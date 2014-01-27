@@ -1,0 +1,4 @@
+<plugin>
+  <name>bounded-integers</name>
+  <classname>mbergenlid.tools.boundedintegers.BoundedIntegersPlugin</classname>
+</plugin>
