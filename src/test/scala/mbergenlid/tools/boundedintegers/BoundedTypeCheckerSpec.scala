@@ -17,7 +17,8 @@ class BoundedTypeCheckerSpec extends FunSuite {
     |
     |testMethod(4, "In range")
     |
-    |testMethod(11, "hello")
+    |testMethod(11, "Over limit")
+    |testMethod(-1, "Below limit")
     """.stripMargin
 
   def typeCheck(program: String = testProgram) =
@@ -38,9 +39,24 @@ class BoundedTypeCheckerSpec extends FunSuite {
   }
 
   test("Failure with constant argument") {
-    import BoundedTypeChecker._
-
     val result = compile()
+    assert(result.size === 2)
+  }
+
+  test("Should fail if called with variable that is not itself within range") {
+
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
+          |
+          |val x = 11
+          |testMethod(x, "Invalid variable")
+          |
+          """.stripMargin
+
+    val result = compile(program)
     assert(result.size === 1)
   }
 }
