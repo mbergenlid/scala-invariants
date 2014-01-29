@@ -15,17 +15,22 @@ class BoundedTypeCheckerSpec extends FunSuite {
     |
     |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
     |
+    |testMethod(4, "In range")
+    |
     |testMethod(11, "hello")
     """.stripMargin
 
-  def compile(program: String = testProgram) =
+  def typeCheck(program: String = testProgram) =
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
+
+  def compile(program: String = testProgram): List[BoundedTypeChecker.BoundedTypeError] =
+    cut.checkBoundedTypes(typeCheck(program))
 
   test("Extract function params") {
     import cut.global._
-    val tree = compile()
+    val tree = typeCheck()
     val Block((_, Apply(method, args))) = tree
-    
+
     val argList = cut.extractMethodParams(
       method.asInstanceOf[cut.global.Tree], args.asInstanceOf[List[cut.global.Tree]])
 
@@ -34,9 +39,8 @@ class BoundedTypeCheckerSpec extends FunSuite {
 
   test("Failure with constant argument") {
     import BoundedTypeChecker._
-    val tree = compile()
-    
-    val result = cut.checkBoundedTypes(tree)
+
+    val result = compile()
     assert(result.size === 1)
   }
 }

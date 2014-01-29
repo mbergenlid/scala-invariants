@@ -5,8 +5,8 @@ import scala.annotation.StaticAnnotation
 
 object BoundedTypeChecker {
   trait BoundedTypeError
-  case object Success extends BoundedTypeError
   case class Error(message: String) extends BoundedTypeError
+  case class Warning(message: String) extends BoundedTypeError
 
   case class Bounded(min: Int, max: Int) extends StaticAnnotation
 }
@@ -23,9 +23,7 @@ class BoundedTypeChecker(val global: Universe) {
       annotation <- argSymbol.annotations
       if(annotation.tpe =:= typeOf[Bounded])
       error <- validate(annotation, paramValue)
-    } yield {
-      error
-    }
+    } yield { error }
   }
 
   private def validate(bounds: Annotation, appliedParam: Tree): Option[BoundedTypeError] = appliedParam match {
