@@ -17,17 +17,21 @@ class BoundedTypeChecker(val global: Universe) {
   import BoundedTypeChecker._
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
-    for {
-      Apply(method, args) <- tree
-      if method.symbol.isMethod
-      (argSymbol, paramValue) <- extractMethodParams(method, args) 
-      annotation <- argSymbol.annotations
-      if(annotation.tpe =:= typeOf[Bounded] &&
-          !(BoundedInteger(paramValue) <:< BoundedInteger(annotation)))
-    } yield { Error("Failure") }
+    (tree collect treeMatcher).flatten
   }
 
-  protected[boundedintegers] def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(Symbol, Tree)] = {
+  def treeMatcher: PartialFunction[Tree, List[BoundedTypeError]] = {
+      case Apply(method, args) if(method.symbol.isMethod) => for {
+        (argSymbol, paramValue) <- extractMethodParams(method, args) 
+        annotation <- argSymbol.annotations.find { a =>
+          a.tpe =:= typeOf[Bounded] &&
+            !(BoundedInteger(paramValue) <:< BoundedInteger(a))
+        }
+      } yield { Error("Failure") }
+  }
+
+  protected[boundedintegers] 
+  def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(Symbol, Tree)] = {
     val symbol = methodApplication.symbol.asMethod
     symbol.paramss.headOption match {
       case Some(list) => list.zip(args)
