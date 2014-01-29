@@ -9,6 +9,7 @@ object BoundedTypeChecker {
   case class Warning(message: String) extends BoundedTypeError
 
   case class Bounded(min: Int, max: Int) extends StaticAnnotation
+
 }
 
 class BoundedTypeChecker(val global: Universe) {
@@ -21,17 +22,9 @@ class BoundedTypeChecker(val global: Universe) {
       if method.symbol.isMethod
       (argSymbol, paramValue) <- extractMethodParams(method, args) 
       annotation <- argSymbol.annotations
-      if(annotation.tpe =:= typeOf[Bounded])
-      error <- validate(annotation, paramValue)
-    } yield { error }
-  }
-
-  private def validate(bounds: Annotation, appliedParam: Tree): Option[BoundedTypeError] = appliedParam match {
-    case Literal(Constant(value: Int)) => bounds.scalaArgs match {
-      case List(Literal(Constant(min: Int)), Literal(Constant(max: Int))) if (value < min || value > max) => Some(Error("Failure"))
-      case _ => None
-    }
-    case _ => None
+      if(annotation.tpe =:= typeOf[Bounded] &&
+          !(BoundedInteger(paramValue) <:< BoundedInteger(annotation)))
+    } yield { Error("Failure") }
   }
 
   protected[boundedintegers] def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(Symbol, Tree)] = {
@@ -39,6 +32,34 @@ class BoundedTypeChecker(val global: Universe) {
     symbol.paramss.headOption match {
       case Some(list) => list.zip(args)
       case None => Nil
+    }
+  }
+
+  class BoundedInteger(private val min: Int = Int.MinValue,
+        private val max: Int = Int.MaxValue) {
+
+    def <:<(other: BoundedInteger): Boolean = {
+      min >= other.min && max <= other.max
+    }
+  }
+
+  object BoundedInteger {
+    def apply(bounds: Annotation): BoundedInteger = {
+      val List(Literal(Constant(min: Int)), Literal(Constant(max: Int))) = bounds.scalaArgs
+      new BoundedInteger(min, max)
+    }
+
+    def apply(tree: Tree): BoundedInteger = {
+      assert(tree.tpe <:< typeOf[Int])
+      tree match {
+        case Literal(Constant(value: Int)) => new BoundedInteger(value, value)
+        case t => 
+          val annotationOption = t.symbol.annotations.find( _.tpe =:= typeOf[Bounded])
+          annotationOption match {
+            case Some(annotation) => this.apply(annotation)
+            case None => new BoundedInteger
+          }
+      }
     }
   }
 }

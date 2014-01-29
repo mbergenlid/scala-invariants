@@ -44,7 +44,6 @@ class BoundedTypeCheckerSpec extends FunSuite {
   }
 
   test("Should fail if called with variable that is not itself within range") {
-
     val program =
           """
           |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
@@ -53,6 +52,38 @@ class BoundedTypeCheckerSpec extends FunSuite {
           |
           |val x = 11
           |testMethod(x, "Invalid variable")
+          |
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 1)
+  }
+
+  test("Should not fail if variable is annotated") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
+          |
+          |@Bounded(10, 10) val x = 10
+          |testMethod(x, "Invalid variable")
+          |
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 0)
+  }
+
+  test("Should fail if called with arbitrary Int expression") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
+          |
+          |def randomInteger = 1
+          |testMethod(randomInteger, "Invalid variable")
           |
           """.stripMargin
 
