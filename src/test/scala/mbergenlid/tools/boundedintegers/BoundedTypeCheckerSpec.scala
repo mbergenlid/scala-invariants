@@ -4,14 +4,16 @@ import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
 
-class BoundedTypeCheckerSpec extends FunSuite {
+class BoundedTypeCheckerSpec extends FunSuite
+  with MyUniverse {
   
-  val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
+  lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
+  val global = tb.u
   val cut = new BoundedTypeChecker(tb.u)
 
   val testProgram = 
     """
-    |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+    |import mbergenlid.tools.boundedintegers.Bounded
     |
     |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
     |
@@ -24,7 +26,7 @@ class BoundedTypeCheckerSpec extends FunSuite {
   def typeCheck(program: String = testProgram) =
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
 
-  def compile(program: String = testProgram): List[BoundedTypeChecker.BoundedTypeError] =
+  def compile(program: String = testProgram): List[cut.BoundedTypeError] =
     cut.checkBoundedTypes(typeCheck(program))
 
   test("Extract function params") {
@@ -46,7 +48,7 @@ class BoundedTypeCheckerSpec extends FunSuite {
   test("Should fail if called with variable that is not itself within range") {
     val program =
           """
-          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |import mbergenlid.tools.boundedintegers.Bounded
           |
           |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
           |
@@ -62,7 +64,7 @@ class BoundedTypeCheckerSpec extends FunSuite {
   test("Should not fail if variable is annotated") {
     val program =
           """
-          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |import mbergenlid.tools.boundedintegers.Bounded
           |
           |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
           |
@@ -78,7 +80,7 @@ class BoundedTypeCheckerSpec extends FunSuite {
   test("Should fail if called with arbitrary Int expression") {
     val program =
           """
-          |import mbergenlid.tools.boundedintegers.BoundedTypeChecker.Bounded
+          |import mbergenlid.tools.boundedintegers.Bounded
           |
           |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
           |
