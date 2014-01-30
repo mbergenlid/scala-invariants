@@ -9,7 +9,7 @@ class BoundedTypeCheckerSpec extends FunSuite
   
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
-  val cut = new BoundedTypeChecker(tb.u)
+  val cut = new BoundedTypeChecker(tb.u) with MethodApplication
 
   val testProgram = 
     """
@@ -29,16 +29,6 @@ class BoundedTypeCheckerSpec extends FunSuite
   def compile(program: String = testProgram): List[cut.BoundedTypeError] =
     cut.checkBoundedTypes(typeCheck(program))
 
-  test("Extract function params") {
-    import cut.global._
-    val tree = typeCheck()
-    val Block((_, Apply(method, args))) = tree
-
-    val argList = cut.extractMethodParams(
-      method.asInstanceOf[cut.global.Tree], args.asInstanceOf[List[cut.global.Tree]])
-
-    assert(argList.size === 2)
-  }
 
   test("Failure with constant argument") {
     val result = compile()
