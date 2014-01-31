@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers
 
+
 import scala.reflect.api.Universe
 import scala.language.implicitConversions
 
@@ -7,9 +8,18 @@ trait MyUniverse {
   val global: Universe
   import global._
 
-  trait BoundedTypeError
+  trait BoundedTypeError {
+    def message: String
+  }
   case class Error(message: String) extends BoundedTypeError
   case class Warning(message: String) extends BoundedTypeError
+
+  class Context(private val symbols: Map[Symbol, BoundedInteger]) {
+    def this() = this(Map.empty)
+    def apply(symbol: Symbol) = symbols.get(symbol)
+    def ++(other: Context) = new Context(symbols ++ other.symbols)
+    def size = symbols.size
+  } 
 
   case class BoundedInteger(min: Int = Int.MinValue, max: Int = Int.MaxValue) {
 
@@ -47,17 +57,16 @@ trait MyUniverse {
   }
 }
 
-trait Context { }
 
 class BoundedTypeChecker(val global: Universe) extends MyUniverse with AbstractBoundsValidator {
   import global._
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
-    checkBounds(tree)
+    checkBounds(new Context())(tree)
   }
 
-  def checkBounds(tree: Tree) = {
-    tree.children.flatMap(checkBounds)
+  def checkBounds(context: Context)(tree: Tree) = {
+    tree.children.flatMap(checkBounds(context))
   }
 
 }

@@ -2,16 +2,18 @@ package mbergenlid.tools.boundedintegers
 
 import scala.reflect.api.Universe
 
-trait IfExpression extends SubTreeValidator { self: MyUniverse =>
+trait IfExpression extends AbstractBoundsValidator { self: MyUniverse =>
   import global._
   import BoundedInteger._
 
-  def validate = {
-      case If(cond, _then, _else) => Nil
+  abstract override def checkBounds(context: Context)(tree: Tree) = tree match {
+    case If(cond, _then, _else) => super.checkBounds(context)(_then)
+      //checkBounds(context)(_then)
+    case _ => super.checkBounds(context)(tree)
   }
 
   protected[boundedintegers] def
-  createContextFrom(cond: Tree): Map[Symbol, BoundedInteger] = {
+  createContextFrom(cond: Tree): Context = {
     val Apply(Select(a, methodName), List(Literal(Constant(arg: Int)))) = cond
 
     val bounds = methodName.toString match {
@@ -20,6 +22,6 @@ trait IfExpression extends SubTreeValidator { self: MyUniverse =>
       case _ => new BoundedInteger
     }
 
-    Map(a.symbol -> bounds)
+    new Context(Map(a.symbol -> bounds))
   }
 }

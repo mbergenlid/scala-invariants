@@ -10,6 +10,7 @@ class BoundedTypeCheckerSpec extends FunSuite
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
+                                          with IfExpression 
 
   val testProgram = 
     """
@@ -81,5 +82,22 @@ class BoundedTypeCheckerSpec extends FunSuite
 
     val result = compile(program)
     assert(result.size === 1)
+  }
+
+  test("Should succeed if inside appropriate if expression") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |def testMethod(@Bounded(min=Int.MinValue, max=10)a: Int, b: String) = 1
+          |
+          |def randomInteger = 1
+          |val x = randomInteger
+          |if(x < 10) testMethod(randomInteger, "Valid variable")
+          |
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 0)
   }
 }

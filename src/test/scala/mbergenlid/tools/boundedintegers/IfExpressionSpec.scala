@@ -25,8 +25,8 @@ class IfExpressionSpec extends FunSuite
       val context = cut.createContextFrom(cond)
 
       assert(context.size === 1)
-      assert(context(x.symbol).min === Int.MinValue)
-      assert(context(x.symbol).max === 10)
+      assert(context(x.symbol).get.min === Int.MinValue)
+      assert(context(x.symbol).get.max === 10)
   }
 
   test("Simple greater than condition") {
@@ -40,7 +40,7 @@ class IfExpressionSpec extends FunSuite
       val context = cut.createContextFrom(cond)
 
       assert(context.size === 1)
-      assert(context(x.symbol).max === Int.MaxValue)
-      assert(context(x.symbol).min === 10)
+      assert(context(x.symbol).get.max === Int.MaxValue)
+      assert(context(x.symbol).get.min === 10)
   }
 }

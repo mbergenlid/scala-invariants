@@ -1,16 +1,21 @@
 package mbergenlid.tools.boundedintegers
 
-trait MethodApplication extends SubTreeValidator { self: MyUniverse =>
+trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
   import global._
 
-  def validate = {
-      case Apply(method, args) if(method.symbol.isMethod) => (for {
+  abstract override def checkBounds(context: Context)(tree: Tree) = tree match {
+      case Apply(method, args) if(method.symbol.isMethod) => 
+        println("METHOD APPLICATION") 
+        (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args) 
         annotation <- argSymbol.annotations.find { a =>
+          println(a.tpe)
+          println(a.tpe =:= typeOf[Bounded])
           a.tpe =:= typeOf[Bounded] &&
             !(BoundedInteger(paramValue) <:< BoundedInteger(a))
         }
       } yield { Error("Failure") })
+      case _ => super.checkBounds(context)(tree)
   }
 
   protected[boundedintegers] 
