@@ -9,9 +9,8 @@ class IfExpressionSpec extends FunSuite
   
   def tb = TestEnvironment.tb
   implicit val global = tb.u
-  val cut = new IfExpression
+  val cut = new BoundedTypeChecker(global) with IfExpression
 
-  
   def typeCheck(program: String) =
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
 

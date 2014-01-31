@@ -2,11 +2,14 @@ package mbergenlid.tools.boundedintegers
 
 import scala.reflect.api.Universe
 
-class IfExpression(implicit val global: Universe) extends MyUniverse {
+trait IfExpression extends SubTreeValidator { self: MyUniverse =>
   import global._
   import BoundedInteger._
 
-  //def apply(tree: Tree)
+  def validate = {
+      case If(cond, _then, _else) => Nil
+  }
+
   protected[boundedintegers] def
   createContextFrom(cond: Tree): Map[Symbol, BoundedInteger] = {
     val Apply(Select(a, methodName), List(Literal(Constant(arg: Int)))) = cond
