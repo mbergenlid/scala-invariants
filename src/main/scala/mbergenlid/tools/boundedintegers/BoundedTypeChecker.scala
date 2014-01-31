@@ -48,32 +48,16 @@ trait MyUniverse {
 }
 
 trait Context { }
-object BoundedTypeChecker {
 
-}
-
-
-class BoundedTypeChecker(val global: Universe) extends MyUniverse with TreeValidator {
+class BoundedTypeChecker(val global: Universe) extends MyUniverse with AbstractBoundsValidator {
   import global._
-  import BoundedTypeChecker._
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
-    validate(tree)
+    checkBounds(tree)
   }
 
-  def validate = {
-    case tree =>
-      tree.children.collect(validate).flatten
+  def checkBounds(tree: Tree) = {
+    tree.children.flatMap(checkBounds)
   }
-
-  def checkTree(tree: Tree): List[BoundedTypeError] = tree match {
-      //case If(cond, _then, _else) => 
-        //Parse cond
-        //checkTree(_then) ++ checkTree(_else)
-      case _ => (for {
-        child <- tree.children
-      } yield (checkTree(child))).flatten
-  }
-
 
 }

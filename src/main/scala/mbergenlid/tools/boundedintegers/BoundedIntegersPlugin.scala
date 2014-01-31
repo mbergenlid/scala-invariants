@@ -29,7 +29,7 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
     class BoundedIntegersPhase(prev: Phase) extends StdPhase(prev) {
       override def name = BoundedIntegersPlugin.this.name
       val typeChecker = new BoundedTypeChecker(global)
-      
+
       def apply(unit: CompilationUnit) {
         typeChecker.checkBoundedTypes(unit.body.asInstanceOf[typeChecker.global.Tree])
       }
