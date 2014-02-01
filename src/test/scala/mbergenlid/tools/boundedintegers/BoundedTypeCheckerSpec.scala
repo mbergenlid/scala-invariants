@@ -93,7 +93,7 @@ class BoundedTypeCheckerSpec extends FunSuite
           |
           |def randomInteger = 1
           |val x = randomInteger
-          |if(x < 10) testMethod(randomInteger, "Valid variable")
+          |if(x < 10) testMethod(x, "Valid variable")
           |
           """.stripMargin
 

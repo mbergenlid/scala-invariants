@@ -6,10 +6,12 @@ trait IfExpression extends AbstractBoundsValidator { self: MyUniverse =>
   import global._
   import BoundedInteger._
 
-  abstract override def checkBounds(context: Context)(tree: Tree) = tree match {
-    case If(cond, _then, _else) => super.checkBounds(context)(_then)
-      //checkBounds(context)(_then)
-    case _ => super.checkBounds(context)(tree)
+  abstract override def checkBounds(context: Context)(tree: Tree) =
+    validate(context).applyOrElse(tree, super.checkBounds(context) _)
+
+  private def validate(context: Context): Validator = {
+    case If(cond, _then, _else) =>
+      checkBounds(context ++ createContextFrom(cond))(_then)
   }
 
   protected[boundedintegers] def

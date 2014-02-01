@@ -3,19 +3,24 @@ package mbergenlid.tools.boundedintegers
 trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
   import global._
 
-  abstract override def checkBounds(context: Context)(tree: Tree) = tree match {
-      case Apply(method, args) if(method.symbol.isMethod) => 
-        println("METHOD APPLICATION") 
-        (for {
+  abstract override def checkBounds(context: Context)(tree: Tree) = 
+    validate(context).applyOrElse(tree, super.checkBounds(context) _)
+
+  private def validate(context: Context): PartialFunction[Tree, List[BoundedTypeError]] = {
+      case Apply(method, args) if(method.symbol.isMethod) => (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args) 
         annotation <- argSymbol.annotations.find { a =>
-          println(a.tpe)
-          println(a.tpe =:= typeOf[Bounded])
           a.tpe =:= typeOf[Bounded] &&
-            !(BoundedInteger(paramValue) <:< BoundedInteger(a))
+            !(getBoundedIntegerFromContext(paramValue, context) <:< BoundedInteger(a))
         }
       } yield { Error("Failure") })
-      case _ => super.checkBounds(context)(tree)
+  }
+
+  private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
+    context(tree.symbol) match {
+      case Some(x) => println(s"Returing $x"); x
+      case None => BoundedInteger(tree)
+    }
   }
 
   protected[boundedintegers] 

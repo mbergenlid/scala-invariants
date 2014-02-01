@@ -19,6 +19,7 @@ trait MyUniverse {
     def apply(symbol: Symbol) = symbols.get(symbol)
     def ++(other: Context) = new Context(symbols ++ other.symbols)
     def size = symbols.size
+    override def toString = symbols.toString
   } 
 
   case class BoundedInteger(min: Int = Int.MinValue, max: Int = Int.MaxValue) {

@@ -28,7 +28,7 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
 
     class BoundedIntegersPhase(prev: Phase) extends StdPhase(prev) {
       override def name = BoundedIntegersPlugin.this.name
-      val typeChecker = new BoundedTypeChecker(global) with MethodApplication
+      val typeChecker = new BoundedTypeChecker(global) with MethodApplication with IfExpression
 
       def apply(unit: CompilationUnit) {
         val errors = typeChecker.checkBoundedTypes(
