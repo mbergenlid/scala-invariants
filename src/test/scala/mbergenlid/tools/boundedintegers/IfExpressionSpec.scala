@@ -44,12 +44,14 @@ class IfExpressionSpec extends FunSuite
           |
           |def randomInteger = 1
           |val x = randomInteger
-          |if(x < 11 && x > 0) testMethod(x, "Valid variable")
-          |
+          |if(x < 11 && x > 0)
+          |  testMethod(x, "Valid variable")
+          |else
+          |  testMethod(x, "Invalid variable")
           """.stripMargin
 
     val result = compile(program)
-    assert(result.size === 0)
+    assert(result.size === 1)
   }
 
 }

@@ -29,6 +29,8 @@ trait MyUniverse {
       }
       new Context(map)
     }
+
+    def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
     def +(kv: (Symbol, BoundedInteger)) = new Context(symbols + kv)
     def size = symbols.size
     override def toString = symbols.toString
@@ -131,6 +133,25 @@ trait MyUniverse {
       (this /: other.range) { _ + _ }
     }
 
+    /**
+     * ---{---}--{---}---
+     *
+     * {-}-----{--------}
+     * {--------}-----{-}
+     *
+     * {-}---------------
+     * ------------------
+     * --------{}--------
+     * ---------------{-}
+     *
+     * {-}-----{}-----{-}
+     */
+    def unary_! = {
+      (BoundedInteger.full /: range) { (acc, r) =>
+        acc & new BoundedInteger(Set(Range(Int.MinValue, r.min-1), Range(r.max+1, Int.MaxValue)))
+      }
+    }
+
     override def toString = s"BoundedInteger($range)"
   }
     /**
@@ -160,6 +181,7 @@ trait MyUniverse {
     def apply(min: Int, max: Int) = new BoundedInteger(min, max)
 
     val empty = new BoundedInteger(Set.empty[Range])
+    val full = new BoundedInteger(Int.MinValue, Int.MaxValue)
 
     implicit def integerToBounded(x: Int) = new BoundedInteger(Set(Range(x,x)))
 
