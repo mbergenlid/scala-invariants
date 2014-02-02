@@ -18,7 +18,7 @@ trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
 
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
     context(tree.symbol) match {
-      case Some(x) => println(s"Returing $x"); x
+      case Some(x) => x
       case None => BoundedInteger(tree)
     }
   }
