@@ -148,7 +148,14 @@ trait MyUniverse {
      */
     def unary_! = {
       (BoundedInteger.full /: range) { (acc, r) =>
-        acc & new BoundedInteger(Set(Range(Int.MinValue, r.min-1), Range(r.max+1, Int.MaxValue)))
+        val set1 = if(r.min == Int.MinValue) {
+          Set.empty
+        } else { Set(Range(Int.MinValue, r.min-1)) }
+        val set2 = if(r.max == Int.MaxValue) {
+          Set.empty
+        } else { Set(Range(r.max+1, Int.MaxValue)) }
+
+        acc & new BoundedInteger(set1 ++ set2)
       }
     }
 
