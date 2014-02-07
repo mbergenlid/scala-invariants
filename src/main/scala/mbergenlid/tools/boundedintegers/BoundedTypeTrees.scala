@@ -34,7 +34,12 @@ trait BoundedTypeTrees {
   }
 
   sealed trait Constraint {
-    def obviouslySubsetOf(that: Constraint): Boolean
+    def obviouslySubsetOf(that: Constraint): Boolean = that match {
+      case Or(left, right) => 
+        (this obviouslySubsetOf left) ||
+        (this obviouslySubsetOf right)
+      case _ => false
+    }
     def obviouslyNotSubsetOf(that: Constraint): Boolean = false
   }
 
@@ -43,10 +48,10 @@ trait BoundedTypeTrees {
    * <= 1,  <= x
    */
   case class LessThan(v: Expression) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
+    override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
       case LessThanOrEqual(v2) => v2 > v
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
   }
   /**
@@ -57,35 +62,35 @@ trait BoundedTypeTrees {
    * <= 4
    */
   case class LessThanOrEqual(v: Expression) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
+    override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 > v 
       case LessThanOrEqual(v2) => v2 >= v
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
   }
 
   case class GreaterThan(v: Expression) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
+    override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
       case GreaterThanOrEqual(v2) => v2 < v
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
   }
 
   case class GreaterThanOrEqual(v: Expression) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
+    override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
   }
   
   case class Equal(v: Expression) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
+    override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThanOrEqual(v2) => v2 == v
       case LessThanOrEqual(v2) => v2 == v
       case Equal(v2) => v2 == v
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
   }
 
@@ -97,11 +102,11 @@ trait BoundedTypeTrees {
    * 
    */
   case class And(left: Constraint, right: Constraint) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = that match {
-      case a: And => this.forall { child =>
-        (a exist ( child obviouslySubsetOf _ ))
+    override def obviouslySubsetOf(that: Constraint) = that match {
+      case a: And => a.forall { child =>
+        (this exist ( _ obviouslySubsetOf child ))
       }
-      case _ => false
+      case _ => super.obviouslySubsetOf(that)
     }
 
     def exist(p: Constraint => Boolean): Boolean = exist(this, p)
@@ -118,7 +123,16 @@ trait BoundedTypeTrees {
     }
   }
 
-  case class Or(left: Constraint, right: Constraint) extends Constraint {
-    def obviouslySubsetOf(that: Constraint) = false
+  case class Or(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
+    override def obviouslySubsetOf(that: Constraint) = that match {
+      case c => this.forall(_ obviouslySubsetOf c)
+    }
+
+    def foreach[U](f: Constraint => U): Unit = foreach(this, f)
+
+    def foreach[U](child: Constraint, f: Constraint => U): Unit = child match {
+      case Or(l2, r2) => foreach(l2, f); foreach(r2, f)
+      case _ => f(child)
+    }
   }
 }

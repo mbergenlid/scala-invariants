@@ -2,6 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
+import scala.util.parsing.combinator.JavaTokenParsers
 
 class BoundedTypeTreesSpec extends FunSuite 
     with BoundedTypeTrees {
@@ -10,6 +11,13 @@ class BoundedTypeTreesSpec extends FunSuite
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def stringToSymbol(s: String) = SymbolExpression(s)
+
+  class ExprParser extends JavaTokenParsers {
+      
+    def value: Parser[Expression] =
+      (ident ^^ SymbolExpression) | (wholeNumber ^^ {x: String => ConstantValue(x.toInt)} )
+  }
+
 
   test("Test Basic Constant values") {
     val one = ConstantValue(1)
@@ -42,12 +50,24 @@ class BoundedTypeTreesSpec extends FunSuite
     assert(c3 obviouslySubsetOf c1, s"$c3 obviouslySubsetOf $c1")
   }
 
-  test("Complex expressions") {
+  test("Complex AND expressions") {
     //x > 0 && x < 100
-    val e1 = And(GreaterThan(-1), LessThan(100))
-    //(x > -1 && x < 10 && x <= 99)
-    val e2 = And(And(GreaterThan(0), LessThan(10)), LessThanOrEqual(99))
+    val e1 = And(GreaterThan(0), LessThan(100))
+    //(x > -1 && x < 10 && x < y && x <= 99)
+    val e2 = And(And(And(GreaterThan(0), LessThan(10)), LessThan("y")), LessThanOrEqual(99))
 
     assert(e2 obviouslySubsetOf e1)
+  }
+
+  test("Complex OR expressions") {
+    //x < 0 || x > 100
+    val e1 = Or(LessThan(0), GreaterThan(100))
+    //(x >= 101)
+    val e2 = GreaterThanOrEqual(101)
+    //(x <= -1 || x >= 101)
+    val e3 = Or(LessThanOrEqual(-1), GreaterThanOrEqual(101))
+
+    assert(e2 obviouslySubsetOf e1)
+    assert(e3 obviouslySubsetOf e1)
   }
 }
