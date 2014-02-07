@@ -66,8 +66,24 @@ class BoundedTypeTreesSpec extends FunSuite
     val e2 = GreaterThanOrEqual(101)
     //(x <= -1 || x >= 101)
     val e3 = Or(LessThanOrEqual(-1), GreaterThanOrEqual(101))
+    //(x <= -1 || x >= 101 || x < 6)
+    val e4 = Or(Or(LessThanOrEqual(-1), GreaterThanOrEqual(101)), LessThan(6))
 
     assert(e2 obviouslySubsetOf e1)
     assert(e3 obviouslySubsetOf e1)
+    assert(!(e4 obviouslySubsetOf e1))
+  }
+
+  test("Complex mixed expressions") {
+    //(x > 0 && x < 100) || (x > -100 && x < -10)
+    val e1 = Or(
+      And(GreaterThan(0), LessThan(100)),
+      And(GreaterThan(-100), LessThan(-10))
+    );
+    
+    //(x > 1 && x <= 10)
+    val e2 = And(GreaterThan(1), LessThanOrEqual(10))
+
+    assert(e2 obviouslySubsetOf e1)
   }
 }
