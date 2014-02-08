@@ -4,10 +4,11 @@ package mbergenlid.tools.boundedintegers
 import scala.reflect.api.Universe
 import scala.language.implicitConversions
 
-trait MyUniverse {
+trait MyUniverse extends BoundedTypeTrees {
   val global: Universe
   import global._
 
+  type BoundedSymbol = global.Symbol
   trait BoundedTypeError {
     def message: String
   }
@@ -15,12 +16,12 @@ trait MyUniverse {
   case class Warning(message: String) extends BoundedTypeError
 
   class Context(private val symbols: Map[Symbol, BoundedInteger]) {
-    type Operator = Function2[BoundedInteger, BoundedInteger, BoundedInteger]
+    type Operator = (BoundedInteger, BoundedInteger) => BoundedInteger
     def this() = this(Map.empty)
     def apply(symbol: Symbol) = symbols.get(symbol)
-    def ++(other: Context) = combineWith(other, _&_)
+    def &&(other: Context) = combineWith(other, _&&_)
 
-    def ||(other: Context) = combineWith(other, _|_)
+    def ||(other: Context) = combineWith(other, _||_)
 
     def combineWith(other: Context, op: Operator) = {
       val map = (other.symbols /: symbols) { (map, t) =>
@@ -31,135 +32,32 @@ trait MyUniverse {
     }
 
     def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
-    def +(kv: (Symbol, BoundedInteger)) = new Context(symbols + kv)
     def size = symbols.size
     override def toString = symbols.toString
   } 
-
-  case class Range(min: Int = Int.MinValue,
-                   max: Int = Int.MaxValue) {
-    assert(min <= max)
-
-    def contains(other: Range) = 
-      min <= other.min && max >= other.max
-
-    def <(other: Range) =
-      this.max < other.min
-
-    def >(other: Range) =
-      this.min > other.max
-
-    def overlaps(other: Range) =
-      !(this < other || this > other)
-
-    def merge(other: Range) =
-      Range(Math.min(min, other.min), Math.max(max, other.max))
-
-    def &(other: Range): Option[Range] =
-      if(this overlaps other) {
-        Some(Range(Math.max(min, other.min), Math.min(max, other.max)))
-      } else {
-        None
-      }
-
-  }
-
-  class BoundedInteger(val range: Set[Range]) {
+  
+  class BoundedInteger(val constraint: Constraint) {
     import BoundedInteger._
 
-    def this(min: Int = Int.MinValue, max: Int = Int.MaxValue) =
-      this(Set(Range(min, max)))
-
-    def min = if(range.isEmpty) Int.MinValue else range.minBy(_.min).min
-    def max = if(range.isEmpty) Int.MaxValue else range.maxBy(_.max).max
+    def this() = this(NoConstraints)
 
     def <:<(other: BoundedInteger): Boolean =
-      range forall ( other contains _ )
+      constraint.obviouslySubsetOf(other.constraint)
 
-    def contains(r: Range) =
-      range.exists(_.contains(r))
 
-    /*
-     * ----{----}--------
-     * --------{------}--
-     */
-    def <|(other: BoundedInteger) = {
-      val otherMax = other.max
-      new BoundedInteger(range.collect {
-        case r @ Range(_, max) if(max < otherMax) => r
-        case r @ Range(min, _) if(min < otherMax) => r.copy(max = otherMax-1)
-     })
+    def &&(other: BoundedInteger) = constraint match {
+      case NoConstraints => new BoundedInteger(other.constraint)
+      case c => new BoundedInteger(And(constraint, other.constraint))
+    }
+      
+    def ||(other: BoundedInteger) = constraint match {
+      case NoConstraints => new BoundedInteger(other.constraint)
+      case c => new BoundedInteger(Or(constraint, other.constraint))
     }
 
-    def >|(other: BoundedInteger) = {
-      val otherMin = other.min
-      new BoundedInteger(range.collect {
-        case r @ Range(min, _) if(min > otherMin) => r
-        case r @ Range(_, max) if(max > otherMin) => r.copy(min = otherMin+1)
-     })
-    }
+    def unary_! = new BoundedInteger(!constraint)
 
-    /*
-     * ---{---}-{------}----
-     * -----{----}--{-----}-
-     *
-     * -----{-}------------- (r1 && r3)
-     * ---------{}---------- (r1 && r4)
-     * --------------------- (r2 && r3)
-     * -------------{--}---- (r2 && r4)
-     *
-     *
-     * R1 = (r1 || r2)
-     * R2 = (r3 || r4)
-     *
-     * R1 && R2 = (r1 || r2) && (r3 || r4)
-     *          = (r1 && r3 || r1 && r4 || r2 && r3 || r2 && r4)
-     */
-    def &(other: BoundedInteger) = {
-      (BoundedInteger.empty /: (for {
-        r1 <- range
-        r2 <- other.range
-        r3 <- r1 & r2
-      } yield { new BoundedInteger(Set(r3)) })) (_|_)
-    }
-
-    def +(r: Range) = new BoundedInteger(addRangeToSet(r, range))
-
-    /*
-     * {----------}---------
-     * -------------{--}----
-     */
-    def |(other: BoundedInteger) = {
-      (this /: other.range) { _ + _ }
-    }
-
-    /**
-     * ---{---}--{---}---
-     *
-     * {-}-----{--------}
-     * {--------}-----{-}
-     *
-     * {-}---------------
-     * ------------------
-     * --------{}--------
-     * ---------------{-}
-     *
-     * {-}-----{}-----{-}
-     */
-    def unary_! = {
-      (BoundedInteger.full /: range) { (acc, r) =>
-        val set1 = if(r.min == Int.MinValue) {
-          Set.empty
-        } else { Set(Range(Int.MinValue, r.min-1)) }
-        val set2 = if(r.max == Int.MaxValue) {
-          Set.empty
-        } else { Set(Range(r.max+1, Int.MaxValue)) }
-
-        acc & new BoundedInteger(set1 ++ set2)
-      }
-    }
-
-    override def toString = s"BoundedInteger($range)"
+    override def toString = s"BoundedInteger($constraint)"
   }
     /**
      * ----{-----}----
@@ -169,13 +67,13 @@ trait MyUniverse {
   object BoundedInteger {
     def apply(bounds: Annotation): BoundedInteger = {
       val List(Literal(Constant(min: Int)), Literal(Constant(max: Int))) = bounds.scalaArgs
-      new BoundedInteger(min, max)
+      BoundedInteger(min, max)
     }
 
     def apply(tree: Tree): BoundedInteger = {
       assert(tree.tpe <:< typeOf[Int])
       tree match {
-        case Literal(Constant(value: Int)) => new BoundedInteger(value, value)
+        case Literal(Constant(value: Int)) => BoundedInteger(value, value)
         case t =>
           val annotationOption = t.symbol.annotations.find( _.tpe =:= typeOf[Bounded])
           annotationOption match {
@@ -185,22 +83,19 @@ trait MyUniverse {
       }
     }
 
-    def apply(min: Int, max: Int) = new BoundedInteger(min, max)
-
-    val empty = new BoundedInteger(Set.empty[Range])
-    val full = new BoundedInteger(Int.MinValue, Int.MaxValue)
-
-    implicit def integerToBounded(x: Int) = new BoundedInteger(Set(Range(x,x)))
-
-    private def addRangeToSet(r: Range, set: Set[Range]): Set[Range] = {
-      val overlapping = set.collectFirst {
-        case r1 if(r1 overlaps r) => r1 merge r 
-      }
-      overlapping match {
-        case Some(merged) => addRangeToSet(merged, set - r)
-        case None => set + r
-      }
+    def apply(constraint: Constraint) = new BoundedInteger(constraint)
+    def apply(min: Int, max: Int) = (min, max) match {
+      case (Int.MinValue, Int.MaxValue) => new BoundedInteger()
+      case (Int.MinValue, _) => new BoundedInteger(LessThanOrEqual(ConstantValue(max)))
+      case (_, Int.MaxValue) => new BoundedInteger(GreaterThanOrEqual(ConstantValue(min)))
+      case _ => new BoundedInteger(And(
+        LessThanOrEqual(ConstantValue(max)),
+        GreaterThanOrEqual(ConstantValue(min))
+      ))
     }
+
+    implicit def integerToBounded(x: Int) = BoundedInteger(Equal(ConstantValue(x)))
+
   }
 }
 

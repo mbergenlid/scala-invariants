@@ -7,17 +7,12 @@ import scala.util.parsing.combinator.JavaTokenParsers
 class BoundedTypeTreesSpec extends FunSuite 
     with BoundedTypeTrees {
 
-  type Symbol = String
+  type BoundedSymbol = String
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def stringToSymbol(s: String) = SymbolExpression(s)
 
-  class ExprParser extends JavaTokenParsers {
-      
-    def value: Parser[Expression] =
-      (ident ^^ SymbolExpression) | (wholeNumber ^^ {x: String => ConstantValue(x.toInt)} )
-  }
-
+  val parser = new ExprParser
 
   test("Test Basic Constant values") {
     val one = ConstantValue(1)
@@ -41,49 +36,80 @@ class BoundedTypeTreesSpec extends FunSuite
     assert(!(x <= y), s"!($x <= $y)")
   }
   
-  test("Simple constraints") {
-    val c1 = GreaterThan(ConstantValue(0))
-    val c2 = LessThanOrEqual(ConstantValue(10))
-    val c3 = GreaterThanOrEqual(ConstantValue(1))
+  assertConstraint("x > 0 <!< x <= 10")
+  assertConstraint("x >= 1 <:< x > 0")
+  assertConstraint("x < 11 <:< x <= 10")
+  assertConstraint("x > 2 <:< x >= 3")
 
-    assert(!(c1 obviouslySubsetOf c2), s"$c1 obviouslySubsetOf $c2")
-    assert(c3 obviouslySubsetOf c1, s"$c3 obviouslySubsetOf $c1")
+  assertConstraint("x > 0 && x < 10 && x < y && x <= 99 <:< x > 0 && x < 100")
+
+  assertConstraint("x >= 101 <:< x < 0 || x > 100")
+  assertConstraint("x <= -1 || x >= 101 <:< x < 0 || x > 100")
+  assertConstraint("x <= -1 || x >= 101 || x < 6 <!< x < 0 || x > 100")
+
+  assertConstraint("x > 1 && x <= 10 <:< (x > 0 && x < 100) || (x > -100 && x < -10)")
+
+  assertConstraint("x <= 10 && x >= 0 <:< x >=0 && x <= 10")
+  assertConstraint("!(x > 10 || x < 0) <:< x >=0 && x <= 10")
+
+  assertConstraint("x == 9 <:< x < 10")
+
+  test("((x <= MaxValue && x >= MinValue) && x < 10) <:< (x >= MinValue && x <= 9)") {
+    val e1 = And(
+      And(LessThanOrEqual(Int.MaxValue), GreaterThanOrEqual(Int.MinValue)),
+      LessThan(10)
+    )
+    val e2 = And(GreaterThanOrEqual(Int.MinValue), LessThanOrEqual(9))
+
+    assert(e1 obviouslySubsetOf e2)
+
+    println(parser.parseAll(parser.expr, "!(x > 10 || x < 0)"))
   }
 
-  test("Complex AND expressions") {
-    //x > 0 && x < 100
-    val e1 = And(GreaterThan(0), LessThan(100))
-    //(x > -1 && x < 10 && x < y && x <= 99)
-    val e2 = And(And(And(GreaterThan(0), LessThan(10)), LessThan("y")), LessThanOrEqual(99))
+  class ExprParser extends JavaTokenParsers {
 
-    assert(e2 obviouslySubsetOf e1)
+    def parseConstraint(input: String) = 
+      parseAll(constraint, input)
+
+    def constraint: Parser[(Constraint, Constraint, () => Boolean)] =
+      expr ~ "<!<" ~ expr ^^ { case e1 ~ op ~ e2 => (e1, e2, () => !(e1 obviouslySubsetOf e2)) } |
+      expr ~ "<:<" ~ expr ^^ { case e1 ~ op ~ e2 => (e1, e2, () => e1 obviouslySubsetOf e2) }
+
+    def expr: Parser[Constraint] =
+      simpleConstraint ~ boolOp ~ expr ^^ {case c ~ op ~ expr => op(c, expr)} |
+      simpleConstraint ^^ {case c => c}
+
+    def simpleConstraint: Parser[Constraint] =
+      "x" ~> binOp ~ value ^^ {case op ~ v => op(v)} |
+      "(" ~> expr <~ ")" |
+      "!(" ~> expr <~ ")" ^^ {case e => !e}
+      
+    def boolOp: Parser[(Constraint, Constraint) => Constraint] =
+      ("&&" | "||" ) ^^ {
+        case "&&" => And.apply _
+        case "||" => Or.apply _
+      }
+
+    def binOp: Parser[Expression => Constraint] = 
+      (">=" | "<=" | "<" | ">" | "==") ^^ {
+        case ">" => GreaterThan.apply _
+        case "<" => LessThan.apply _
+        case "<=" => LessThanOrEqual.apply _
+        case ">=" => GreaterThanOrEqual.apply _
+        case "==" => Equal.apply _
+      }
+
+
+    def value: Parser[Expression] =
+      (ident ^^ SymbolExpression) | (wholeNumber ^^ {x: String => ConstantValue(x.toInt)} )
   }
 
-  test("Complex OR expressions") {
-    //x < 0 || x > 100
-    val e1 = Or(LessThan(0), GreaterThan(100))
-    //(x >= 101)
-    val e2 = GreaterThanOrEqual(101)
-    //(x <= -1 || x >= 101)
-    val e3 = Or(LessThanOrEqual(-1), GreaterThanOrEqual(101))
-    //(x <= -1 || x >= 101 || x < 6)
-    val e4 = Or(Or(LessThanOrEqual(-1), GreaterThanOrEqual(101)), LessThan(6))
+  def assertConstraint(expr: String) {
+    val result = parser.parseConstraint(expr).get
+    val (e1, e2, f) = result
 
-    assert(e2 obviouslySubsetOf e1)
-    assert(e3 obviouslySubsetOf e1)
-    assert(!(e4 obviouslySubsetOf e1))
-  }
-
-  test("Complex mixed expressions") {
-    //(x > 0 && x < 100) || (x > -100 && x < -10)
-    val e1 = Or(
-      And(GreaterThan(0), LessThan(100)),
-      And(GreaterThan(-100), LessThan(-10))
-    );
-    
-    //(x > 1 && x <= 10)
-    val e2 = And(GreaterThan(1), LessThanOrEqual(10))
-
-    assert(e2 obviouslySubsetOf e1)
+    test(expr) {
+      assert(f(), e1)
+    }
   }
 }

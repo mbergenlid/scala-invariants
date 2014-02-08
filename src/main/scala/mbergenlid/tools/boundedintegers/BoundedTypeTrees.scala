@@ -2,7 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 
 trait BoundedTypeTrees {
-  type Symbol
+  type BoundedSymbol
 
   trait Expression {
     def >(that: Expression): Boolean
@@ -10,8 +10,11 @@ trait BoundedTypeTrees {
     def <(that: Expression): Boolean
     def <=(that: Expression): Boolean 
     def ==(that: Expression): Boolean 
+
+    def increment: Expression = this
+    def decrement: Expression = this
   }
-  case class SymbolExpression(symbol: Symbol) extends Expression {
+  case class SymbolExpression(symbol: BoundedSymbol) extends Expression {
     def >(that: Expression) = false
     def >=(that: Expression) = this == that
     def <(that: Expression) = false
@@ -31,6 +34,9 @@ trait BoundedTypeTrees {
       case ConstantValue(v) => op(expr, v)
       case _ => false
     }
+
+    override def increment: Expression = ConstantValue(expr+1)
+    override def decrement: Expression = ConstantValue(expr-1)
   }
 
   sealed trait Constraint {
@@ -41,6 +47,14 @@ trait BoundedTypeTrees {
       case _ => false
     }
     def obviouslyNotSubsetOf(that: Constraint): Boolean = false
+    def unary_! : Constraint
+  }
+
+  case object NoConstraints extends Constraint {
+    override def obviouslySubsetOf(that: Constraint) =
+      this == that
+
+    def unary_! = this
   }
 
   /**
@@ -50,9 +64,11 @@ trait BoundedTypeTrees {
   case class LessThan(v: Expression) extends Constraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
-      case LessThanOrEqual(v2) => v2 > v
+      case LessThanOrEqual(v2) => (v2.increment) >= v
       case _ => super.obviouslySubsetOf(that)
     }
+    
+    def unary_! = GreaterThanOrEqual(v)
   }
   /**
    * <= x
@@ -67,14 +83,22 @@ trait BoundedTypeTrees {
       case LessThanOrEqual(v2) => v2 >= v
       case _ => super.obviouslySubsetOf(that)
     }
+
+    def unary_! = GreaterThan(v)
   }
 
+  /**
+   *  >  2
+   *  >= 3
+   */
   case class GreaterThan(v: Expression) extends Constraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
-      case GreaterThanOrEqual(v2) => v2 < v
+      case GreaterThanOrEqual(v2) => (v2.decrement) <= v
       case _ => super.obviouslySubsetOf(that)
     }
+
+    def unary_! = LessThanOrEqual(v)
   }
 
   case class GreaterThanOrEqual(v: Expression) extends Constraint {
@@ -83,6 +107,8 @@ trait BoundedTypeTrees {
       case GreaterThanOrEqual(v2) => v2 <= v
       case _ => super.obviouslySubsetOf(that)
     }
+
+    def unary_! = LessThan(v)
   }
   
   case class Equal(v: Expression) extends Constraint {
@@ -92,6 +118,8 @@ trait BoundedTypeTrees {
       case Equal(v2) => v2 == v
       case _ => super.obviouslySubsetOf(that)
     }
+
+    def unary_! = Or(LessThan(v), GreaterThan(v))
   }
 
   /**
@@ -108,6 +136,10 @@ trait BoundedTypeTrees {
       }
       case _ => super.obviouslySubsetOf(that)
     }
+
+    //!(a && b)
+    //!a || !b
+    def unary_! = Or(!left, !right)
 
     def exist(p: Constraint => Boolean): Boolean = exist(this, p)
 
@@ -127,6 +159,8 @@ trait BoundedTypeTrees {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case c => this.forall(_ obviouslySubsetOf c)
     }
+
+    def unary_! = And(!left, !right)
 
     def foreach[U](f: Constraint => U): Unit = foreach(this, f)
 

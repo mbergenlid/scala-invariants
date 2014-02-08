@@ -10,8 +10,9 @@ trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
       case Apply(method, args) if(method.symbol.isMethod) => (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args) 
         annotation <- argSymbol.annotations.find { a =>
-          a.tpe =:= typeOf[Bounded] &&
+          a.tpe =:= typeOf[Bounded] && {
             !(getBoundedIntegerFromContext(paramValue, context) <:< BoundedInteger(a))
+          }
         }
       } yield { Error("Failure") })
   }

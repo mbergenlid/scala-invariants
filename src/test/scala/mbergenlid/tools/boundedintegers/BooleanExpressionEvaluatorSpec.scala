@@ -34,9 +34,8 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       val context = cut.evaluate(cond)
 
       val Some(x) = context(xSymb.symbol)
-      assert(x.min === Int.MinValue)
-      assert(x.max === 9)
       assert(Int.MinValue <:< x)
+      println(BoundedInteger(9, 9))
       assert(9 <:< x)
   }
 
@@ -51,10 +50,9 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       val context = cut.evaluate(cond)
 
       val Some(x) = context(findSymbol("x", cond))
-      assert(x.min === 1)
-      assert(x.max === 9)
       assert(1 <:< x)
       assert(9 <:< x)
+      assert(!(0 <:< x))
   }
 
   test("Condition with disjunction") {
@@ -68,8 +66,6 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       val context = cut.evaluate(cond)
 
       val Some(x) = context(findSymbol("x", cond))
-      assert(x.min === Int.MinValue)
-      assert(x.max === Int.MaxValue)
       assert(-1 <:< x)
       assert(11 <:< x)
       assert(!(4 <:< x))
