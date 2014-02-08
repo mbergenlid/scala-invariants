@@ -35,7 +35,6 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
 
       val Some(x) = context(xSymb.symbol)
       assert(Int.MinValue <:< x)
-      println(BoundedInteger(9, 9))
       assert(9 <:< x)
   }
 

@@ -62,8 +62,6 @@ class BoundedTypeTreesSpec extends FunSuite
     val e2 = And(GreaterThanOrEqual(Int.MinValue), LessThanOrEqual(9))
 
     assert(e1 obviouslySubsetOf e2)
-
-    println(parser.parseAll(parser.expr, "!(x > 10 || x < 0)"))
   }
 
   class ExprParser extends JavaTokenParsers {

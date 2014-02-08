@@ -44,6 +44,9 @@ trait BoundedTypeTrees {
       case Or(left, right) => 
         (this obviouslySubsetOf left) ||
         (this obviouslySubsetOf right)
+      case And(left, right) =>
+        (this obviouslySubsetOf left) &&
+        (this obviouslySubsetOf right)
       case _ => false
     }
     def obviouslyNotSubsetOf(that: Constraint): Boolean = false
@@ -113,8 +116,10 @@ trait BoundedTypeTrees {
   
   case class Equal(v: Expression) extends Constraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
-      case GreaterThanOrEqual(v2) => v2 == v
-      case LessThanOrEqual(v2) => v2 == v
+      case GreaterThan(v2) => v2 < v
+      case GreaterThanOrEqual(v2) => v2 <= v
+      case LessThan(v2) => v2 > v
+      case LessThanOrEqual(v2) => v2 >= v
       case Equal(v2) => v2 == v
       case _ => super.obviouslySubsetOf(that)
     }
