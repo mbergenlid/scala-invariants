@@ -72,4 +72,25 @@ class IfExpressionSpec extends FunSuite
     val result = compile(program)
     assert(result.size === 0)
   }
+
+  test("Test bound to symbol") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |val maxValue = 10
+          |def testMethod(@Bounded(min=0, max=maxValue)a: Int, b: String) = 1
+          |
+          |def randomInteger = 1
+          |val x = randomInteger
+          |if(x > 0 && x < maxValue)
+          |  testMethod(x, "Valid variable")
+          |
+          |if(x > 0)
+          |  testMethod(x, "Invalid variable")
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 1)
+  }
 }

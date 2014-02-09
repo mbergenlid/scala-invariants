@@ -66,14 +66,31 @@ trait MyUniverse extends BoundedTypeTrees {
 
   object BoundedInteger {
     def apply(bounds: Annotation): BoundedInteger = {
-      val List(Literal(Constant(min: Int)), Literal(Constant(max: Int))) = bounds.scalaArgs
-      BoundedInteger(min, max)
+      val List(min, max) = bounds.scalaArgs
+      val maxOption = extractExpression(max)
+      val minOption = extractExpression(min)
+
+      (minOption, maxOption) match {
+        case (None, None) => new BoundedInteger
+        case (None, Some(x)) => new BoundedInteger(LessThanOrEqual(x))
+        case (Some(x), None) => new BoundedInteger(GreaterThanOrEqual(x))
+        case (Some(x), Some(y)) => new BoundedInteger(And(
+          LessThanOrEqual(y),
+          GreaterThanOrEqual(x)
+        ))
+      }
+    }
+
+    private def extractExpression(tree: Tree): Option[Expression] = tree match {
+      case Literal(Constant(x: Int)) if(x != Int.MinValue && x != Int.MaxValue) => Some(ConstantValue(x))
+      case x: Ident if(x.symbol != NoSymbol) => Some(SymbolExpression(x.symbol))
+      case _ => None
     }
 
     def apply(tree: Tree): BoundedInteger = {
       assert(tree.tpe <:< typeOf[Int])
       tree match {
-        case Literal(Constant(value: Int)) => BoundedInteger(value, value)
+        case Literal(Constant(value: Int)) => BoundedInteger(Equal(ConstantValue(value)))
         case t =>
           val annotationOption = t.symbol.annotations.find( _.tpe =:= typeOf[Bounded])
           annotationOption match {

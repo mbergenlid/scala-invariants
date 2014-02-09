@@ -139,7 +139,8 @@ trait BoundedTypeTrees {
       case a: And => a.forall { child =>
         (this exist ( _ obviouslySubsetOf child ))
       }
-      case _ => super.obviouslySubsetOf(that)
+      case Or(_,_) => super.obviouslySubsetOf(that)
+      case _ => this exist ( _ obviouslySubsetOf that )
     }
 
     //!(a && b)
