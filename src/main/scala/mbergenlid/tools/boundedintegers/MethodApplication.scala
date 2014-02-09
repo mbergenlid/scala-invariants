@@ -14,7 +14,19 @@ trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
             !(getBoundedIntegerFromContext(paramValue, context) <:< BoundedInteger(a))
           }
         }
-      } yield { Error("Failure") })
+      } yield { Error(method.pos, createErrorMessage(argSymbol, annotation, paramValue, context)) })
+  }
+
+  private def createErrorMessage(argSymbol: Symbol, bounds: Annotation, appliedParam: Tree, context: Context): String = {
+    val paramBounds = getBoundedIntegerFromContext(appliedParam, context) 
+    s"""
+      |Can not assign $appliedParam to $argSymbol.
+      |
+      |Unable to prove that:
+      |  $appliedParam constrained by (${paramBounds.constraint.prettyPrint(appliedParam.toString)})
+      |is a subtype of
+      |  ${argSymbol.name} constrained by (${BoundedInteger(bounds).constraint.prettyPrint(argSymbol.name.toString)})
+    """.stripMargin
   }
 
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {

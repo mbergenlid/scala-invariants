@@ -23,6 +23,8 @@ trait BoundedTypeTrees {
       case SymbolExpression(s) => symbol == s
       case _ => false
     }
+
+    override def toString = symbol.toString
   }
   case class ConstantValue(expr: Int) extends Expression {
     def >(that: Expression) = compareWith(that, _>_)
@@ -37,6 +39,8 @@ trait BoundedTypeTrees {
 
     override def increment: Expression = ConstantValue(expr+1)
     override def decrement: Expression = ConstantValue(expr-1)
+
+    override def toString = expr.toString
   }
 
   sealed trait Constraint {
@@ -51,6 +55,7 @@ trait BoundedTypeTrees {
     }
     def obviouslyNotSubsetOf(that: Constraint): Boolean = false
     def unary_! : Constraint
+    def prettyPrint(variable: String): String = this.toString
   }
 
   case object NoConstraints extends Constraint {
@@ -72,6 +77,9 @@ trait BoundedTypeTrees {
     }
     
     def unary_! = GreaterThanOrEqual(v)
+
+    override def prettyPrint(variable: String) =
+      s"$variable < $v"
   }
   /**
    * <= x
@@ -88,6 +96,9 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = GreaterThan(v)
+
+    override def prettyPrint(variable: String) =
+      s"$variable <= $v"
   }
 
   /**
@@ -102,6 +113,8 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = LessThanOrEqual(v)
+    override def prettyPrint(variable: String) =
+      s"$variable > $v"
   }
 
   case class GreaterThanOrEqual(v: Expression) extends Constraint {
@@ -112,6 +125,8 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = LessThan(v)
+    override def prettyPrint(variable: String) =
+      s"$variable >= $v"
   }
   
   case class Equal(v: Expression) extends Constraint {
@@ -125,6 +140,8 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = Or(LessThan(v), GreaterThan(v))
+    override def prettyPrint(variable: String) =
+      s"$variable == $v"
   }
 
   /**
@@ -147,6 +164,14 @@ trait BoundedTypeTrees {
     //!a || !b
     def unary_! = Or(!left, !right)
 
+    override def prettyPrint(variable: String) =
+      s"${prettyPrint(left, variable)} && ${prettyPrint(right, variable)}"
+
+    def prettyPrint(child: Constraint, variable: String) = child match {
+      case Or(_, _) => s"(${child.prettyPrint(variable)})"
+      case _ => child.prettyPrint(variable)
+    }
+
     def exist(p: Constraint => Boolean): Boolean = exist(this, p)
 
     private def exist(child: Constraint, p: Constraint => Boolean): Boolean = child match {
@@ -159,6 +184,7 @@ trait BoundedTypeTrees {
       case And(l2, r2) => forall(l2, p) && forall(r2, p)
       case _ => p(child)
     }
+
   }
 
   case class Or(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
@@ -167,6 +193,9 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = And(!left, !right)
+
+    override def prettyPrint(variable: String) =
+      s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
 
     def foreach[U](f: Constraint => U): Unit = foreach(this, f)
 

@@ -10,10 +10,11 @@ trait MyUniverse extends BoundedTypeTrees {
 
   type BoundedSymbol = global.Symbol
   trait BoundedTypeError {
+    def pos: Position
     def message: String
   }
-  case class Error(message: String) extends BoundedTypeError
-  case class Warning(message: String) extends BoundedTypeError
+  case class Error(pos: Position, message: String) extends BoundedTypeError
+  case class Warning(pos: Position, message: String) extends BoundedTypeError
 
   class Context(private val symbols: Map[Symbol, BoundedInteger]) {
     type Operator = (BoundedInteger, BoundedInteger) => BoundedInteger

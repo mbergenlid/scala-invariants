@@ -34,7 +34,7 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
         val errors = typeChecker.checkBoundedTypes(
           unit.body.asInstanceOf[typeChecker.global.Tree])
         errors foreach { e =>
-          unit.error(unit.body.pos, e.message)
+          unit.error(e.pos.asInstanceOf[Position], e.message)
         }
       }
     }
