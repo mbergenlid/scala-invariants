@@ -4,7 +4,7 @@ package mbergenlid.tools.boundedintegers
 import scala.reflect.api.Universe
 import scala.language.implicitConversions
 
-trait MyUniverse extends BoundedTypeTrees {
+trait MyUniverse extends BoundedTypeTrees with TypeConstraintValidator {
   val global: Universe
   import global._
 
