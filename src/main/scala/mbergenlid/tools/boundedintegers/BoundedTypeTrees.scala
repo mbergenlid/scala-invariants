@@ -151,13 +151,13 @@ trait BoundedTypeTrees {
    * (x > -1 && x < 10 && x < y) || (x < 0 && y > 5)
    * 
    */
-  case class And(left: Constraint, right: Constraint) extends Constraint {
+  case class And(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case a: And => a.forall { child =>
-        (this exist ( _ obviouslySubsetOf child ))
+        (this exists ( _ obviouslySubsetOf child ))
       }
       case Or(_,_) => super.obviouslySubsetOf(that)
-      case _ => this exist ( _ obviouslySubsetOf that )
+      case _ => this exists ( _ obviouslySubsetOf that )
     }
 
     //!(a && b)
@@ -172,19 +172,12 @@ trait BoundedTypeTrees {
       case _ => child.prettyPrint(variable)
     }
 
-    def exist(p: Constraint => Boolean): Boolean = exist(this, p)
+    def foreach[U](f: Constraint => U): Unit = foreach(this, f)
 
-    private def exist(child: Constraint, p: Constraint => Boolean): Boolean = child match {
-      case And(l2, r2) => exist(l2, p) || exist(r2, p)
-      case _ => p(child)
+    def foreach[U](child: Constraint, f: Constraint => U): Unit = child match {
+      case And(l2, r2) => foreach(l2, f); foreach(r2, f)
+      case _ => f(child)
     }
-    def forall(p: Constraint => Boolean): Boolean = forall(this, p)
-
-    private def forall(child: Constraint, p: Constraint => Boolean): Boolean = child match {
-      case And(l2, r2) => forall(l2, p) && forall(r2, p)
-      case _ => p(child)
-    }
-
   }
 
   case class Or(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
