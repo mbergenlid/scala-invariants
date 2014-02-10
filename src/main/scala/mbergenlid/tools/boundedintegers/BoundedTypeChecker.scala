@@ -118,18 +118,28 @@ trait MyUniverse extends BoundedTypeTrees with TypeConstraintValidator {
 }
 
 
-class BoundedTypeChecker(val global: Universe) extends MyUniverse
+abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
                                                 with AbstractBoundsValidator
                                                 with BooleanExpressionEvaluator {
 
   import global._
+  var errors: List[BoundedTypeError] = Nil
+
+  def reportError(error: BoundedTypeError) {
+    errors = error :: errors
+  }
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
+    errors = Nil
     checkBounds(new Context())(tree)
+    errors
   }
 
   def checkBounds(context: Context)(tree: Tree) = {
-    tree.children.flatMap(checkBounds(context))
+    tree.children.map(checkBounds(context)) match {
+      case x :: xs => x
+      case Nil => new BoundedInteger
+    }
   }
 
 }

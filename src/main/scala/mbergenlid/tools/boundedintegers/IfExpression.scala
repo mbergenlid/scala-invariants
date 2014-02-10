@@ -13,7 +13,7 @@ trait IfExpression extends AbstractBoundsValidator {
   private def validate(context: Context): Validator = {
     case If(cond, _then, _else) => {
       val newContext = evaluate(cond)
-      checkBounds(context && newContext)(_then) ++
+      checkBounds(context && newContext)(_then) ||
       checkBounds(context && !newContext)(_else)
     }
   }
