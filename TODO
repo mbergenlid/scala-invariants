@@ -8,7 +8,7 @@
 *========================================================================
 
 
-* Produce meaningful Error messages
+= Produce meaningful Error messages
 * If variable constrained by another variable, we need to check that that
   variable hasn't changed since the constraint was verified.
   - Perhaps start by only allowing binding to vals in @Bounded
@@ -17,9 +17,11 @@
   - e.g. x > 0 && callMethodWith(x) -- callMethodWith should now be able
     to expect that its parameter is > 0
 
-* Refactor the "assignable" test from MethodApplication
+= Refactor the "assignable" test from MethodApplication
 * Introduce more complex expressions
 
 * Create a test 'framework' that will execute test programs in files.
 
 * Generalise the Constraints in order to easily add Constraints for new types.
+
+* Validate DefDef return values.
