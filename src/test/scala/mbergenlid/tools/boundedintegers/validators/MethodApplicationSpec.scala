@@ -1,5 +1,6 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.tools.boundedintegers.validators
 
+import mbergenlid.tools.boundedintegers._
 import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror

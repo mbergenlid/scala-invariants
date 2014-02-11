@@ -80,10 +80,12 @@ class BoundedTypeCheckerSpec extends FunSuite
           |def randomInteger = 1
           |testMethod(randomInteger, "Invalid variable")
           |
+          |val x = randomInteger
+          |testMethod(x, "Also invalid")
           """.stripMargin
 
     val result = compile(program)
-    assert(result.size === 1)
+    assert(result.size === 2)
   }
 
   test("Test return statement") {

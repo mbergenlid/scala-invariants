@@ -1,5 +1,7 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.tools.boundedintegers.validators
 
+
+import mbergenlid.tools.boundedintegers._
 import scala.reflect.api.Universe
 
 trait IfExpression extends AbstractBoundsValidator {

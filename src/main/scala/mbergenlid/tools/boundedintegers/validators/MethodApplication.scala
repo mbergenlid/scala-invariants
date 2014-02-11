@@ -1,4 +1,6 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.tools.boundedintegers.validators
+
+import mbergenlid.tools.boundedintegers._
 
 trait MethodApplication extends AbstractBoundsValidator {
   self: MyUniverse with TypeConstraintValidator =>
