@@ -3,6 +3,8 @@ package mbergenlid.tools.boundedintegers
 import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
+import validators._
+
 
 class BoundedTypeCheckerSpec extends FunSuite
   with MyUniverse {
@@ -10,7 +12,8 @@ class BoundedTypeCheckerSpec extends FunSuite
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
-                                          with IfExpression 
+                                          with IfExpression
+                                          with Assignment
 
   val testProgram = 
     """
@@ -19,7 +22,6 @@ class BoundedTypeCheckerSpec extends FunSuite
     |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
     |
     |testMethod(4, "In range")
-    |
     |testMethod(11, "Over limit")
     |testMethod(-1, "Below limit")
     """.stripMargin
@@ -78,6 +80,19 @@ class BoundedTypeCheckerSpec extends FunSuite
           |def randomInteger = 1
           |testMethod(randomInteger, "Invalid variable")
           |
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 1)
+  }
+
+  test("Test return statement") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |@Bounded(min=0, max=10) val x = 11
+          |x
           """.stripMargin
 
     val result = compile(program)

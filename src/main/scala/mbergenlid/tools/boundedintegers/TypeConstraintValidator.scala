@@ -2,29 +2,22 @@ package mbergenlid.tools.boundedintegers
 
 import scala.language.implicitConversions
 
-trait TypeConstraintValidator { self: MyUniverse =>
+trait TypeConstraintValidator extends AbstractBoundsValidator {
+  self: MyUniverse =>
 
   import global._
 
   implicit class ConstrainedSymbol(symbol: Symbol) {
 
-    def tryAssign(expr: Tree)(implicit context: Context): Option[String] = {
+    def tryAssign(expr: Tree)(implicit context: Context): BoundedInteger = {
       val boundedAnnotation = symbol.annotations.find(_.tpe =:= typeOf[Bounded])
+      val boundedExpr = checkBounds(context)(expr)
       if(boundedAnnotation.isDefined) {
-        val boundedExpr = getBoundedIntegerFromContext(expr, context)
         val target = BoundedInteger(boundedAnnotation.get)
-        if(boundedExpr <:< target) None
-        else Some(createErrorMessage(symbol, target, expr, boundedExpr)(context))
-      } else {
-        None
-      }
-    }
-
-    private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
-      context(tree.symbol) match {
-        case Some(x) => x
-        case None => BoundedInteger(tree)
-      }
+        if(!(boundedExpr <:< target)) 
+          reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
+      } 
+      boundedExpr
     }
 
     private def createErrorMessage(targetSymbol: Symbol, targetBounds: BoundedInteger,

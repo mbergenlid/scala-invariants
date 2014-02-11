@@ -4,7 +4,7 @@ package mbergenlid.tools.boundedintegers
 import scala.reflect.api.Universe
 import scala.language.implicitConversions
 
-trait MyUniverse extends BoundedTypeTrees with TypeConstraintValidator {
+trait MyUniverse extends BoundedTypeTrees {
   val global: Universe
   import global._
 
@@ -89,15 +89,16 @@ trait MyUniverse extends BoundedTypeTrees with TypeConstraintValidator {
     }
 
     def apply(tree: Tree): BoundedInteger = {
-      assert(tree.tpe <:< typeOf[Int])
       tree match {
-        case Literal(Constant(value: Int)) => BoundedInteger(Equal(ConstantValue(value)))
-        case t =>
+        case Literal(Constant(value: Int)) =>
+          BoundedInteger(Equal(ConstantValue(value)))
+        case t if(t.symbol != null) =>
           val annotationOption = t.symbol.annotations.find( _.tpe =:= typeOf[Bounded])
           annotationOption match {
             case Some(annotation) => this.apply(annotation)
-            case None => new BoundedInteger
+            case None => noBounds
           }
+        case _ => noBounds
       }
     }
 
@@ -114,12 +115,15 @@ trait MyUniverse extends BoundedTypeTrees with TypeConstraintValidator {
 
     implicit def integerToBounded(x: Int) = BoundedInteger(Equal(ConstantValue(x)))
 
+    val noBounds = new BoundedInteger
+
   }
 }
 
 
 abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
                                                 with AbstractBoundsValidator
+                                                with TypeConstraintValidator
                                                 with BooleanExpressionEvaluator {
 
   import global._
@@ -136,10 +140,22 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   def checkBounds(context: Context)(tree: Tree) = {
-    tree.children.map(checkBounds(context)) match {
-      case x :: xs => x
-      case Nil => new BoundedInteger
+    if(tree.children.isEmpty) {
+      getBoundedIntegerFromContext(tree, context)
+    } else {
+      (context /: tree.children) {(c,child) =>
+        val bounds = checkBounds(c)(child)
+        if(bounds == BoundedInteger.noBounds) c
+        else c && new Context(Map(child.symbol -> bounds))
+      }
+      BoundedInteger.noBounds
     }
   }
+
+  private def getBoundedIntegerFromContext(tree: Tree, context: Context) = 
+    context(tree.symbol) match {
+      case Some(x) => x
+      case None => BoundedInteger(tree)
+    }
 
 }

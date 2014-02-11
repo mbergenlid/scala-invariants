@@ -1,6 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
-trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
+trait MethodApplication extends AbstractBoundsValidator {
+  self: MyUniverse with TypeConstraintValidator =>
   import global._
 
   abstract override def checkBounds(context: Context)(tree: Tree) = 
@@ -9,8 +10,7 @@ trait MethodApplication extends AbstractBoundsValidator { self: MyUniverse =>
   private def validate(implicit context: Context): Validator = {
       case Apply(method, args) if(method.symbol.isMethod) => (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args) 
-        errorMessage <- argSymbol.tryAssign(paramValue)
-      } { reportError(Error(method.pos, errorMessage)) }); new BoundedInteger
+      } { argSymbol.tryAssign(paramValue) }); BoundedInteger.noBounds
   }
 
   protected[boundedintegers] 

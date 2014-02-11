@@ -7,6 +7,7 @@ import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
 import nsc.transform.{ Transform, TypingTransformers }
 import nsc.symtab.Flags
+import validators._
 
 
 class BoundedIntegersPlugin(val global: Global) extends Plugin {
@@ -28,7 +29,9 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
 
     class BoundedIntegersPhase(prev: Phase) extends StdPhase(prev) {
       override def name = BoundedIntegersPlugin.this.name
-      val typeChecker = new BoundedTypeChecker(global) with MethodApplication with IfExpression
+      val typeChecker = new BoundedTypeChecker(global) with TypeConstraintValidator 
+                                                        with IfExpression
+                                                        with Assignment
 
       def apply(unit: CompilationUnit) {
         val errors = typeChecker.checkBoundedTypes(
