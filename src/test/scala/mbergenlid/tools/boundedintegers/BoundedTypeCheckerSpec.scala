@@ -101,4 +101,22 @@ class BoundedTypeCheckerSpec extends FunSuite
     assert(result.size === 1)
   }
 
+  test("Annotated method application") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |def testMethod(@Bounded(min=0, max=11)a: Int) = 5
+          |
+          |@Bounded(min=0, max=10)
+          |def constrained() = 5
+          |
+          |val x = constrained()
+          |testMethod(x)
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 0)
+  }
+
 }

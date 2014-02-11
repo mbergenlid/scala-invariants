@@ -12,7 +12,7 @@ trait MethodApplication extends AbstractBoundsValidator {
   private def validate(implicit context: Context): Validator = {
       case Apply(method, args) if(method.symbol.isMethod) => (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args) 
-      } { argSymbol.tryAssign(paramValue) }); BoundedInteger.noBounds
+      } { argSymbol.tryAssign(paramValue) }); BoundedInteger(method)
   }
 
   protected[boundedintegers] 
