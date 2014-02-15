@@ -56,6 +56,8 @@ trait BoundedTypeTrees {
     def obviouslyNotSubsetOf(that: Constraint): Boolean = false
     def unary_! : Constraint
     def prettyPrint(variable: String): String = this.toString
+
+    def upperBound: Constraint
   }
 
   case object NoConstraints extends Constraint {
@@ -63,6 +65,8 @@ trait BoundedTypeTrees {
       this == that
 
     def unary_! = this
+
+    def upperBound = this
   }
 
   /**
@@ -80,6 +84,8 @@ trait BoundedTypeTrees {
 
     override def prettyPrint(variable: String) =
       s"$variable < $v"
+
+    def upperBound = this
   }
   /**
    * <= x
@@ -99,6 +105,8 @@ trait BoundedTypeTrees {
 
     override def prettyPrint(variable: String) =
       s"$variable <= $v"
+
+    def upperBound = LessThan(v)
   }
 
   /**
@@ -115,6 +123,8 @@ trait BoundedTypeTrees {
     def unary_! = LessThanOrEqual(v)
     override def prettyPrint(variable: String) =
       s"$variable > $v"
+
+    def upperBound = NoConstraints
   }
 
   case class GreaterThanOrEqual(v: Expression) extends Constraint {
@@ -127,6 +137,8 @@ trait BoundedTypeTrees {
     def unary_! = LessThan(v)
     override def prettyPrint(variable: String) =
       s"$variable >= $v"
+
+    def upperBound = NoConstraints
   }
   
   case class Equal(v: Expression) extends Constraint {
@@ -142,6 +154,8 @@ trait BoundedTypeTrees {
     def unary_! = Or(LessThan(v), GreaterThan(v))
     override def prettyPrint(variable: String) =
       s"$variable == $v"
+
+    def upperBound = LessThan(v)
   }
 
   /**
@@ -163,6 +177,15 @@ trait BoundedTypeTrees {
     //!(a && b)
     //!a || !b
     def unary_! = Or(!left, !right)
+
+    def upperBound = map ((_:Constraint).upperBound)
+
+    def map(f: Constraint => Constraint) = (f(left), f(right)) match {
+      case (NoConstraints, NoConstraints) => NoConstraints
+      case (NoConstraints, x) => x
+      case (x, NoConstraints) => x
+      case (x, y) => And(x,y)
+    }
 
     override def prettyPrint(variable: String) =
       s"${prettyPrint(left, variable)} && ${prettyPrint(right, variable)}"
@@ -186,6 +209,8 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = And(!left, !right)
+
+    def upperBound = this
 
     override def prettyPrint(variable: String) =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"

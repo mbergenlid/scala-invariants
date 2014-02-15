@@ -119,4 +119,27 @@ class BoundedTypeCheckerSpec extends FunSuite
     assert(result.size === 0)
   }
 
+  test("Transitive constraints") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int) = 2
+          |
+          |@Bounded(min=0, max=10)
+          |def randomInteger = 4
+          |def anotherRandomInteger = 20
+          |
+          |val x = randomInteger
+          |val y = anotherRandomInteger
+          |
+          |if(y > 0 && y < x) testMethod(y)
+          """.stripMargin
+
+    val result = compile(program)
+    println(result)
+    assert(result.size === 0)
+  }
+
 }

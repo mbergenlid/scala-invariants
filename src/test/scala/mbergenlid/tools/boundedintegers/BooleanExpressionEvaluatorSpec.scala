@@ -12,6 +12,8 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
   val global = tb.u
   val cut = new BoundedTypeChecker(tb.u) with BooleanExpressionEvaluator
 
+  implicit val emptyContext = new cut.Context
+
   import cut.global._
   import cut.BoundedInteger._
   def typeCheck(program: String) =
@@ -23,7 +25,6 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
   }.get.symbol
 
   test("Simple condition") {
-    import cut.global._
     val program =
       """
       |val x = 1

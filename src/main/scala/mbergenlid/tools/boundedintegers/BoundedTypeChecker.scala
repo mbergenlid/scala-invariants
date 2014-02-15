@@ -20,6 +20,7 @@ trait MyUniverse extends BoundedTypeTrees {
     type Operator = (BoundedInteger, BoundedInteger) => BoundedInteger
     def this() = this(Map.empty)
     def apply(symbol: Symbol) = symbols.get(symbol)
+    def get(symbol: Symbol) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
     def &&(other: Context) = combineWith(other, _&&_)
 
     def ||(other: Context) = combineWith(other, _||_)
@@ -32,6 +33,11 @@ trait MyUniverse extends BoundedTypeTrees {
       new Context(map)
     }
 
+    def &(s: Symbol, bounds: BoundedInteger) = {
+      val oldBounds = symbols.getOrElse(s, new BoundedInteger)
+      new Context(symbols + (s -> (oldBounds && bounds)))
+    }
+      
     def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
     def size = symbols.size
     override def toString = symbols.toString
@@ -55,6 +61,18 @@ trait MyUniverse extends BoundedTypeTrees {
       case NoConstraints => new BoundedInteger(other.constraint)
       case c => new BoundedInteger(Or(constraint, other.constraint))
     }
+
+    /** 
+     *  x < y < 10
+     *  y < 10 && y > 0
+     *
+     *  x < y 
+     *  y < 10 || y > 100
+     */
+    def <|(other: BoundedInteger) =
+      BoundedInteger(other.constraint.upperBound) && this
+
+    def >|(other: BoundedInteger) = this
 
     def unary_! = new BoundedInteger(!constraint)
 

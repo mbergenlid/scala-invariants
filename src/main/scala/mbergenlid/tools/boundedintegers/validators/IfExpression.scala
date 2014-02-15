@@ -12,7 +12,7 @@ trait IfExpression extends AbstractBoundsValidator {
   abstract override def checkBounds(context: Context)(tree: Tree) =
     validate(context).applyOrElse(tree, super.checkBounds(context) _)
 
-  private def validate(context: Context): Validator = {
+  private def validate(implicit context: Context): Validator = {
     case If(cond, _then, _else) => {
       val newContext = evaluate(cond)
       checkBounds(context && newContext)(_then) ||
