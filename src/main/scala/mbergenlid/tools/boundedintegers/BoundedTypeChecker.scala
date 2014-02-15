@@ -154,26 +154,28 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
     errors = Nil
     checkBounds(new Context())(tree)
-    errors
+    errors.reverse
   }
 
   def checkBounds(context: Context)(tree: Tree) = {
     if(tree.children.isEmpty) {
       getBoundedIntegerFromContext(tree, context)
-    } else {
-      (context /: tree.children) {(c,child) =>
-        val bounds = checkBounds(c)(child)
-        if(bounds == BoundedInteger.noBounds) c
-        else c && new Context(Map(child.symbol -> bounds))
-      }
-      BoundedInteger.noBounds
+    } else tree match {
+      case Select(_,_) => getBoundedIntegerFromContext(tree, context)
+      case _ => 
+        (context /: tree.children) {(c,child) =>
+          val bounds = checkBounds(c)(child)
+          if(bounds == BoundedInteger.noBounds) c
+          else c && new Context(Map(child.symbol -> bounds))
+        }
+        BoundedInteger.noBounds
     }
   }
 
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = 
     context(tree.symbol) match {
       case Some(x) => x
-      case None => BoundedInteger(tree)
+      case None => { BoundedInteger(tree) }
     }
 
 }

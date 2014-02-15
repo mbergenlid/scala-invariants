@@ -6,132 +6,50 @@ import scala.reflect.runtime.universe.runtimeMirror
 import validators._
 
 
-class BoundedTypeCheckerSpec extends FunSuite
+class BoundedTypeCheckerSpec extends PluginTestRunner
   with MyUniverse {
   
-  lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
-  val global = tb.u
-  val cut = new BoundedTypeChecker(tb.u) with MethodApplication
-                                          with IfExpression
-                                          with Assignment
-
-  val testProgram = 
-    """
-    |import mbergenlid.tools.boundedintegers.Bounded
-    |
-    |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
-    |
-    |testMethod(4, "In range")
-    |testMethod(11, "Over limit")
-    |testMethod(-1, "Below limit")
-    """.stripMargin
-
-  def typeCheck(program: String = testProgram) =
-    tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
-
-  def compile(program: String = testProgram): List[cut.BoundedTypeError] =
-    cut.checkBoundedTypes(typeCheck(program))
-
-
   test("Failure with constant argument") {
-    val result = compile()
-    assert(result.size === 2)
+    compile("""
+    |testMethod(4)
+    |testMethod(11)
+    |testMethod(-1)
+    """.stripMargin)(List(3,4))
   }
 
   test("Should fail if called with variable that is not itself within range") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
-          |
+    compile("""
           |val x = 11
-          |testMethod(x, "Invalid variable")
-          |
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 1)
+          |testMethod(x)
+          """.stripMargin)(List(3))
   }
 
   test("Should not fail if variable is annotated") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
-          |
+    compile("""
           |@Bounded(10, 10) val x = 10
-          |testMethod(x, "Invalid variable")
-          |
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 0)
+          |testMethod(x)
+          """.stripMargin)(Nil)
   }
 
   test("Should fail if called with arbitrary Int expression") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
-          |
-          |def randomInteger = 1
-          |testMethod(randomInteger, "Invalid variable")
-          |
-          |val x = randomInteger
-          |testMethod(x, "Also invalid")
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 2)
+    compile("""
+          |testMethod(anotherRandomInteger)
+          |val x = anotherRandomInteger
+          |testMethod(x)
+          """.stripMargin)(List(2, 4))
   }
 
   test("Test return statement") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
+    compile("""
           |@Bounded(min=0, max=10) val x = 11
-          |x
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 1)
-  }
-
-  test("Annotated method application") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |def testMethod(@Bounded(min=0, max=11)a: Int) = 5
-          |
-          |@Bounded(min=0, max=10)
-          |def constrained() = 5
-          |
-          |val x = constrained()
-          |testMethod(x)
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 0)
+          |println(x)
+          """.stripMargin)(List(2))
   }
 
   test("Transitive constraints") {
     val program =
           """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int) = 2
-          |
-          |@Bounded(min=0, max=10)
-          |def randomInteger = 4
-          |def anotherRandomInteger = 20
-          |
-          |val x = randomInteger
+          |val x = intBetween0And10
           |val y = anotherRandomInteger
           |val z = anotherRandomInteger
           |
@@ -140,56 +58,26 @@ class BoundedTypeCheckerSpec extends FunSuite
           |}
           """.stripMargin
 
-    val result = compile(program)
-    assert(result.size === 0)
+    compile(program)(Nil)
   }
 
   test("Transitive in same boolean expression") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int) = 2
-          |
-          |@Bounded(min=0, max=10)
-          |def randomInteger = 4
-          |def anotherRandomInteger = 20
-          |
-          |val x = randomInteger
+    compile("""
+          |val x = intBetween0And10
           |val y = anotherRandomInteger
           |val z = anotherRandomInteger
           |
           |if(y < x && z > 0 && z < y) testMethod(z)
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 0)
+          """.stripMargin)(Nil)
   }
 
-  test("Validation in middle of boolean expression") {
-    val program =
-          """
-          |import mbergenlid.tools.boundedintegers.Bounded
-          |
-          |def testMethod(@Bounded(min=0, max=10)a: Int) = a == 3
-          |
-          |@Bounded(min=0, max=Int.MaxValue)
-          |def randomInteger = 4
-          |def anotherRandomInteger = 20
-          |
+  test("Validation in middle of boolean expression") { 
+    compile("""
           |val x = randomInteger
-          |val y = anotherRandomInteger
-          |val z = anotherRandomInteger
           |
+          |if(x < 10 && testMethod(x)) println("Should compile")
           |if(x > 0 && testMethod(x)) println("Should not compile")
-          |
-          |if(x < 10 && testMethod(x)) println("This should compile")
-          """.stripMargin
-
-    val result = compile(program)
-    assert(result.size === 1)
-    assert(result.head.pos.line == 14)
+          """.stripMargin)(List(5))
   }
 
 }

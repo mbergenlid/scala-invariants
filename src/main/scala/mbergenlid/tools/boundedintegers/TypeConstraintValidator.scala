@@ -14,6 +14,8 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       val boundedExpr = checkBounds(context)(expr)
       if(boundedAnnotation.isDefined) {
         val target = BoundedInteger(boundedAnnotation.get)
+//        val pretty = boundedExpr.constraint.prettyPrint("x")
+//        println(s"$symbol = $pretty")
         if(!(boundedExpr <:< target)) 
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
       } 
