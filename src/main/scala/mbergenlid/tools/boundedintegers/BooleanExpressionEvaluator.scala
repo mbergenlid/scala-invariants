@@ -22,13 +22,13 @@ trait BooleanExpressionEvaluator { self: MyUniverse =>
         obj.symbol -> apply(BoundedInteger(obj), method, arg).getOrElse(BoundedInteger.noBounds)
       ))
     case Apply(Select(boolExpr, method), List(arg)) if(boolExpr.tpe <:< typeOf[Boolean]) =>
-      apply(evaluate(boolExpr), method, evaluate(arg)) 
+      apply(evaluate(boolExpr), method, arg) 
       
   }
 
-  def apply(obj: Context, method: Name, other: Context) = method match {
-    case a if(a == stringToTermName("$amp$amp")) => obj && other
-    case a if(a == stringToTermName("$bar$bar")) => obj || other
+  def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
+    case a if(a == stringToTermName("$amp$amp")) => obj && (evaluate(arg)(obj && c))
+    case a if(a == stringToTermName("$bar$bar")) => obj || (evaluate(arg))
     case _ => obj
   }
 

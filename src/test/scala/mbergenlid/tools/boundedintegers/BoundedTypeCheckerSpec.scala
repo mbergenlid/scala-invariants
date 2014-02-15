@@ -133,12 +133,37 @@ class BoundedTypeCheckerSpec extends FunSuite
           |
           |val x = randomInteger
           |val y = anotherRandomInteger
+          |val z = anotherRandomInteger
           |
-          |if(y > 0 && y < x) testMethod(y)
+          |if(y < x) {
+          |  if(z > 0 && z < y) testMethod(z)
+          |}
           """.stripMargin
 
     val result = compile(program)
-    println(result)
+    assert(result.size === 0)
+  }
+
+  test("Transitive in same boolean expression") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int) = 2
+          |
+          |@Bounded(min=0, max=10)
+          |def randomInteger = 4
+          |def anotherRandomInteger = 20
+          |
+          |val x = randomInteger
+          |val y = anotherRandomInteger
+          |val z = anotherRandomInteger
+          |
+          |if(y < x && z > 0 && z < y) testMethod(z)
+          """.stripMargin
+
+    val result = compile(program)
     assert(result.size === 0)
   }
 
