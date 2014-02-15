@@ -167,4 +167,29 @@ class BoundedTypeCheckerSpec extends FunSuite
     assert(result.size === 0)
   }
 
+  test("Validation in middle of boolean expression") {
+    val program =
+          """
+          |import mbergenlid.tools.boundedintegers.Bounded
+          |
+          |def testMethod(@Bounded(min=0, max=10)a: Int) = a == 3
+          |
+          |@Bounded(min=0, max=Int.MaxValue)
+          |def randomInteger = 4
+          |def anotherRandomInteger = 20
+          |
+          |val x = randomInteger
+          |val y = anotherRandomInteger
+          |val z = anotherRandomInteger
+          |
+          |if(x > 0 && testMethod(x)) println("Should not compile")
+          |
+          |if(x < 10 && testMethod(x)) println("This should compile")
+          """.stripMargin
+
+    val result = compile(program)
+    assert(result.size === 1)
+    assert(result.head.pos.line == 14)
+  }
+
 }

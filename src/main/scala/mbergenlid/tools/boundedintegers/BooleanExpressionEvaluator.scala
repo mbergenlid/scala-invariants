@@ -1,9 +1,20 @@
 package mbergenlid.tools.boundedintegers
 
-trait BooleanExpressionEvaluator { self: MyUniverse =>
+trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
+  self: MyUniverse =>
   import global._
 
-  import scala.language.implicitConversions
+  def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
+    case Apply(Select(obj, method), List(arg)) if(obj.tpe <:< typeOf[Int] && !obj.symbol.isMethod) => 
+      new Context(Map(
+        obj.symbol -> apply(BoundedInteger(obj), method, arg).getOrElse(BoundedInteger.noBounds)
+      ))
+    case Apply(Select(boolExpr, method), List(arg)) if(boolExpr.tpe <:< typeOf[Boolean]) =>
+      apply(evaluate(boolExpr), method, arg) 
+    case a @ Apply(method, args) =>
+      checkBounds(c)(a); new Context
+  }
+
   def n(s: String) = stringToTermName(s)
 
   val opToConstraints = Map[Name, (Expression => Constraint)](
@@ -16,15 +27,6 @@ trait BooleanExpressionEvaluator { self: MyUniverse =>
     n("$greater") -> (_ >| _)
   )
 
-  def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
-    case Apply(Select(obj, method), List(arg)) if(obj.tpe <:< typeOf[Int] && !obj.symbol.isMethod) => 
-      new Context(Map(
-        obj.symbol -> apply(BoundedInteger(obj), method, arg).getOrElse(BoundedInteger.noBounds)
-      ))
-    case Apply(Select(boolExpr, method), List(arg)) if(boolExpr.tpe <:< typeOf[Boolean]) =>
-      apply(evaluate(boolExpr), method, arg) 
-      
-  }
 
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
     case a if(a == stringToTermName("$amp$amp")) => obj && (evaluate(arg)(obj && c))
