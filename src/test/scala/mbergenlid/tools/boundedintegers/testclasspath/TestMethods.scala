@@ -3,6 +3,12 @@ package mbergenlid.tools.boundedintegers.testclasspath
 
 object TestMethods {
   import mbergenlid.tools.boundedintegers.Bounded
+  var globalVariable = 5
+  @Bounded(min=0, max=10)
+  var globalBoundedVariable = 5
+  @Bounded(min=0, max=10)
+  var globalBoundedValue = 5
+
   
   def testMethod(@Bounded(min=0, max=10)a: Int) = a == 3
   

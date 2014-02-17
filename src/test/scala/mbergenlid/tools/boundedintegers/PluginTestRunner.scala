@@ -6,7 +6,7 @@ import scala.reflect.runtime.universe.runtimeMirror
 import validators._
 
 
-class PluginTestRunner extends FunSuite
+trait PluginTestRunner extends FunSuite
   with MyUniverse {
   
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
@@ -14,6 +14,7 @@ class PluginTestRunner extends FunSuite
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
                                           with IfExpression
                                           with Assignment
+                                         
 
   import cut.global._
 

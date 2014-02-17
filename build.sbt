@@ -11,9 +11,10 @@ libraryDependencies ++= Seq(
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
-scalacOptions in (Compile, console) <+= (packageBin in Compile) map { bin =>
-    "-Xplugin:"+bin.absolutePath
-}
+
+//scalacOptions in (Compile, Console) <+= (packageBin in Compile) map { bin =>
+//    "-Xplugin:"+bin.absolutePath
+//}
 
 concurrentRestrictions in Global := {
   Tags.limitAll(1) :: Nil

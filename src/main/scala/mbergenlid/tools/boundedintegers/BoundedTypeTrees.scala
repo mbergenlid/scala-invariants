@@ -210,6 +210,13 @@ trait BoundedTypeTrees {
 
     def unary_! = And(!left, !right)
 
+    def map(f: Constraint => Constraint) = (f(left), f(right)) match {
+      case (NoConstraints, NoConstraints) => NoConstraints
+      case (NoConstraints, x) => x
+      case (x, NoConstraints) => x
+      case (x, y) => Or(x,y)
+    }
+
     def upperBound = this
 
     override def prettyPrint(variable: String) =

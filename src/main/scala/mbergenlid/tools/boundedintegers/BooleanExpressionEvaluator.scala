@@ -27,7 +27,6 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     n("$greater") -> (_ >| _)
   )
 
-
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
     case a if(a == stringToTermName("$amp$amp")) => obj && (evaluate(arg)(obj && c))
     case a if(a == stringToTermName("$bar$bar")) => obj || (evaluate(arg))
@@ -44,6 +43,6 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   def fromTree(tree: Tree)(c: Context): (Expression, BoundedInteger) = tree match {
     case Literal(Constant(x: Int)) => (ConstantValue(x), BoundedInteger.noBounds)
-    case _ => (SymbolExpression(tree.symbol), c.get(tree.symbol))
+    case _ => (SymbolExpression(tree.symbol), c(tree.symbol).getOrElse(BoundedInteger(tree)))
   }
 }

@@ -21,6 +21,9 @@ trait MyUniverse extends BoundedTypeTrees {
     def this() = this(Map.empty)
     def apply(symbol: Symbol) = symbols.get(symbol)
     def get(symbol: Symbol) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
+    def removeSymbolConstraints(symbol: Symbol) =
+      new Context(symbols map { case (k,v) => (k -> v.removeSymbolConstraints(symbol))})
+
     def &&(other: Context) = combineWith(other, _&&_)
 
     def ||(other: Context) = combineWith(other, _||_)
@@ -74,6 +77,19 @@ trait MyUniverse extends BoundedTypeTrees {
 
     def >|(other: BoundedInteger) = this
 
+    def removeSymbolConstraints(symbol: Symbol): BoundedInteger =
+      new BoundedInteger(_removeSymbolConstraints(symbol)(constraint))
+
+    private def _removeSymbolConstraints(symbol: Symbol)(c: Constraint): Constraint = c match {
+      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol) _)
+      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol) _)
+      case LessThan(SymbolExpression(s)) => NoConstraints
+      case LessThanOrEqual(SymbolExpression(s)) => NoConstraints
+      case GreaterThan(SymbolExpression(s)) => NoConstraints
+      case GreaterThanOrEqual(SymbolExpression(s)) => NoConstraints
+      case Equal(SymbolExpression(s)) => NoConstraints
+      case _ => c
+    }
     def unary_! = new BoundedInteger(!constraint)
 
     override def toString = s"BoundedInteger($constraint)"
@@ -165,11 +181,17 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case _ => 
         (context /: tree.children) {(c,child) =>
           val bounds = checkBounds(c)(child)
-          if(bounds == BoundedInteger.noBounds) c
-          else c && new Context(Map(child.symbol -> bounds))
+          updateContext(c, child, bounds)
         }
         BoundedInteger.noBounds
     }
+  }
+
+  def updateContext(context: Context, tree: Tree, bounds: BoundedInteger): Context = tree match {
+    case Assign(_, _) => context.removeSymbolConstraints(tree.symbol)
+    case _ if(bounds != BoundedInteger.noBounds) =>
+      context && new Context(Map(tree.symbol -> bounds))
+    case _ => context      
   }
 
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = 
