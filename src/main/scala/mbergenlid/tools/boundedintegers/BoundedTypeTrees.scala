@@ -53,7 +53,6 @@ trait BoundedTypeTrees {
         (this obviouslySubsetOf right)
       case _ => false
     }
-    def obviouslyNotSubsetOf(that: Constraint): Boolean = false
     def unary_! : Constraint
     def prettyPrint(variable: String): String = this.toString
 
@@ -161,17 +160,16 @@ trait BoundedTypeTrees {
   /**
    * x > 0 && x < 100
    *  
-   * (x > -1 && x < 50) || (x >= 50)
+   * (x > -1 && (x < 50 || x < -100)) || (x >= 50)
    * (x > -1 && x < 10 && x < y) || (x < 0 && y > 5)
    * 
    */
-  case class And(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
+  case class And(left: Constraint, right: Constraint) extends Constraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
-      case a: And => a.forall { child =>
-        (this exists ( _ obviouslySubsetOf child ))
-      }
+      case And(_, _) => super.obviouslySubsetOf(that)
       case Or(_,_) => super.obviouslySubsetOf(that)
-      case _ => this exists ( _ obviouslySubsetOf that )
+      case _ => 
+        (left obviouslySubsetOf that) || (right obviouslySubsetOf that)
     }
 
     //!(a && b)
@@ -194,19 +192,11 @@ trait BoundedTypeTrees {
       case Or(_, _) => s"(${child.prettyPrint(variable)})"
       case _ => child.prettyPrint(variable)
     }
-
-    def foreach[U](f: Constraint => U): Unit = foreach(this, f)
-
-    def foreach[U](child: Constraint, f: Constraint => U): Unit = child match {
-      case And(l2, r2) => foreach(l2, f); foreach(r2, f)
-      case _ => f(child)
-    }
   }
 
-  case class Or(left: Constraint, right: Constraint) extends Constraint with Traversable[Constraint] {
-    override def obviouslySubsetOf(that: Constraint) = that match {
-      case c => this.forall(_ obviouslySubsetOf c)
-    }
+  case class Or(left: Constraint, right: Constraint) extends Constraint {
+    override def obviouslySubsetOf(that: Constraint) = 
+      (left obviouslySubsetOf that) && (right obviouslySubsetOf that)
 
     def unary_! = And(!left, !right)
 
@@ -221,12 +211,5 @@ trait BoundedTypeTrees {
 
     override def prettyPrint(variable: String) =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
-
-    def foreach[U](f: Constraint => U): Unit = foreach(this, f)
-
-    def foreach[U](child: Constraint, f: Constraint => U): Unit = child match {
-      case Or(l2, r2) => foreach(l2, f); foreach(r2, f)
-      case _ => f(child)
-    }
   }
 }
