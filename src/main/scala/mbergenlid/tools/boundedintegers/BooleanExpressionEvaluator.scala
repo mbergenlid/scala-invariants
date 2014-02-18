@@ -15,16 +15,11 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
       checkBounds(c)(a); new Context
   }
 
-  def n(s: String) = stringToTermName(s)
+  private def n(s: String) = stringToTermName(s)
 
-  val opToConstraints = Map[Name, (Expression => Constraint)](
+  private val opToConstraints = Map[Name, (Expression => Constraint)](
     n("$less") -> LessThan,
     n("$greater") -> GreaterThan
-  )
-
-  val opToBounds = Map[Name, ((BoundedInteger, BoundedInteger) => BoundedInteger)](
-    n("$less") -> (_ <| _),
-    n("$greater") -> (_ >| _)
   )
 
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
@@ -34,15 +29,14 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   }
 
   def apply(obj: BoundedInteger, method: Name, arg: Tree)(implicit c: Context) = {
-    val (argExpression, argBounds) = fromTree(arg)(c)
+    val argExpression = fromTree(arg)
     for {
       constraint <- opToConstraints.get(method)
-      op <- opToBounds.get(method)
-    } yield { op(obj && BoundedInteger(constraint(argExpression)), argBounds) }
+    } yield { obj && BoundedInteger(constraint(argExpression)) }
   }
 
-  def fromTree(tree: Tree)(c: Context): (Expression, BoundedInteger) = tree match {
-    case Literal(Constant(x: Int)) => (ConstantValue(x), BoundedInteger.noBounds)
-    case _ => (SymbolExpression(tree.symbol), c(tree.symbol).getOrElse(BoundedInteger(tree)))
+  private def fromTree(tree: Tree): Expression = tree match {
+    case Literal(Constant(x: Int)) => ConstantValue(x)
+    case _ => SymbolExpression(tree.symbol)
   }
 }

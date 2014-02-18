@@ -40,6 +40,7 @@ trait MyUniverse extends BoundedTypeTrees {
       val oldBounds = symbols.getOrElse(s, new BoundedInteger)
       new Context(symbols + (s -> (oldBounds && bounds)))
     }
+    def -(s: Symbol) = new Context(symbols - s)
       
     def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
     def size = symbols.size
@@ -90,6 +91,7 @@ trait MyUniverse extends BoundedTypeTrees {
       case Equal(SymbolExpression(s)) => NoConstraints
       case _ => c
     }
+
     def unary_! = new BoundedInteger(!constraint)
 
     override def toString = s"BoundedInteger($constraint)"
@@ -122,16 +124,20 @@ trait MyUniverse extends BoundedTypeTrees {
       case _ => None
     }
 
+    def apply(symbol: Symbol): BoundedInteger = {
+      val annotationOption = symbol.annotations.find( _.tpe =:= typeOf[Bounded])
+      annotationOption match {
+        case Some(annotation) => BoundedInteger(annotation)
+        case None => noBounds
+      }
+    }
+
     def apply(tree: Tree): BoundedInteger = {
       tree match {
         case Literal(Constant(value: Int)) =>
           BoundedInteger(Equal(ConstantValue(value)))
         case t if(t.symbol != null) =>
-          val annotationOption = t.symbol.annotations.find( _.tpe =:= typeOf[Bounded])
-          annotationOption match {
-            case Some(annotation) => this.apply(annotation)
-            case None => noBounds
-          }
+          BoundedInteger(t.symbol)
         case _ => noBounds
       }
     }
@@ -175,7 +181,8 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
 
   def checkBounds(context: Context)(tree: Tree) = {
     if(tree.children.isEmpty) {
-      getBoundedIntegerFromContext(tree, context)
+      val b = getBoundedIntegerFromContext(tree, context)
+      b
     } else tree match {
       case Select(_,_) => getBoundedIntegerFromContext(tree, context)
       case _ => 
@@ -194,10 +201,39 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
     case _ => context      
   }
 
-  private def getBoundedIntegerFromContext(tree: Tree, context: Context) = 
-    context(tree.symbol) match {
+  private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
+    val bounds = context(tree.symbol) match {
       case Some(x) => x
       case None => { BoundedInteger(tree) }
     }
+    findTransitiveBounds(bounds, context - tree.symbol)
+  }
+
+  private def getBoundedIntegerFromContext(symbol: Symbol, context: Context) = {
+    val bounds = context(symbol).getOrElse(BoundedInteger(symbol))
+    findTransitiveBounds(bounds, context - symbol)
+  }
+
+  private def findTransitiveBounds(bounds: BoundedInteger, context: Context): BoundedInteger = {
+    (bounds /: extractSymbolConstraints(bounds.constraint)) {(b, c) => c match {
+      case LessThan(SymbolExpression(s)) => b <| getBoundedIntegerFromContext(s, context)
+      case LessThanOrEqual(SymbolExpression(s)) => b
+      case GreaterThan(SymbolExpression(s)) => b >| getBoundedIntegerFromContext(s, context)
+      case GreaterThanOrEqual(SymbolExpression(s)) => b
+      case Equal(SymbolExpression(s)) => b
+      case _ => b
+    }}
+  }
+
+  private def extractSymbolConstraints(c: Constraint): List[Constraint] = c match {
+    case And(left, right) => extractSymbolConstraints(left) ++ extractSymbolConstraints(right)
+    case Or(left, right) => extractSymbolConstraints(left) ++ extractSymbolConstraints(right)
+    case c @ LessThan(SymbolExpression(_)) => List(c)
+    case c @ LessThanOrEqual(SymbolExpression(_)) => List(c)
+    case c @ GreaterThan(SymbolExpression(_)) => List(c)
+    case c @ GreaterThanOrEqual(SymbolExpression(_)) => List(c)
+    case c @ Equal(SymbolExpression(_)) => List(c)
+    case _ => Nil
+  }
 
 }

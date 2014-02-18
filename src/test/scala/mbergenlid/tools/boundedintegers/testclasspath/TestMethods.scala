@@ -17,5 +17,7 @@ object TestMethods {
   
   @Bounded(min=0, max=10)
   def intBetween0And10 = 4
+  @Bounded(min=0, max=5)
+  def intBetween0And5 = 4
   def anotherRandomInteger = 20
 }

@@ -46,30 +46,6 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
           """.stripMargin)(List(2))
   }
 
-  test("Transitive constraints") {
-    val program =
-          """
-          |val x = intBetween0And10
-          |val y = anotherRandomInteger
-          |val z = anotherRandomInteger
-          |
-          |if(y < x) {
-          |  if(z > 0 && z < y) testMethod(z)
-          |}
-          """.stripMargin
-
-    compile(program)(Nil)
-  }
-
-  test("Transitive in same boolean expression") {
-    compile("""
-          |val x = intBetween0And10
-          |val y = anotherRandomInteger
-          |val z = anotherRandomInteger
-          |
-          |if(y < x && z > 0 && z < y) testMethod(z)
-          """.stripMargin)(Nil)
-  }
 
   test("Validation in middle of boolean expression") { 
     compile("""
@@ -79,5 +55,4 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
           |if(x > 0 && testMethod(x)) println("Should not compile")
           """.stripMargin)(List(5))
   }
-
 }
