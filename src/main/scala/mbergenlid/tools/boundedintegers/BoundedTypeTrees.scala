@@ -43,7 +43,7 @@ trait BoundedTypeTrees {
     override def toString = expr.toString
   }
 
-  sealed trait Constraint {
+  sealed trait Constraint extends Traversable[Constraint] {
     def obviouslySubsetOf(that: Constraint): Boolean = that match {
       case Or(left, right) => 
         (this obviouslySubsetOf left) ||
@@ -66,13 +66,28 @@ trait BoundedTypeTrees {
     def unary_! = this
 
     def upperBound = this
+    def foreach[U](f: Constraint => U): Unit = {}
+  }
+
+  trait SimpleConstraint extends Constraint {
+    def v: Expression
+    def foreach[U](f: Constraint => U): Unit = {
+      f(this)
+    }
+  }
+
+  object SimpleConstraint {
+    def unapply(c: SimpleConstraint): Option[Expression] = c match {
+      case s: SimpleConstraint => Some(s.v)
+      case _ => None
+    }
   }
 
   /**
    * <  2,  <  x
    * <= 1,  <= x
    */
-  case class LessThan(v: Expression) extends Constraint {
+  case class LessThan(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
       case LessThanOrEqual(v2) => (v2.increment) >= v
@@ -93,7 +108,7 @@ trait BoundedTypeTrees {
    * <= 5
    * <= 4
    */
-  case class LessThanOrEqual(v: Expression) extends Constraint {
+  case class LessThanOrEqual(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 > v 
       case LessThanOrEqual(v2) => v2 >= v
@@ -112,7 +127,7 @@ trait BoundedTypeTrees {
    *  >  2
    *  >= 3
    */
-  case class GreaterThan(v: Expression) extends Constraint {
+  case class GreaterThan(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
       case GreaterThanOrEqual(v2) => (v2.decrement) <= v
@@ -126,7 +141,7 @@ trait BoundedTypeTrees {
     def upperBound = NoConstraints
   }
 
-  case class GreaterThanOrEqual(v: Expression) extends Constraint {
+  case class GreaterThanOrEqual(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v
@@ -140,7 +155,7 @@ trait BoundedTypeTrees {
     def upperBound = NoConstraints
   }
   
-  case class Equal(v: Expression) extends Constraint {
+  case class Equal(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v
@@ -157,6 +172,16 @@ trait BoundedTypeTrees {
     def upperBound = LessThan(v)
   }
 
+  trait ComplexConstraint extends Constraint {
+    def left: Constraint
+    def right: Constraint
+
+    def foreach[U](f: Constraint => U): Unit = {
+      f(this)
+      left.foreach(f)
+      right.foreach(f)
+    }
+  }
   /**
    * x > 0 && x < 100
    *  
@@ -164,7 +189,7 @@ trait BoundedTypeTrees {
    * (x > -1 && x < 10 && x < y) || (x < 0 && y > 5)
    * 
    */
-  case class And(left: Constraint, right: Constraint) extends Constraint {
+  case class And(left: Constraint, right: Constraint) extends ComplexConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case And(_, _) => super.obviouslySubsetOf(that)
       case Or(_,_) => super.obviouslySubsetOf(that)
@@ -194,7 +219,7 @@ trait BoundedTypeTrees {
     }
   }
 
-  case class Or(left: Constraint, right: Constraint) extends Constraint {
+  case class Or(left: Constraint, right: Constraint) extends ComplexConstraint {
     override def obviouslySubsetOf(that: Constraint) = 
       (left obviouslySubsetOf that) && (right obviouslySubsetOf that)
 

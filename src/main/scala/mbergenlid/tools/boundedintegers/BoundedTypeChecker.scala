@@ -225,15 +225,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
     }}
   }
 
-  private def extractSymbolConstraints(c: Constraint): List[Constraint] = c match {
-    case And(left, right) => extractSymbolConstraints(left) ++ extractSymbolConstraints(right)
-    case Or(left, right) => extractSymbolConstraints(left) ++ extractSymbolConstraints(right)
-    case c @ LessThan(SymbolExpression(_)) => List(c)
-    case c @ LessThanOrEqual(SymbolExpression(_)) => List(c)
-    case c @ GreaterThan(SymbolExpression(_)) => List(c)
-    case c @ GreaterThanOrEqual(SymbolExpression(_)) => List(c)
-    case c @ Equal(SymbolExpression(_)) => List(c)
-    case _ => Nil
-  }
+  private def extractSymbolConstraints(c: Constraint): Traversable[Constraint] = 
+    c collect { case s @ SimpleConstraint(SymbolExpression(_)) => s } 
 
 }
