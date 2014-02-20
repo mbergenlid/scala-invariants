@@ -13,7 +13,9 @@ trait BoundedTypeTrees {
 
     def increment: Expression = this
     def decrement: Expression = this
+
   }
+
   case class SymbolExpression(symbol: BoundedSymbol) extends Expression {
     def >(that: Expression) = false
     def >=(that: Expression) = this == that
@@ -54,9 +56,10 @@ trait BoundedTypeTrees {
       case _ => false
     }
     def unary_! : Constraint
-    def prettyPrint(variable: String): String = this.toString
+    def prettyPrint(variable: String = "_"): String = this.toString
 
     def upperBound: Constraint
+    def lowerBound: Constraint
   }
 
   case object NoConstraints extends Constraint {
@@ -66,6 +69,7 @@ trait BoundedTypeTrees {
     def unary_! = this
 
     def upperBound = this
+    def lowerBound = this
     def foreach[U](f: Constraint => U): Unit = {}
   }
 
@@ -96,10 +100,11 @@ trait BoundedTypeTrees {
     
     def unary_! = GreaterThanOrEqual(v)
 
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"$variable < $v"
 
     def upperBound = this
+    def lowerBound = NoConstraints
   }
   /**
    * <= x
@@ -117,10 +122,11 @@ trait BoundedTypeTrees {
 
     def unary_! = GreaterThan(v)
 
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"$variable <= $v"
 
     def upperBound = LessThan(v)
+    def lowerBound = NoConstraints
   }
 
   /**
@@ -135,10 +141,11 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = LessThanOrEqual(v)
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"$variable > $v"
 
     def upperBound = NoConstraints
+    def lowerBound = this
   }
 
   case class GreaterThanOrEqual(v: Expression) extends SimpleConstraint {
@@ -149,10 +156,11 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = LessThan(v)
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"$variable >= $v"
 
     def upperBound = NoConstraints
+    def lowerBound = GreaterThan(v)
   }
   
   case class Equal(v: Expression) extends SimpleConstraint {
@@ -166,10 +174,11 @@ trait BoundedTypeTrees {
     }
 
     def unary_! = Or(LessThan(v), GreaterThan(v))
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"$variable == $v"
 
     def upperBound = LessThan(v)
+    def lowerBound = GreaterThan(v)
   }
 
   trait ComplexConstraint extends Constraint {
@@ -202,6 +211,7 @@ trait BoundedTypeTrees {
     def unary_! = Or(!left, !right)
 
     def upperBound = map ((_:Constraint).upperBound)
+    def lowerBound = map ((_:Constraint).lowerBound)
 
     def map(f: Constraint => Constraint) = (f(left), f(right)) match {
       case (NoConstraints, NoConstraints) => NoConstraints
@@ -210,7 +220,7 @@ trait BoundedTypeTrees {
       case (x, y) => And(x,y)
     }
 
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"${prettyPrint(left, variable)} && ${prettyPrint(right, variable)}"
 
     def prettyPrint(child: Constraint, variable: String) = child match {
@@ -232,9 +242,10 @@ trait BoundedTypeTrees {
       case (x, y) => Or(x,y)
     }
 
-    def upperBound = this
+    def upperBound = map ((_:Constraint).upperBound)
+    def lowerBound = map ((_:Constraint).lowerBound)
 
-    override def prettyPrint(variable: String) =
+    override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
   }
 }

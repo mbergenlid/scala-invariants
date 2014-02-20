@@ -76,7 +76,8 @@ trait MyUniverse extends BoundedTypeTrees {
     def <|(other: BoundedInteger) =
       BoundedInteger(other.constraint.upperBound) && this
 
-    def >|(other: BoundedInteger) = this
+    def >|(other: BoundedInteger) =
+      BoundedInteger(other.constraint.lowerBound) && this
 
     def removeSymbolConstraints(symbol: Symbol): BoundedInteger =
       new BoundedInteger(_removeSymbolConstraints(symbol)(constraint))
@@ -94,7 +95,7 @@ trait MyUniverse extends BoundedTypeTrees {
 
     def unary_! = new BoundedInteger(!constraint)
 
-    override def toString = s"BoundedInteger($constraint)"
+    override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
   }
     /**
      * ----{-----}----

@@ -4,7 +4,7 @@ package mbergenlid.tools.boundedintegers.validators
 import scala.reflect.api.Universe
 import mbergenlid.tools.boundedintegers._
 
-trait ArithmeticExpression extends AbstractBoundsValidator {
+trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
   self: MyUniverse with TypeConstraintValidator =>
   import global._
   import BoundedInteger._
@@ -35,4 +35,5 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
     case Literal(Constant(x: Int)) => ConstantValue(x)
     case _ => SymbolExpression(tree.symbol)
   }
+
 }
