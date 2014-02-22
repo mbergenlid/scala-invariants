@@ -56,6 +56,7 @@ class BoundedTypeTreesSpec extends FunSuite
   assertConstraint("x == 4 <:< x >= 0 && x <= 10")
   assertConstraint("x > 0 && x < maxValue <:< x >= 0")
 
+
   test("((x <= MaxValue && x >= MinValue) && x < 10) <:< (x >= MinValue && x <= 9)") {
     val e1 = And(
       And(LessThanOrEqual(Int.MaxValue), GreaterThanOrEqual(Int.MinValue)),

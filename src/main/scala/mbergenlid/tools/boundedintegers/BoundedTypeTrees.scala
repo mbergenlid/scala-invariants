@@ -1,49 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
 
-trait BoundedTypeTrees {
-  type BoundedSymbol
-
-  trait Expression {
-    def >(that: Expression): Boolean
-    def >=(that: Expression): Boolean 
-    def <(that: Expression): Boolean
-    def <=(that: Expression): Boolean 
-    def ==(that: Expression): Boolean 
-
-    def increment: Expression = this
-    def decrement: Expression = this
-
-  }
-
-  case class SymbolExpression(symbol: BoundedSymbol) extends Expression {
-    def >(that: Expression) = false
-    def >=(that: Expression) = this == that
-    def <(that: Expression) = false
-    def <=(that: Expression) = this == that
-    def ==(that: Expression) = that match {
-      case SymbolExpression(s) => symbol == s
-      case _ => false
-    }
-
-    override def toString = symbol.toString
-  }
-  case class ConstantValue(expr: Int) extends Expression {
-    def >(that: Expression) = compareWith(that, _>_)
-    def >=(that: Expression) = compareWith(that, _>=_)
-    def <(that: Expression) = compareWith(that, _<_)
-    def <=(that: Expression) = compareWith(that, _<=_)
-    def ==(that: Expression) = compareWith(that, _==_)
-    def compareWith(other: Expression, op: Function2[Int, Int, Boolean]) = other match {
-      case ConstantValue(v) => op(expr, v)
-      case _ => false
-    }
-
-    override def increment: Expression = ConstantValue(expr+1)
-    override def decrement: Expression = ConstantValue(expr-1)
-
-    override def toString = expr.toString
-  }
+trait BoundedTypeTrees extends Expressions {
 
   sealed trait Constraint extends Traversable[Constraint] {
     def obviouslySubsetOf(that: Constraint): Boolean = that match {
