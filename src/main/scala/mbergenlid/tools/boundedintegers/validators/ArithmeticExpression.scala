@@ -32,8 +32,9 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
   }
 
   private def fromTree(tree: Tree): Expression = tree match {
-    case Literal(Constant(x: Int)) => ConstantValue(x)
+    case Literal(Constant(x: Int)) => Polynom(Set(Term(ConstantValue(x), Map.empty)))
     case _ => SymbolExpression(tree.symbol)
+    
   }
 
 }

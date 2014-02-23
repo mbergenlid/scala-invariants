@@ -85,11 +85,7 @@ trait MyUniverse extends BoundedTypeTrees {
     private def _removeSymbolConstraints(symbol: Symbol)(c: Constraint): Constraint = c match {
       case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol) _)
       case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol) _)
-      case LessThan(SymbolExpression(s)) => NoConstraints
-      case LessThanOrEqual(SymbolExpression(s)) => NoConstraints
-      case GreaterThan(SymbolExpression(s)) => NoConstraints
-      case GreaterThanOrEqual(SymbolExpression(s)) => NoConstraints
-      case Equal(SymbolExpression(s)) => NoConstraints
+      case _ if(c.isSymbolConstraint) => NoConstraints
       case _ => c
     }
 
@@ -216,17 +212,10 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   private def findTransitiveBounds(bounds: BoundedInteger, context: Context): BoundedInteger = {
-    (bounds /: extractSymbolConstraints(bounds.constraint)) {(b, c) => c match {
-      case LessThan(SymbolExpression(s)) => b <| getBoundedIntegerFromContext(s, context)
-      case LessThanOrEqual(SymbolExpression(s)) => b
-      case GreaterThan(SymbolExpression(s)) => b >| getBoundedIntegerFromContext(s, context)
-      case GreaterThanOrEqual(SymbolExpression(s)) => b
-      case Equal(SymbolExpression(s)) => b
-      case _ => b
-    }}
+    bounds
   }
 
   private def extractSymbolConstraints(c: Constraint): Traversable[Constraint] = 
-    c collect { case s @ SimpleConstraint(SymbolExpression(_)) => s } 
+    c filter { _.isSymbolConstraint }
 
 }

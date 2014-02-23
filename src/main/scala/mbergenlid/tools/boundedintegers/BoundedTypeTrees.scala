@@ -18,6 +18,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound: Constraint
     def lowerBound: Constraint
+
+    def isSymbolConstraint: Boolean
   }
 
   case object NoConstraints extends Constraint {
@@ -29,6 +31,8 @@ trait BoundedTypeTrees extends Expressions {
     def upperBound = this
     def lowerBound = this
     def foreach[U](f: Constraint => U): Unit = {}
+
+    def isSymbolConstraint = false
   }
 
   trait SimpleConstraint extends Constraint {
@@ -36,6 +40,8 @@ trait BoundedTypeTrees extends Expressions {
     def foreach[U](f: Constraint => U): Unit = {
       f(this)
     }
+
+    def isSymbolConstraint = v.containsSymbols
   }
 
   object SimpleConstraint {
@@ -43,6 +49,7 @@ trait BoundedTypeTrees extends Expressions {
       case s: SimpleConstraint => Some(s.v)
       case _ => None
     }
+    
   }
 
   /**
@@ -148,6 +155,9 @@ trait BoundedTypeTrees extends Expressions {
       left.foreach(f)
       right.foreach(f)
     }
+
+    def isSymbolConstraint =
+      right.isSymbolConstraint || left.isSymbolConstraint
   }
   /**
    * x > 0 && x < 100

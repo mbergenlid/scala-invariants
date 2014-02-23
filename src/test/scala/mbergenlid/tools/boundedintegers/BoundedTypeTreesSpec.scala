@@ -12,6 +12,7 @@ class BoundedTypeTreesSpec extends FunSuite
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def stringToSymbol(s: String) = SymbolExpression(s)
 
+
   val parser = new ExprParser
 
   test("Test Basic Constant values") {
@@ -57,16 +58,6 @@ class BoundedTypeTreesSpec extends FunSuite
   assertConstraint("x > 0 && x < maxValue <:< x >= 0")
 
 
-  test("((x <= MaxValue && x >= MinValue) && x < 10) <:< (x >= MinValue && x <= 9)") {
-    val e1 = And(
-      And(LessThanOrEqual(Int.MaxValue), GreaterThanOrEqual(Int.MinValue)),
-      LessThan(10)
-    )
-    val e2 = And(GreaterThanOrEqual(Int.MinValue), LessThanOrEqual(9))
-
-    assert(e1 obviouslySubsetOf e2)
-  }
-
   class ExprParser extends JavaTokenParsers {
 
     def parseConstraint(input: String) = 
@@ -102,7 +93,13 @@ class BoundedTypeTreesSpec extends FunSuite
 
 
     def value: Parser[Expression] =
-      (ident ^^ SymbolExpression) | (wholeNumber ^^ {x: String => ConstantValue(x.toInt)} )
+      (ident ^^ polynom) | (wholeNumber ^^ {x: String => polynom(x.toInt)} )
+
+    def polynom(s: String) =
+      Polynom(Set(Term(ConstantValue(1), Map(SymbolExpression(s) -> 1))))
+
+    def polynom(c: Int) =
+      Polynom(Set(Term(ConstantValue(c), Map.empty)))
   }
 
   def assertConstraint(expr: String) {

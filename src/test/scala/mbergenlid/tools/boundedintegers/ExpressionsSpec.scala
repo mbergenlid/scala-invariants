@@ -10,41 +10,68 @@ class ExpressionsSpec extends FunSuite
 
   type BoundedSymbol = String
 
-  implicit def intToConstant(v: Int) = ConstantValue(v)
-  implicit def stringToSymbol(s: String) = SymbolExpression(s)
-  //  < x + 1    <|  x > 0 && < 10
-  //  < x + 1    <|    < 10
-  //  x <| 10  
-  //  1 <| 10
-  //  
-  //  (y+5) + 1
-  //  
-  // ===========================
-  //  < x   <|   < 10
-  //  < x && < 10
-  //  < x + 1 && < 9
-  ignore("ArithmeticExpressions") {
-    val e1 = Plus(SymbolExpression("x"), ConstantValue(4))
-    val e2 = ConstantValue(1)
-    val e3 = Plus("y", 5)
+  implicit def c(v: Int) = constantToExpression(ConstantValue(v))
+  implicit def s(s: String) = symbolToExpression(SymbolExpression(s))
+  def t(v: Int) = Term(ConstantValue(v), Map.empty)
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolExpression, Int] /: s) { (map, term) =>
+    val multiplicity = map.getOrElse(SymbolExpression(term), 0) + 1
+    map + (SymbolExpression(term) -> multiplicity)
+  })
 
-    val res1 = e1.substitute("x", e2)
-    assert(res1 === ConstantValue(5))
-    //val res2 = e1.substitute("x", e3)
-    //assert(res2.toString === Plus("y", 9).toString)
-    assert((Plus("y", 5) + 1).toString === (Plus("y", 6).toString))
-    assert((Plus("y", 5) + Plus("x", 3)) === (Plus(Plus("y", 8), "x")))
+  test("Simple addition") {
+    val e1 = c(4) + c(5)
+    assert(e1 === c(9))
+
+    val e2 = s("x") + c(4)
+    assert(e2 === Polynom(Set(t(1, "x"), t(4))))
+
+    val e3 = s("x") + s("y") + c(4)
+    assert(e3 === Polynom(Set(t(1, "x"), t(1, "y"), t(4))))
   }
 
   test("Minus arithmetic expressions") {
-    val e1 = ConstantValue(4) - ConstantValue(1)
-    assert(e1 == ConstantValue(3))
+    val e1 = c(4) - c(1)
+    assert(e1 === c(3))
 
-    val e2 = SymbolExpression("x") - ConstantValue(1) - SymbolExpression("x")
-    assert(e2 === ConstantValue(-1))
+    val e2 = s("x") - c(1) - s("x")
+    assert(e2 === c(-1))
 
-    val e3 = (Plus("y", 5) + Plus("x", 3))
-    val e4 = Plus(Plus("y", 8), "x")
-    assert(e3 == e4)
+    val e3 = s("y") + c(5) + (s("x") + c(3))
+    assert(e3 === Polynom(Set(t(1, "y"), t(1, "x"), t(8))))
   }
+
+  test("Times with constant") {
+    val e0 = c(0)
+    val e1 = c(1)
+    val e2 = c(2)
+    val e10 = c(10)
+    val x = s("x")
+
+    assert(e2*x === Polynom(Set(t(2, "x"))))
+    assert(e0*x === e0)
+    assert(e1*x === x)
+
+    assert(e10*e2 === c(20))
+    assert(-e1*x === Polynom(Set(t(-1, "x"))))
+  }
+
+
+  test("Times with expression") {
+    val e1 = c(4) + s("x")
+    val e2 = c(4) + s("y")
+    val e3 = s("x")
+
+    assert(c(4)*e1 === Polynom(Set(t(16), t(4, "x"))))
+    assert(e1*e2 === Polynom(Set(t(16), t(4, "x"), t(4, "y"), t(1, "x", "y"))))
+
+    assert(e1*e3 === Polynom(Set(t(4, "x"), t(1, "x", "x"))))
+  }
+
+  test("Add products") {
+    val e1 = Polynom(Set(t(2, "x")))
+    val e2 = Polynom(Set(t(4, "y")))
+
+    assert(e1+e2 === Polynom(Set(t(2, "x"), t(4, "y"))))
+  }
+
 }
