@@ -13,7 +13,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       val boundedAnnotation = symbol.annotations.find(_.tpe =:= typeOf[Bounded])
       val boundedExpr = checkBounds(context)(expr)
       if(boundedAnnotation.isDefined) {
-        val target = BoundedInteger(boundedAnnotation.get)
+        val target = BoundsFactory(boundedAnnotation.get)
 //        val pretty = boundedExpr.constraint.prettyPrint("x")
 //        println(s"$symbol = $pretty")
         if(!(boundedExpr <:< target)) 

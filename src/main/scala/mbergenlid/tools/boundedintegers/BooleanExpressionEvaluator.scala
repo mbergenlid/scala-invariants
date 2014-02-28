@@ -1,13 +1,13 @@
 package mbergenlid.tools.boundedintegers
 
 trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
-  self: MyUniverse =>
+  self: MyUniverse with TypeContext =>
   import global._
 
   def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
     case Apply(Select(obj, method), List(arg)) if(obj.tpe <:< typeOf[Int] && !obj.symbol.isMethod) => 
       new Context(Map(
-        obj.symbol -> apply(BoundedInteger(obj), method, arg).getOrElse(BoundedInteger.noBounds)
+        obj.symbol -> apply(BoundsFactory(obj), method, arg).getOrElse(BoundedInteger.noBounds)
       ))
     case Apply(Select(boolExpr, method), List(arg)) if(boolExpr.tpe <:< typeOf[Boolean]) =>
       apply(evaluate(boolExpr), method, arg) 

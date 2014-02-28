@@ -57,11 +57,13 @@ class BoundedTypeTreesSpec extends FunSuite
   assertConstraint("x == 4 <:< x >= 0 && x <= 10")
   assertConstraint("x > 0 && x < maxValue <:< x >= 0")
 
-
   class ExprParser extends JavaTokenParsers {
 
     def parseConstraint(input: String) = 
       parseAll(constraint, input)
+
+    def parseExpression(input: String) =
+      parseAll(expr, input)
 
     def constraint: Parser[(Constraint, Constraint, () => Boolean)] =
       expr ~ "<!<" ~ expr ^^ { case e1 ~ op ~ e2 => (e1, e2, () => !(e1 obviouslySubsetOf e2)) } |

@@ -2,7 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 
 
-trait AbstractBoundsValidator { self: MyUniverse =>
+trait AbstractBoundsValidator { self: MyUniverse with TypeContext  =>
   import global._
   def checkBounds(context: Context)(tree: Tree): BoundedInteger
 

@@ -18,6 +18,12 @@ class ExpressionsSpec extends FunSuite
     map + (SymbolExpression(term) -> multiplicity)
   })
 
+  test("Comparison") {
+    assert(c(10) > c(Int.MinValue))
+    assert(c(Int.MinValue) < c(10))
+    assert(!(c(0) < c(0))) 
+  }
+
   test("Simple addition") {
     val e1 = c(4) + c(5)
     assert(e1 === c(9))

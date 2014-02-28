@@ -23,8 +23,8 @@ trait Expressions {
     def -(that: Expression): Expression
     def *(that: Expression): Expression
 
-    def increment: Expression = this
-    def decrement: Expression = this
+    def increment: Expression
+    def decrement: Expression
 
     def depth: Int = 1
     def unary_- : Expression
@@ -38,11 +38,21 @@ trait Expressions {
   }
 
   case class Polynom(terms: Set[Term]) extends Expression {
-    def >(that: Expression): Boolean = false 
-    def >=(that: Expression): Boolean= false 
-    def <(that: Expression): Boolean = false 
-    def <=(that: Expression): Boolean= false 
-    def ==(that: Expression): Boolean= false
+    def >(that: Expression): Boolean = {
+      val diff = (this - that).terms
+      !diff.isEmpty && diff.forall(_.greaterThanZero)
+    }
+    def >=(that: Expression): Boolean=
+      (this - that).terms.forall(t => t.greaterThanZero || t.isZero)
+    def <(that: Expression): Boolean = {
+      val diff = (this - that).terms
+      !diff.isEmpty && diff.forall(_.lessThanZero)
+    }
+    def <=(that: Expression): Boolean=
+      (this - that).terms.forall(t => t.lessThanZero || t.isZero)
+    def ==(that: Expression): Boolean=
+      (this - that).terms.forall(_.isZero)
+
 
     def +(that: Expression): Expression = Polynom(
       (terms /: that.terms) {(set, term) =>
@@ -71,23 +81,28 @@ trait Expressions {
     def containsSymbols = throw new Exception
 
     override def toString = ("" /: terms) ((s,t) => s + s" ${t.toString}")
+
+    def increment =
+      if(terms.size == 1) Polynom(terms.map(_.increment))
+      else this
+
+    def decrement =
+      if(terms.size == 1) Polynom(terms.map(_.decrement))
+      else this
   }
 
   case class Term(coeff: ConstantValue, variables: Map[SymbolExpression, Int]) {
     def unary_- = Term(-coeff, variables)
     def isZero = coeff.expr == 0
-
-    def >(that: Expression): Boolean = false 
-    def >=(that: Expression): Boolean= false 
-    def <(that: Expression): Boolean = false 
-    def <=(that: Expression): Boolean= false 
+    def greaterThanZero = variables.isEmpty && coeff.expr > 0
+    def lessThanZero = variables.isEmpty && coeff.expr < 0
 
     def substitute(symbol: BoundedSymbol, expr: Expression) = this
 
     def + : PartialFunction[Term, Term] = {
       case Term(ConstantValue(0), s) => this
-      case Term(ConstantValue(v), s) if(variables == s) =>
-        Term(ConstantValue(v+coeff.expr), variables)
+      case Term(c, s) if(variables == s) =>
+        Term(coeff+c, variables)
     }
 
     def *(that: Term): Term = {
@@ -109,27 +124,34 @@ trait Expressions {
       else (coeff.toString /: variables) ((s, t) => s + t)
       sign + s1
     }
+
+    def increment =
+      if(variables.isEmpty) Term(coeff.increment, variables)
+      else this
+
+    def decrement =
+      if(variables.isEmpty) Term(coeff.decrement, variables)
+      else this
   }
 
   case class SymbolExpression(symbol: BoundedSymbol) {
-    def >(that: Expression) = false
-    def >=(that: Expression) = this == that
-    def <(that: Expression) = false
-    def <=(that: Expression) = this == that
-    def ==(that: Expression) = false
-
-
     override def toString = symbol.toString
   }
 
   case class ConstantValue(expr: Int) {
-    def >(that: Expression) = compareWith(that, _>_)
-    def >=(that: Expression) = compareWith(that, _>=_)
-    def <(that: Expression) = compareWith(that, _<_)
-    def <=(that: Expression) = compareWith(that, _<=_)
-    def ==(that: Expression) = compareWith(that, _==_)
-    def compareWith(other: Expression, op: Function2[Int, Int, Boolean]) = false
-    def unary_- = ConstantValue(-expr)
+
+    def unary_- = ConstantValue(
+      if(expr == Int.MinValue) Int.MaxValue
+      else if(expr == Int.MaxValue) Int.MinValue
+      else -expr
+    )
+
+    def +(that: ConstantValue) =
+      if((that.expr > 0 && expr > Int.MaxValue - that.expr))
+        ConstantValue(Int.MaxValue)
+      else if(that.expr < 0 && expr < Int.MinValue - that.expr)
+        ConstantValue(Int.MinValue)
+      else ConstantValue(expr + that.expr)
 
     def increment = ConstantValue(expr+1)
     def decrement = ConstantValue(expr-1)

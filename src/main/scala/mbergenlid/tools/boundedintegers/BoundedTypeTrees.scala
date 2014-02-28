@@ -3,7 +3,7 @@ package mbergenlid.tools.boundedintegers
 
 trait BoundedTypeTrees extends Expressions {
 
-  sealed trait Constraint extends Traversable[Constraint] {
+  sealed trait Constraint {
     def obviouslySubsetOf(that: Constraint): Boolean = that match {
       case Or(left, right) => 
         (this obviouslySubsetOf left) ||
@@ -20,6 +20,8 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound: Constraint
 
     def isSymbolConstraint: Boolean
+
+    def map(f: SimpleConstraint => Constraint): Constraint
   }
 
   case object NoConstraints extends Constraint {
@@ -33,6 +35,9 @@ trait BoundedTypeTrees extends Expressions {
     def foreach[U](f: Constraint => U): Unit = {}
 
     def isSymbolConstraint = false
+
+    def map(f: SimpleConstraint => Constraint) = this
+    def flatMap(f: Constraint => Constraint) = this
   }
 
   trait SimpleConstraint extends Constraint {
@@ -42,6 +47,12 @@ trait BoundedTypeTrees extends Expressions {
     }
 
     def isSymbolConstraint = v.containsSymbols
+
+    def map(f: SimpleConstraint => Constraint) = 
+      f(this)
+
+    def flatMap(f: Constraint => Constraint) =
+      f(this)
   }
 
   object SimpleConstraint {
@@ -150,12 +161,6 @@ trait BoundedTypeTrees extends Expressions {
     def left: Constraint
     def right: Constraint
 
-    def foreach[U](f: Constraint => U): Unit = {
-      f(this)
-      left.foreach(f)
-      right.foreach(f)
-    }
-
     def isSymbolConstraint =
       right.isSymbolConstraint || left.isSymbolConstraint
   }
@@ -178,10 +183,10 @@ trait BoundedTypeTrees extends Expressions {
     //!a || !b
     def unary_! = Or(!left, !right)
 
-    def upperBound = map ((_:Constraint).upperBound)
-    def lowerBound = map ((_:Constraint).lowerBound)
+    def upperBound = map ((_:SimpleConstraint).upperBound)
+    def lowerBound = map ((_:SimpleConstraint).lowerBound)
 
-    def map(f: Constraint => Constraint) = (f(left), f(right)) match {
+    def map(f: SimpleConstraint => Constraint) = (left.map(f), right.map(f)) match {
       case (NoConstraints, NoConstraints) => NoConstraints
       case (NoConstraints, x) => x
       case (x, NoConstraints) => x
@@ -203,15 +208,15 @@ trait BoundedTypeTrees extends Expressions {
 
     def unary_! = And(!left, !right)
 
-    def map(f: Constraint => Constraint) = (f(left), f(right)) match {
+    def map(f: SimpleConstraint => Constraint) = (left.map(f), right.map(f)) match {
       case (NoConstraints, NoConstraints) => NoConstraints
       case (NoConstraints, x) => x
       case (x, NoConstraints) => x
       case (x, y) => Or(x,y)
     }
 
-    def upperBound = map ((_:Constraint).upperBound)
-    def lowerBound = map ((_:Constraint).lowerBound)
+    def upperBound = map ((_:SimpleConstraint).upperBound)
+    def lowerBound = map ((_:SimpleConstraint).lowerBound)
 
     override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
