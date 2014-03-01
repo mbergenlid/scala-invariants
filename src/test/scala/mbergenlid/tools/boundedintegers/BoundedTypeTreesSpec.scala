@@ -98,7 +98,7 @@ class BoundedTypeTreesSpec extends FunSuite
       (ident ^^ polynom) | (wholeNumber ^^ {x: String => polynom(x.toInt)} )
 
     def polynom(s: String) =
-      Polynom(Set(Term(ConstantValue(1), Map(SymbolExpression(s) -> 1))))
+      Polynom(Set(Term(ConstantValue(1), Map(s -> 1))))
 
     def polynom(c: Int) =
       Polynom(Set(Term(ConstantValue(c), Map.empty)))

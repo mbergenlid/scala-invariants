@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers
 
+import scala.language.implicitConversions
 
 trait BoundedTypeTrees extends Expressions {
 
@@ -22,7 +23,20 @@ trait BoundedTypeTrees extends Expressions {
     def isSymbolConstraint: Boolean
 
     def map(f: SimpleConstraint => Constraint): Constraint
+    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]): Constraint
   }
+
+  implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
+    def foreach[U](f: SimpleConstraint => U): Unit = {
+      def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
+        case NoConstraints => {}
+        case s: SimpleConstraint => f(s)
+        case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
+      }
+      foreach(f, c)
+    }
+  }
+
 
   case object NoConstraints extends Constraint {
     override def obviouslySubsetOf(that: Constraint) =
@@ -32,12 +46,11 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = this
     def lowerBound = this
-    def foreach[U](f: Constraint => U): Unit = {}
 
     def isSymbolConstraint = false
 
     def map(f: SimpleConstraint => Constraint) = this
-    def flatMap(f: Constraint => Constraint) = this
+    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) = this
   }
 
   trait SimpleConstraint extends Constraint {
@@ -51,8 +64,8 @@ trait BoundedTypeTrees extends Expressions {
     def map(f: SimpleConstraint => Constraint) = 
       f(this)
 
-    def flatMap(f: Constraint => Constraint) =
-      f(this)
+    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) =
+      (this.asInstanceOf[Constraint] /: f(this)) (And.apply _)
   }
 
   object SimpleConstraint {
@@ -153,8 +166,8 @@ trait BoundedTypeTrees extends Expressions {
     override def prettyPrint(variable: String = "_") =
       s"$variable == $v"
 
-    def upperBound = LessThan(v)
-    def lowerBound = GreaterThan(v)
+    def upperBound = Equal(v)
+    def lowerBound = Equal(v)
   }
 
   trait ComplexConstraint extends Constraint {
@@ -163,6 +176,11 @@ trait BoundedTypeTrees extends Expressions {
 
     def isSymbolConstraint =
       right.isSymbolConstraint || left.isSymbolConstraint
+
+    def combine(c1: Constraint, c2: Constraint): Constraint
+
+    def map(f: SimpleConstraint => Constraint) = combine(left.map(f), right.map(f))
+    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) = combine(left.flatMap(f), right.flatMap(f))
   }
   /**
    * x > 0 && x < 100
@@ -186,7 +204,7 @@ trait BoundedTypeTrees extends Expressions {
     def upperBound = map ((_:SimpleConstraint).upperBound)
     def lowerBound = map ((_:SimpleConstraint).lowerBound)
 
-    def map(f: SimpleConstraint => Constraint) = (left.map(f), right.map(f)) match {
+    def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
       case (NoConstraints, NoConstraints) => NoConstraints
       case (NoConstraints, x) => x
       case (x, NoConstraints) => x
@@ -208,7 +226,7 @@ trait BoundedTypeTrees extends Expressions {
 
     def unary_! = And(!left, !right)
 
-    def map(f: SimpleConstraint => Constraint) = (left.map(f), right.map(f)) match {
+    def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
       case (NoConstraints, NoConstraints) => NoConstraints
       case (NoConstraints, x) => x
       case (x, NoConstraints) => x

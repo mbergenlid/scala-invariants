@@ -34,6 +34,61 @@ trait TypeContext { self: BoundedTypeTrees =>
     def size = symbols.size
     override def toString = symbols.toString
   } 
+  
+  def createBound(symbol: BoundedSymbol): BoundedInteger
+  object Context {
+
+
+    def getBoundedInteger(symbol: BoundedSymbol, context: Context): BoundedInteger = {
+      val bounds = context(symbol).getOrElse(createBound(symbol))
+      getBoundedInteger(bounds, context - symbol)
+    }
+
+    def getBoundedInteger(start: BoundedInteger, context: Context): BoundedInteger = {
+      BoundedInteger(
+        findTransitiveConstraints(start.constraint, context)
+      )
+    }
+
+    def findTransitiveConstraints(c: Constraint, context: Context): Constraint =
+      for {
+        sc <- c
+        sym <- sc.v.extractSymbols 
+        symConstraint <- findBoundFunction(sc)(getBoundedInteger(sym, context).constraint)
+      } yield
+        createBoundConstraint(sc, symConstraint).apply(
+          sc.v.substitute(sym, symConstraint.v)
+        )
+    
+    private def createBoundConstraint(
+          base: SimpleConstraint, boundedBy: SimpleConstraint):
+          (Expression => SimpleConstraint) = base match {
+
+      case LessThan(v) => 
+        LessThan.apply _
+      case GreaterThan(v) => 
+        GreaterThan.apply _
+      case Equal(v) =>
+        if(boundedBy.isInstanceOf[Equal])
+          Equal.apply _
+        else 
+          createBoundConstraint(boundedBy, base)
+      case GreaterThanOrEqual(v) =>
+        GreaterThan.apply _
+      case LessThanOrEqual(v) =>
+        LessThanOrEqual.apply _
+    }
+
+    private def findBoundFunction(c: SimpleConstraint): (Constraint => Constraint) = c match {
+      case LessThan(v) => _.upperBound
+      case GreaterThan(_) => _.lowerBound
+      case Equal(_) => { con => 
+        And(con.lowerBound, con.upperBound)
+      }
+      case GreaterThanOrEqual(_) => _.lowerBound
+      case LessThanOrEqual(_) => _.upperBound
+    }
+  }
 
   class BoundedInteger(val constraint: Constraint) {
     import BoundedInteger._
@@ -80,6 +135,9 @@ trait TypeContext { self: BoundedTypeTrees =>
     def unary_! = new BoundedInteger(!constraint)
 
     override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
+    override def equals(other: Any) = 
+      other.isInstanceOf[BoundedInteger] &&
+      other.asInstanceOf[BoundedInteger].constraint == this.constraint
   }
 
   object BoundedInteger {

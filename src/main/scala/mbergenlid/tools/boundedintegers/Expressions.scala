@@ -9,7 +9,7 @@ trait Expressions {
     Polynom(Set(Term(c, Map.empty)))
 
   implicit def symbolToExpression(s: SymbolExpression) =
-    Polynom(Set(Term(ConstantValue(1), Map(s -> 1))))
+    Polynom(Set(Term(ConstantValue(1), Map(s.symbol -> 1))))
 
   trait Expression {
     def terms: Set[Term]
@@ -26,11 +26,14 @@ trait Expressions {
     def increment: Expression
     def decrement: Expression
 
-    def depth: Int = 1
     def unary_- : Expression
 
     def substitute(symbol: BoundedSymbol, expr: Expression): Expression
     def containsSymbols: Boolean
+    def extractSymbols: Traversable[BoundedSymbol] = for {
+      term <- terms
+      (symbol, mult) <- term.variables
+    } yield symbol
 
     def map(f: Term => Term) =
       Polynom(terms.map(f))
@@ -77,8 +80,13 @@ trait Expressions {
     } yield { thisTerm * thatTerm })
 
     def unary_- : Expression = map(_.unary_-)
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression = this
+    def substitute(symbol: BoundedSymbol, expr: Expression): Expression =
+      terms.foldLeft[Expression](Polynom(Set.empty)) {(p, t) => {
+        p + t.substitute(symbol, expr) 
+      }}
+
     def containsSymbols = throw new Exception
+
 
     override def toString = ("" /: terms) ((s,t) => s + s" ${t.toString}")
 
@@ -91,13 +99,19 @@ trait Expressions {
       else this
   }
 
-  case class Term(coeff: ConstantValue, variables: Map[SymbolExpression, Int]) {
+  case class Term(coeff: ConstantValue, variables: Map[BoundedSymbol, Int]) {
     def unary_- = Term(-coeff, variables)
     def isZero = coeff.expr == 0
     def greaterThanZero = variables.isEmpty && coeff.expr > 0
     def lessThanZero = variables.isEmpty && coeff.expr < 0
 
-    def substitute(symbol: BoundedSymbol, expr: Expression) = this
+    def substitute(symbol: BoundedSymbol, expr: Expression): Expression = 
+      if(variables.contains(symbol)) {
+        (expr * Polynom(Set(Term(coeff, variables - symbol))))
+      } else {
+        Polynom(Set(this))
+      }
+
 
     def + : PartialFunction[Term, Term] = {
       case Term(ConstantValue(0), s) => this

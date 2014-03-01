@@ -13,9 +13,9 @@ class ExpressionsSpec extends FunSuite
   implicit def c(v: Int) = constantToExpression(ConstantValue(v))
   implicit def s(s: String) = symbolToExpression(SymbolExpression(s))
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
-  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolExpression, Int] /: s) { (map, term) =>
-    val multiplicity = map.getOrElse(SymbolExpression(term), 0) + 1
-    map + (SymbolExpression(term) -> multiplicity)
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[BoundedSymbol, Int] /: s) { (map, term) =>
+    val multiplicity = map.getOrElse(term, 0) + 1
+    map + (term -> multiplicity)
   })
 
   test("Comparison") {

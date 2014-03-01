@@ -63,6 +63,8 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
 
   }
+
+  def createBound(symbol: BoundedSymbol) = BoundsFactory(symbol)
 }
 
 
@@ -111,31 +113,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case Some(x) => x
       case None => { BoundsFactory(tree) }
     }
-    findTransitiveBounds(bounds, context - tree.symbol)
+    Context.getBoundedInteger(bounds, context - tree.symbol)
   }
 
-  private def getBoundedIntegerFromContext(symbol: Symbol, context: Context) = {
-    val bounds = context(symbol).getOrElse(BoundsFactory(symbol))
-    findTransitiveBounds(bounds, context - symbol)
-  }
-
-  private def findTransitiveBounds(bounds: BoundedInteger, context: Context): BoundedInteger = {
-    bounds
-    /*
-    for {
-      sc <- bounds.constraint
-      sym <- extractSymbols(sc.v)
-      c <- getBoundedConstraints(sc, getBoundedIntegerFromContext(sym, context))
-    } yield {
-      (sc /: 
-    }*/
-  }
-
-  /*
-  private def extractSymbols(expr: Expression): Traversable[BoundedSymbol] = {
-  }
-
-  private def getBoundedConstraints(sc: SimpleConstraint, bounds: BoundedInteger) = sc match {
-    case LessThan(expr) => bounds.constraint.upperBound
-  }*/
 }
