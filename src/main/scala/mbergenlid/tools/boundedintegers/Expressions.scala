@@ -85,7 +85,8 @@ trait Expressions {
         p + t.substitute(symbol, expr) 
       }}
 
-    def containsSymbols = throw new Exception
+    def containsSymbols =
+      terms.exists(_.variables != Map.empty)
 
 
     override def toString = ("" /: terms) ((s,t) => s + s" ${t.toString}")
