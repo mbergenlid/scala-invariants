@@ -17,11 +17,11 @@ class MethodApplicationSpec extends FunSuite
 
   test("Extract function params") {
     import cut.global._
-    val testProgram = 
+    val testProgram =
       """
       |import mbergenlid.tools.boundedintegers.Bounded
       |
-      |def testMethod(@Bounded(min=0, max=10)a: Int, b: String) = 1
+      |def testMethod(@LessThanOrEqual(10) @GreaterThanOrEqual(0) a: Int, b: String) = 1
       |testMethod(-1, "Below limit")
       """.stripMargin
 

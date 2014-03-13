@@ -26,9 +26,10 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
 
   test("Should not fail if variable is annotated") {
     compile("""
-          |@Bounded(10, 10) val x = 10
-          |testMethod(x)
-          """.stripMargin)(Nil)
+              |@Equal(10) val x = 10
+              |testMethod(x)
+              |1
+            """.stripMargin)(Nil)
   }
 
   test("Should fail if called with arbitrary Int expression") {
@@ -41,9 +42,11 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
 
   test("Test return statement") {
     compile("""
-          |@Bounded(min=0, max=10) val x = 11
-          |println(x)
-          """.stripMargin)(List(2))
+              |@GreaterThanOrEqual(0)
+              |@LessThanOrEqual(10)
+              |val x = 11
+              |1
+            """.stripMargin)(List(4))
   }
 
 

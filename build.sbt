@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 
+
 //scalacOptions in (Compile, Console) <+= (packageBin in Compile) map { bin =>
 //    "-Xplugin:"+bin.absolutePath
 //}

@@ -10,13 +10,10 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
   implicit class ConstrainedSymbol(symbol: Symbol) {
 
     def tryAssign(expr: Tree)(implicit context: Context): BoundedInteger = {
-      val boundedAnnotation = symbol.annotations.find(_.tpe =:= typeOf[Bounded])
+      val target = BoundsFactory.apply(symbol)
       val boundedExpr = Context.getBoundedInteger(checkBounds(context)(expr), context)
-      if(boundedAnnotation.isDefined) {
-        val target = BoundsFactory(boundedAnnotation.get)
-        if(!(boundedExpr <:< target)) 
-          reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
-      } 
+      if(!(boundedExpr <:< target))
+        reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
       boundedExpr
     }
 
@@ -25,16 +22,16 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
                                  (context: Context): String = {
       val targetName = targetSymbol.name
       val assigneeName = assignee.symbol match {
-        case NoSymbol => assignee.toString
-        case null => assignee.toString
+        case NoSymbol => assignee.toString()
+        case null => assignee.toString()
         case _ => assignee.symbol.name.toString
       }
       s"""
         |Could not assign $assigneeName to $targetName.
         |Unable to prove that:
-        |  ${assigneeName} constrained by (${assigneeBounds.constraint.prettyPrint(assigneeName.toString)})
+        |  $assigneeName constrained by (${assigneeBounds.constraint.prettyPrint(assigneeName.toString)})
         |is a subtype of
-        |  ${targetName} constrained by (${targetBounds.constraint.prettyPrint(targetName.toString)})
+        |  $targetName constrained by (${targetBounds.constraint.prettyPrint(targetName.toString)})
       """.stripMargin
     }
   }

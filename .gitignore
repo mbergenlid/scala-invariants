@@ -2,3 +2,5 @@ target/
 project/
 
 *.swp
+.idea/
+.idea_modules/

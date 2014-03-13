@@ -2,6 +2,9 @@ package mbergenlid.tools.boundedintegers
 
 
 import scala.reflect.api.Universe
+import mbergenlid.tools.boundedintegers.{GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
+                                         LessThanOrEqual => LessThanOrEqualAnnotation,
+                                         Equal => EqualAnnotation}
 
 trait MyUniverse extends BoundedTypeTrees with TypeContext {
   val global: Universe
@@ -15,47 +18,32 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   case class Error(pos: Position, message: String) extends BoundedTypeError
   case class Warning(pos: Position, message: String) extends BoundedTypeError
 
-    /**
-     * ----{-----}----
-     * ------}-{------
-     */
-
   object BoundsFactory {
-    def apply(bounds: Annotation): BoundedInteger = {
-      val List(min, max) = bounds.scalaArgs
-      val maxOption = extractExpression(max)
-      val minOption = extractExpression(min)
-
-      (minOption, maxOption) match {
-        case (None, None) => new BoundedInteger
-        case (None, Some(x)) => new BoundedInteger(LessThanOrEqual(x))
-        case (Some(x), None) => new BoundedInteger(GreaterThanOrEqual(x))
-        case (Some(x), Some(y)) => new BoundedInteger(And(
-          LessThanOrEqual(y),
-          GreaterThanOrEqual(x)
-        ))
-      }
+    def apply(bounds: Annotation): BoundedInteger = bounds match {
+      case a if a.tpe =:= typeOf[GreaterThanOrEqualAnnotation] =>
+        BoundedInteger(GreaterThanOrEqual(expr(a.scalaArgs.head)))
+      case a if a.tpe =:= typeOf[LessThanOrEqualAnnotation] =>
+        BoundedInteger(LessThanOrEqual(expr(a.scalaArgs.head)))
+      case a if a.tpe =:= typeOf[EqualAnnotation] =>
+        BoundedInteger(Equal(expr(a.scalaArgs.head)))
     }
 
-    private def extractExpression(tree: Tree): Option[Expression] = tree match {
-      case Literal(Constant(x: Int)) if(x != Int.MinValue && x != Int.MaxValue) => Some(ConstantValue(x))
-      case x: Ident if(x.symbol != NoSymbol) => Some(SymbolExpression(x.symbol))
-      case _ => None
+    private def expr(tree: Tree): Expression = tree match {
+      case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => ConstantValue(x)
+      case x: Ident if x.symbol != NoSymbol => SymbolExpression(x.symbol)
     }
 
     def apply(symbol: Symbol): BoundedInteger = {
-      val annotationOption = symbol.annotations.find( _.tpe =:= typeOf[Bounded])
-      annotationOption match {
-        case Some(annotation) => BoundsFactory(annotation)
-        case None => BoundedInteger.noBounds
-      }
+      (BoundedInteger.noBounds /: symbol.annotations.collect {
+        case a if a.tpe <:< typeOf[BoundedType] => BoundsFactory(a)
+      }) (_ && _)
     }
 
     def apply(tree: Tree): BoundedInteger = {
       tree match {
         case Literal(Constant(value: Int)) =>
           BoundedInteger(Equal(ConstantValue(value)))
-        case t if(t.symbol != null) =>
+        case t if t.symbol != null =>
           BoundsFactory(t.symbol)
         case _ => BoundedInteger.noBounds
       }
@@ -103,7 +91,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
 
   def updateContext(context: Context, tree: Tree, bounds: BoundedInteger): Context = tree match {
     case Assign(_, _) => context.removeSymbolConstraints(tree.symbol)
-    case _ if(bounds != BoundedInteger.noBounds) =>
+    case _ if bounds != BoundedInteger.noBounds =>
       context && new Context(Map(tree.symbol -> bounds))
     case _ => context      
   }

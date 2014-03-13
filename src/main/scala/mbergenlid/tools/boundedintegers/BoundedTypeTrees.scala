@@ -12,6 +12,7 @@ trait BoundedTypeTrees extends Expressions {
       case And(left, right) =>
         (this obviouslySubsetOf left) &&
         (this obviouslySubsetOf right)
+      case NoConstraints => true
       case _ => false
     }
     def unary_! : Constraint

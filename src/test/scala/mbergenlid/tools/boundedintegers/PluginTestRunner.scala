@@ -23,14 +23,15 @@ trait PluginTestRunner extends FunSuite
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
 
   def compile(program: String)(expectedErrorLines: List[Int] = Nil) {
-    val withImports = 
+    val withImports =
       """|import mbergenlid.tools.boundedintegers.testclasspath.TestMethods._
-         |import mbergenlid.tools.boundedintegers.Bounded
+         |import mbergenlid.tools.boundedintegers.{BoundedType, LessThanOrEqual, Equal, GreaterThanOrEqual}
+         |println("Start of test")
       """.stripMargin + program
 
     val errors = cut.checkBoundedTypes(typeCheck(withImports))
     val errorPositions = errors map (_.pos.line)
-    val expectedErrorsAdjusted = expectedErrorLines map (_ + 2)
+    val expectedErrorsAdjusted = expectedErrorLines map (_ + 3)
     if(errorPositions != expectedErrorsAdjusted) {
       fail(s"Expected: $expectedErrorsAdjusted\nGot: $errors")
     } 
