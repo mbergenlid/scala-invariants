@@ -50,43 +50,87 @@ trait TypeContext { self: BoundedTypeTrees =>
       )
     }
 
+    /**
+     *   _ < x && _ < y
+     * upperBound
+     *   _ < x && _ < y
+     * 
+     */
     def findTransitiveConstraints(c: Constraint, context: Context): Constraint =
       for {
         sc <- c
-        sym <- sc.v.extractSymbols 
-        symConstraint <- findBoundFunction(sc)(getBoundedInteger(sym, context).constraint)
-      } yield
-        createBoundConstraint(sc, symConstraint).apply(
-          sc.v.substitute(sym, symConstraint.v)
-        )
+      } yield substitute(sc, sc.v.extractSymbols.toList, context)
+
+
+    private[boundedintegers]
+    def substitute( constraint: Constraint,
+                    symbols: List[BoundedSymbol],
+                    context: Context): Constraint =
+      symbols match {
+        case symbol :: rest => 
+          val b = getBoundedInteger(symbol, context).constraint
+          substitute (
+            for {
+              sc1 <- constraint
+              sc2 <- findBoundFunction(sc1)(b)
+            } yield { 
+              val boundConstr = createBoundConstraint(sc1, sc2)
+              if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v));
+              else NoConstraints
+            },
+            rest,
+            context
+          )
+        case Nil => constraint
+      }
     
+
     private def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
-          (Expression => SimpleConstraint) = base match {
+          Option[Expression => SimpleConstraint] = (base, boundedBy) match {
 
-      case LessThan(v) => 
-        LessThan.apply _
-      case GreaterThan(v) => 
-        GreaterThan.apply _
-      case Equal(v) =>
+      case (LessThan(_), LessThan(_)) =>
+        Some(LessThan.apply _)
+      case (LessThan(_), LessThanOrEqual(_)) => 
+        Some(LessThan.apply _)
+      case (LessThan(_), Equal(_)) => 
+        Some(LessThan.apply _)
+      case (GreaterThan(_), GreaterThan(_)) => 
+        Some(GreaterThan.apply _)
+      case (GreaterThan(_), GreaterThanOrEqual(_)) => 
+        Some(GreaterThan.apply _)
+      case (GreaterThan(_), Equal(_)) => 
+        Some(GreaterThan.apply _)
+
+      case (GreaterThanOrEqual(_), GreaterThan(_)) =>
+          Some(GreaterThan.apply _)
+      case (GreaterThanOrEqual(_), GreaterThanOrEqual(_)) =>
+          Some(GreaterThanOrEqual.apply _)
+      case (GreaterThanOrEqual(_), Equal(_)) =>
+          Some(GreaterThanOrEqual.apply _)
+      case (LessThanOrEqual(_), LessThan(_)) =>
+          Some(LessThan.apply _)
+      case (LessThanOrEqual(_), LessThanOrEqual(_)) =>
+          Some(LessThanOrEqual.apply _)
+      case (LessThanOrEqual(_), Equal(_)) =>
+          Some(LessThanOrEqual.apply _)
+
+      case (Equal(_), _) =>
         if(boundedBy.isInstanceOf[Equal])
-          Equal.apply _
+          Some(Equal.apply _)
         else 
           createBoundConstraint(boundedBy, base)
-      case GreaterThanOrEqual(v) =>
-        GreaterThan.apply _
-      case LessThanOrEqual(v) =>
-        LessThanOrEqual.apply _
+      case _ => None
     }
 
     private def findBoundFunction(c: SimpleConstraint): (Constraint => Constraint) = c match {
       case LessThan(v) => _.upperBound
       case GreaterThan(_) => _.lowerBound
       case Equal(_) => { con => 
-        And(con.lowerBound, con.upperBound)
+        And(con.lowerBoundInclusive, con.upperBoundInclusive)
       }
-      case GreaterThanOrEqual(_) => _.lowerBound
-      case LessThanOrEqual(_) => _.upperBound
+      case GreaterThanOrEqual(_) => _.lowerBoundInclusive
+      case LessThanOrEqual(_) => _.upperBoundInclusive
     }
   }
 

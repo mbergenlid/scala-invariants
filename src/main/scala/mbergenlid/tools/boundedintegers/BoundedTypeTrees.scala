@@ -19,11 +19,13 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound: Constraint
     def lowerBound: Constraint
+    def upperBoundInclusive: Constraint
+    def lowerBoundInclusive: Constraint
 
     def isSymbolConstraint: Boolean
 
     def map(f: SimpleConstraint => Constraint): Constraint
-    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]): Constraint
+    def flatMap(f: SimpleConstraint => Traversable[Constraint]): Constraint
   }
 
   implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
@@ -46,11 +48,13 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = this
     def lowerBound = this
+    def upperBoundInclusive = this
+    def lowerBoundInclusive = this
 
     def isSymbolConstraint = false
 
     def map(f: SimpleConstraint => Constraint) = this
-    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) = this
+    def flatMap(f: SimpleConstraint => Traversable[Constraint]) = this
   }
 
   trait SimpleConstraint extends Constraint {
@@ -64,8 +68,9 @@ trait BoundedTypeTrees extends Expressions {
     def map(f: SimpleConstraint => Constraint) = 
       f(this)
 
-    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) =
+    def flatMap(f: SimpleConstraint => Traversable[Constraint]) =
       (this.asInstanceOf[Constraint] /: f(this)) (And.apply _)
+
   }
 
   object SimpleConstraint {
@@ -90,10 +95,12 @@ trait BoundedTypeTrees extends Expressions {
     def unary_! = GreaterThanOrEqual(v)
 
     override def prettyPrint(variable: String = "_") =
-      s"$variable < $v"
+      s"$variable < ${v.toString}"
 
     def upperBound = this
     def lowerBound = NoConstraints
+    def upperBoundInclusive = this
+    def lowerBoundInclusive = NoConstraints
   }
   /**
    * <= x
@@ -116,6 +123,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = LessThan(v)
     def lowerBound = NoConstraints
+    def upperBoundInclusive = this
+    def lowerBoundInclusive = NoConstraints
   }
 
   /**
@@ -135,6 +144,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = NoConstraints
     def lowerBound = this
+    def upperBoundInclusive = NoConstraints
+    def lowerBoundInclusive = this
   }
 
   case class GreaterThanOrEqual(v: Expression) extends SimpleConstraint {
@@ -150,6 +161,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = NoConstraints
     def lowerBound = GreaterThan(v)
+    def upperBoundInclusive = NoConstraints
+    def lowerBoundInclusive = this
   }
   
   case class Equal(v: Expression) extends SimpleConstraint {
@@ -168,6 +181,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = Equal(v)
     def lowerBound = Equal(v)
+    def upperBoundInclusive = this
+    def lowerBoundInclusive = this
   }
 
   trait ComplexConstraint extends Constraint {
@@ -180,7 +195,7 @@ trait BoundedTypeTrees extends Expressions {
     def combine(c1: Constraint, c2: Constraint): Constraint
 
     def map(f: SimpleConstraint => Constraint) = combine(left.map(f), right.map(f))
-    def flatMap(f: SimpleConstraint => Traversable[SimpleConstraint]) = combine(left.flatMap(f), right.flatMap(f))
+    def flatMap(f: SimpleConstraint => Traversable[Constraint]) = combine(left.flatMap(f), right.flatMap(f))
   }
   /**
    * x > 0 && x < 100
@@ -203,6 +218,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def upperBound = map ((_:SimpleConstraint).upperBound)
     def lowerBound = map ((_:SimpleConstraint).lowerBound)
+    def upperBoundInclusive = map ((_:SimpleConstraint).upperBoundInclusive)
+    def lowerBoundInclusive = map ((_:SimpleConstraint).lowerBoundInclusive)
 
     def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
       case (NoConstraints, NoConstraints) => NoConstraints
@@ -228,13 +245,15 @@ trait BoundedTypeTrees extends Expressions {
 
     def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
       case (NoConstraints, NoConstraints) => NoConstraints
-      case (NoConstraints, x) => x
-      case (x, NoConstraints) => x
+      case (NoConstraints, x) => NoConstraints
+      case (x, NoConstraints) => NoConstraints
       case (x, y) => Or(x,y)
     }
 
     def upperBound = map ((_:SimpleConstraint).upperBound)
     def lowerBound = map ((_:SimpleConstraint).lowerBound)
+    def upperBoundInclusive = map ((_:SimpleConstraint).upperBoundInclusive)
+    def lowerBoundInclusive = map ((_:SimpleConstraint).lowerBoundInclusive)
 
     override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"

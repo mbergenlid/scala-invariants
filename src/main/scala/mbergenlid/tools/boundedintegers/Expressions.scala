@@ -30,7 +30,7 @@ trait Expressions {
 
     def substitute(symbol: BoundedSymbol, expr: Expression): Expression
     def containsSymbols: Boolean
-    def extractSymbols: Traversable[BoundedSymbol] = for {
+    def extractSymbols: Set[BoundedSymbol] = for {
       term <- terms
       (symbol, mult) <- term.variables
     } yield symbol
@@ -38,6 +38,9 @@ trait Expressions {
     def map(f: Term => Term) =
       Polynom(terms.map(f))
 
+    override def toString =
+      if(terms.isEmpty) "0"
+      else terms.mkString(" + ")
   }
 
   case class Polynom(terms: Set[Term]) extends Expression {
@@ -89,7 +92,6 @@ trait Expressions {
       terms.exists(_.variables != Map.empty)
 
 
-    override def toString = ("" /: terms) ((s,t) => s + s" ${t.toString}")
 
     def increment =
       if(terms.size == 1) Polynom(terms.map(_.increment))
@@ -133,11 +135,9 @@ trait Expressions {
     }
 
     override def toString = {
-      val sign = if(coeff.expr >= 0) "+"
-        else ""
-      val s1 = if(variables.isEmpty) coeff.toString
-      else (coeff.toString /: variables) ((s, t) => s + t)
-      sign + s1
+      if(variables.isEmpty) coeff.toString
+      else if(coeff.expr == 1) ("" /: variables) ((s, t) => s + t._1) 
+      else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1)
     }
 
     def increment =

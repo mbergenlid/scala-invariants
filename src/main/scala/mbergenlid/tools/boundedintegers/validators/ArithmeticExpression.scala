@@ -14,8 +14,10 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
 
   private def n(s: String) = stringToTermName(s)
 
-  private val operators = Map[Name, (Expression, Expression) => BoundedInteger](
-    n("$plus") -> (plus _)
+  private val operators = Map[Name, (Expression, Expression) => Expression](
+    n("$plus") -> (_+_),
+    n("$minus") -> (_-_),
+    n("$times") -> (_*_)
   )
 
   /**
@@ -23,13 +25,10 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
    */
   private def validate(implicit context: Context): Validator = {
     case Apply(Select(op1, method), List(op2)) if(operators.contains(method)) =>
-      operators(method).apply(fromTree(op1), fromTree(op2))
+      BoundedInteger(Equal(operators(method).apply(fromTree(op1), fromTree(op2))))
       
   }
 
-  private def plus(c1: Expression, c2: Expression): BoundedInteger = {
-    BoundedInteger(GreaterThan(c1))
-  }
 
   private def fromTree(tree: Tree): Expression = tree match {
     case Literal(Constant(x: Int)) => Polynom(Set(Term(ConstantValue(x), Map.empty)))

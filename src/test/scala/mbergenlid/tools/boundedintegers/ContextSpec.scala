@@ -105,12 +105,81 @@ class ContextSpec extends FunSuite
       "y" -> BoundedInteger(Or(LessThan(ConstantValue(0)), GreaterThan(ConstantValue(10))))
     ))) ()(LessThan(ConstantValue(4)))
 
+  /**
+   * x = y - 5
+   * y >= 0 && <= 5
+   *
+   * x >= -5 && x <= 0
+   */
+  contextTest(
+    new Context(Map(
+      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(-5))))),
+      "y" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(0)), LessThanOrEqual(ConstantValue(5))))
+    )))(GreaterThanOrEqual(ConstantValue(-5)))(GreaterThan(ConstantValue(-5)))
 
-  def contextTest(c: Context)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
+  /**
+   * x > y
+   * y >= 0 
+   *
+   * x > y && x > 0
+   */
+  contextTest(
+    new Context(Map(
+      "x" -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"))))),
+      "y" -> BoundedInteger(GreaterThanOrEqual(ConstantValue(0)))
+    )))(GreaterThan(ConstantValue(0)))()
+
+  /**
+   * x < y
+   * y <= 0 
+   *
+   * x < y && x < 0
+   */
+  contextTest(
+    new Context(Map(
+      "x" -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"))))),
+      "y" -> BoundedInteger(LessThanOrEqual(ConstantValue(0)))
+    )))(LessThan(ConstantValue(0)))()
+
+  /**
+   * _ = y + z
+   * y >= 0 && y <= 5
+   * z >= 1 && z <= 6
+   *
+   * _ >= 1
+   */
+  contextTest(
+    new Context(Map(
+      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
+      "y" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(0)), LessThanOrEqual(ConstantValue(5)))),
+      "z" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(1)), LessThanOrEqual(ConstantValue(6)))) 
+    )))(GreaterThanOrEqual(ConstantValue(1)), LessThan(ConstantValue(12)))(LessThanOrEqual(ConstantValue(10)))
+  
+  /**
+   * _ = y + z
+   * y >= 0 && y <= 5
+   * z >= 1 && z <= 6
+   *
+   * _ >= 1
+   */
+  contextTest(
+    new Context(Map(
+      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
+      "y" -> BoundedInteger(GreaterThanOrEqual(ConstantValue(0))),
+      "z" -> BoundedInteger(GreaterThan(ConstantValue(1))) 
+    )))(GreaterThanOrEqual(SymbolExpression("z")), GreaterThan(ConstantValue(1)))()
+
+  def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
     test(c.toString) {
       val xBounds = Context.getBoundedInteger("x", c).constraint
-      positiveAsserts.forall ( xBounds obviouslySubsetOf _ )
-      negativeAsserts.forall(x => !(xBounds obviouslySubsetOf x))
+      if(debug) {
+        println(xBounds.prettyPrint("x"))
+      }
+      assert(positiveAsserts.forall ( xBounds obviouslySubsetOf _ ))
+      negativeAsserts.foreach {x => 
+        assert(!(xBounds obviouslySubsetOf x),
+          s"Expected ${xBounds.prettyPrint("x")} to not be a subset of ${x.prettyPrint("x")}")
+      }
     }
   }
 }
