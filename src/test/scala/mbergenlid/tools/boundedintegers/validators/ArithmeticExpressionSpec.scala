@@ -22,7 +22,7 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
           |@Bounded(min=0, max=5)
           |val x = intBetween0And5
           |
-          |@Bounded(min=(-4), max=5)
+          |@Bounded(min=(-5), max=5)
           |val y = x - 5
           |
           |@Bounded(min=(-2), max=1000)
