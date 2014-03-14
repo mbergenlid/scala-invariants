@@ -99,7 +99,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
     val bounds = context(tree.symbol) match {
       case Some(x) => x
-      case None => { BoundsFactory(tree) }
+      case None => BoundsFactory(tree)
     }
     Context.getBoundedInteger(bounds, context - tree.symbol)
   }

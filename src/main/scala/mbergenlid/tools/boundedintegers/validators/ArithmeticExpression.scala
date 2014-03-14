@@ -5,7 +5,7 @@ import scala.reflect.api.Universe
 import mbergenlid.tools.boundedintegers._
 
 trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
-  self: MyUniverse with TypeConstraintValidator =>
+  self: MyUniverse =>
   import global._
   import BoundedInteger._
 

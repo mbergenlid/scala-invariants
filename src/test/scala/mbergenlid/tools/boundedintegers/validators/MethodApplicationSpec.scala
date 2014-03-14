@@ -26,7 +26,7 @@ class MethodApplicationSpec extends FunSuite
       """.stripMargin
 
     val tree = typeCheck(testProgram)
-    val Block((_, Apply(method, args))) = tree
+    val Block(_, Apply(method, args)) = tree
 
     val argList = cut.extractMethodParams(
       method.asInstanceOf[cut.global.Tree], args.asInstanceOf[List[cut.global.Tree]])

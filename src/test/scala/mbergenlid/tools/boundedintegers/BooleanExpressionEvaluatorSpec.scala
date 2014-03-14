@@ -11,6 +11,7 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
   val cut = new BoundedTypeChecker(tb.u) with BooleanExpressionEvaluator
+                                          with TypeContext
 
   implicit val emptyContext = new cut.Context
 
@@ -31,7 +32,7 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       |x < 10
       """.stripMargin
       
-      val Block((list, cond @ Apply(Select(xSymb, _), _))) = typeCheck(program)
+      val Block(list, cond @ Apply(Select(xSymb, _), _)) = typeCheck(program)
       val context = cut.evaluate(cond)
 
       val Some(x) = context(xSymb.symbol)
@@ -46,7 +47,7 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       |x < 10 && x > 0
       """.stripMargin
       
-      val tree @ Block((_, cond)) = typeCheck(program)
+      val tree @ Block(_, cond) = typeCheck(program)
       val context = cut.evaluate(cond)
 
       val Some(x) = context(findSymbol("x", cond))
@@ -62,7 +63,7 @@ class BooleanExpressionEvaluatorSpec extends FunSuite
       |x > 10 || x < 0
       """.stripMargin
       
-      val tree @ Block((_, cond)) = typeCheck(program)
+      val tree @ Block(_, cond) = typeCheck(program)
       val context = cut.evaluate(cond)
 
       val Some(x) = context(findSymbol("x", cond))

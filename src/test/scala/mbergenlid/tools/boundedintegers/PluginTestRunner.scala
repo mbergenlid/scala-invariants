@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
 import validators._
+import scala.reflect.api.JavaUniverse
 
 
 trait PluginTestRunner extends FunSuite
@@ -16,8 +17,6 @@ trait PluginTestRunner extends FunSuite
                                           with Assignment
                                           with ArithmeticExpressionValidator
                                          
-
-  import cut.global._
 
   def typeCheck(program: String) =
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
