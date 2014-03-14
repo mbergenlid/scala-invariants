@@ -16,6 +16,7 @@ trait PluginTestRunner extends FunSuite
                                           with IfExpression
                                           with Assignment
                                           with ArithmeticExpressionValidator
+                                          with MethodDefinition
                                          
 
   def typeCheck(program: String) =

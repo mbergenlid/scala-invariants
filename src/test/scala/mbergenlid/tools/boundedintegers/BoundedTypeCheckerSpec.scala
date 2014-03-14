@@ -58,4 +58,5 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
           |if(x > 0 && testMethod(x)) println("Should not compile")
           """.stripMargin)(List(5))
   }
+
 }
