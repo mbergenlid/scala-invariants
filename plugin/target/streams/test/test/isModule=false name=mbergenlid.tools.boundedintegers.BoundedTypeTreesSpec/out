@@ -1,0 +1,17 @@
+[0m[[0minfo[0m] [0m[32mBoundedTypeTreesSpec:[0m[0m
+[0m[[0minfo[0m] [0m[32m- Test Basic Constant values[0m[0m
+[0m[[0minfo[0m] [0m[32m- Test Basic SymbolExpression[0m[0m
+[0m[[0minfo[0m] [0m[32m- x > 0 <!< x <= 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- x >= 1 <:< x > 0[0m[0m
+[0m[[0minfo[0m] [0m[32m- x < 11 <:< x <= 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- x > 2 <:< x >= 3[0m[0m
+[0m[[0minfo[0m] [0m[32m- x > 0 && x < 10 && x < y && x <= 99 <:< x > 0 && x < 100[0m[0m
+[0m[[0minfo[0m] [0m[32m- x >= 101 <:< x < 0 || x > 100[0m[0m
+[0m[[0minfo[0m] [0m[32m- x <= -1 || x >= 101 <:< x < 0 || x > 100[0m[0m
+[0m[[0minfo[0m] [0m[32m- x <= -1 || x >= 101 || x < 6 <!< x < 0 || x > 100[0m[0m
+[0m[[0minfo[0m] [0m[32m- x > 1 && x <= 10 <:< (x > 0 && x < 100) || (x > -100 && x < -10)[0m[0m
+[0m[[0minfo[0m] [0m[32m- x <= 10 && x >= 0 <:< x >=0 && x <= 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- !(x > 10 || x < 0) <:< x >=0 && x <= 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- x == 9 <:< x < 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- x == 4 <:< x >= 0 && x <= 10[0m[0m
+[0m[[0minfo[0m] [0m[32m- x > 0 && x < maxValue <:< x >= 0[0m[0m

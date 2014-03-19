@@ -1,0 +1,5 @@
+[0m[[0minfo[0m] [0m[32mIfExpressionSpec:[0m[0m
+[0m[[0minfo[0m] [0m[32m- Should succeed if inside appropriate if expression[0m[0m
+[0m[[0minfo[0m] [0m[32m- Test more complicated if expression[0m[0m
+[0m[[0minfo[0m] [0m[32m- Test successful else[0m[0m
+[0m[[0minfo[0m] [0m[32m- Test bound to symbol[0m[0m

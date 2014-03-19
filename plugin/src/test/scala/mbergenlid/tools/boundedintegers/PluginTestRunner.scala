@@ -1,0 +1,39 @@
+package mbergenlid.tools.boundedintegers
+
+import org.scalatest.FunSuite
+import scala.tools.reflect.ToolBox
+import scala.reflect.runtime.universe.runtimeMirror
+import validators._
+import scala.reflect.api.JavaUniverse
+
+
+trait PluginTestRunner extends FunSuite
+  with MyUniverse {
+  
+  lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
+  val global = tb.u
+  val cut = new BoundedTypeChecker(tb.u) with MethodApplication
+                                          with IfExpression
+                                          with Assignment
+                                          with ArithmeticExpressionValidator
+                                          with MethodDefinition
+                                         
+
+  def typeCheck(program: String) =
+    tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
+
+  def compile(program: String)(expectedErrorLines: List[Int] = Nil) {
+    val withImports =
+      """|import mbergenlid.tools.boundedintegers.testclasspath.TestMethods._
+         |import mbergenlid.tools.boundedintegers.annotations.{BoundedType, LessThanOrEqual, Equal, GreaterThanOrEqual}
+         |println("Start of test")
+      """.stripMargin + program
+
+    val errors = cut.checkBoundedTypes(typeCheck(withImports))
+    val errorPositions = errors map (_.pos.line)
+    val expectedErrorsAdjusted = expectedErrorLines map (_ + 3)
+    if(errorPositions != expectedErrorsAdjusted) {
+      fail(s"Expected: $expectedErrorsAdjusted\nGot: $errors")
+    } 
+  }
+}

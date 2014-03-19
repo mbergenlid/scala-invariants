@@ -1,0 +1,463 @@
+compile
+console
+build
+compile
+console
+compile
+console
+reload
+compile
+exit
+console
+exit
+console
+test
+compile
+import scala.reflect.api.Trees.Tree
+compie
+compile
+compie
+compile
+test
+compile
+test
+console
+compile
+test
+console
+compile
+exut
+exit
+test
+console
+test
+console
+test
+compile
+test
+:reload
+reload
+test
+exit
+test
+console
+test
+console
+exit
+console
+exit
+compile
+test
+:q
+exit
+test
+exit
+test
+console
+connsole
+console
+test
+compile
+test
+compile
+test
+compile
+test
+exit
+test
+last test:test
+test
+last test:test
+test
+exit
+test
+exit
+test
+:reload
+relaod
+reload
+relaod
+test
+last test:test
+reload
+test
+exit
+compile
+test
+compile
+test
+console
+clean
+console
+compile
+clean
+compile
+build
+package
+compile
+package
+console
+test
+package
+clean
+package
+test
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+last test:test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+compile
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+exit
+ensime generate
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+console
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+console
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test
+exit
+test
+console
+test
+console
+test
+test\
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+exi
+exit
+test
+exit
+test
+test:copile
+test:compile
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test:compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+console
+test:console
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test:compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testO
+last test:testOnly
+last test:testO
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testO
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+console
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+exit
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+exit
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+test
+exit
+test
+last test:test
+test
+exit
+console
+test
+console
+test
+exit
+console
+compile
+test
+exit
+test
+console
+compile
+compi;e
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+exit
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+exit
+console
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.IfExpressionSpec
+test
+compile
+test
+console
+test
+exit
+test
+test-only mbergenlid.tools.boundedintegers.validators.IfExpressionSpec
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+console
+exit
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test
+console
+exit
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+exit
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+console
+test-only mbergenlid.tools.boundedintegers.VarTest
+console
+reload
+console
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+tet
+test
+exit
+test
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test
+test-only mbergenlid.tools.boundedintegers.TransitiveConstraintSpec
+compile
+test-only mbergenlid.tools.boundedintegers.TransitiveConstraintSpec
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+test
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test-only mbergenlid.tools.boundedintegers.TransitiveConstraintSpec
+test
+exit
+console
+compile
+test
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+compile
+test
+compile
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testO
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+-(y+8+x)
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+compile
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+compile
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+clean
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+exit
+test
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test-only mbergenlid.tools.boundedintegers.ExpressionsSpec
+test-only mbergenlid.tools.boundedintegers.BooleanExpressionEvaluatorSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+test
+test-only mbergenlid.tools.boundedintegers.TransitiveConstraintSpec
+exit
+test
+test-only mbergenlid.tools.boundedintegers.TransitiveConstraintSpec
+console
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeTreesSpec
+exit
+compile
+test
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+console
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+last test:testOnly
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test
+test-only mbergenlid.tools.boundedintegers.VarTest
+test
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+compile
+exit
+compile
+test
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+clean
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+exit
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+console
+test-only mbergenlid.tools.boundedintegers.ContextSpec
+test
+test-only mbergenlid.tools.boundedintegers.Ari
+test-only mbergenlid.tools.boundedintegers.validators.ArithmeticExpressionSpec
+exit
+gen-idea
+:q
+exit
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+reload
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+exit
+test
+test-only mbergenlid.tools.boundedintegers.BoundedType
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+exit
+test
+exit
+test
+exit
+compile
+test
+console
+exit
+test
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+last:test-run
+last:test-only
+test:last
+last:test-only
+test-only mbergenlid.tools.boundedintegers.BoundedTypeCheckerSpec
+test
+help
+project
+build
+publish-local
+test
+compile
+reload
+test
+reload
+test
+gen-idea
+test

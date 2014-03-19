@@ -1,0 +1,33 @@
+[0m[[0minfo[0m] [0mPackaging /home/marcus/work/plugin/annotations/target/scala-2.10/annotations_2.10-0.1-SNAPSHOT.jar ...[0m
+[0m[[0mdebug[0m] [0mInput file mappings:[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/GreaterThanOrEqual.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/GreaterThanOrEqual.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/LessThanOrEqual.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/LessThanOrEqual.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/Equal$.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/Equal$.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/Equal.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/Equal.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/LessThan.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/LessThan.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/LessThan$.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/LessThan$.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/Bounded.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/Bounded.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/GreaterThanOrEqual$.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/GreaterThanOrEqual$.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/BoundedType.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/BoundedType.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/Bounded$.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/Bounded$.class[0m
+[0m[[0mdebug[0m] [0m	mbergenlid/tools/boundedintegers/annotations/LessThanOrEqual$.class[0m
+[0m[[0mdebug[0m] [0m	  /home/marcus/work/plugin/annotations/target/scala-2.10/classes/mbergenlid/tools/boundedintegers/annotations/LessThanOrEqual$.class[0m
+[0m[[0minfo[0m] [0mDone packaging.[0m
