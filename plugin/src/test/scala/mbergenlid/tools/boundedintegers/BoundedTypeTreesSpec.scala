@@ -33,7 +33,7 @@ class BoundedTypeTreesSpec extends FunSuite
 
     assert(!(x < y), s"!($x < $y)")
     assert(!(x < x), s"!($x < $x)")
-    assert((x <= x), s"!($x <= $x)")
+    assert(x <= x, s"!($x <= $x)")
     assert(!(x <= y), s"!($x <= $y)")
   }
   

@@ -1,10 +1,5 @@
 package mbergenlid.tools.boundedintegers
 
-import org.scalatest.FunSuite
-import scala.tools.reflect.ToolBox
-import scala.reflect.runtime.universe.runtimeMirror
-import validators._
-
 
 class BoundedTypeCheckerSpec extends PluginTestRunner
   with MyUniverse {
@@ -50,13 +45,11 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
   }
 
 
-  test("Validation in middle of boolean expression") { 
-    compile("""
-          |val x = randomInteger
+  test("Validation in middle of boolean expression") {
+    compile("""|val x = randomInteger
           |
           |if(x < 10 && testMethod(x)) println("Should compile")
           |if(x > 0 && testMethod(x)) println("Should not compile")
-          """.stripMargin)(List(5))
+          """.stripMargin)(List(4))
   }
-
 }

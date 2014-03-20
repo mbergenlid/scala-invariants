@@ -30,14 +30,19 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         BoundedInteger(Equal(expr(a.scalaArgs.head)))
     }
 
-    private def expr(tree: Tree): Expression = tree match {
-      case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => ConstantValue(x)
-      case x: Ident if x.symbol != NoSymbol => SymbolExpression(x.symbol)
-    }
+    private def expr(tree: Tree): Expression = {
+      val Apply(_, List(value)) = tree
+      value match {
+        case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => ConstantValue(x)
+        case Literal(Constant(x: Long)) => ConstantValue(x.toInt)
+//        case Literal(Constant(x: Double)) => //
+        case x: Ident if x.symbol != NoSymbol => SymbolExpression(x.symbol)
+    }}
 
     def apply(symbol: Symbol): BoundedInteger = {
       (BoundedInteger.noBounds /: symbol.annotations.collect {
-        case a if a.tpe <:< typeOf[BoundedType] => BoundsFactory(a)
+        case a if a.tpe <:< typeOf[BoundedType] =>
+          BoundsFactory(a)
       }) (_ && _)
     }
 
@@ -101,7 +106,8 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
     val bounds = context(tree.symbol) match {
       case Some(x) => x
-      case None => BoundsFactory(tree)
+      case None =>
+        BoundsFactory(tree)
     }
     Context.getBoundedInteger(bounds, context - tree.symbol)
   }

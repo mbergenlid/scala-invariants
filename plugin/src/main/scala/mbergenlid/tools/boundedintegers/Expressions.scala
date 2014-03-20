@@ -1,6 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.language.implicitConversions
+import java.math.{BigDecimal => JBigDecimal}
 
 trait Expressions {
   type BoundedSymbol
@@ -10,6 +11,8 @@ trait Expressions {
 
   implicit def symbolToExpression(s: SymbolExpression) =
     Polynom(Set(Term(ConstantValue(1), Map(s.symbol -> 1))))
+
+  implicit def int2BigDecimal(v: Int) = BigDecimal(v)
 
   trait Expression {
     def terms: Set[Term]
@@ -104,39 +107,38 @@ trait Expressions {
 
   case class Term(coeff: ConstantValue, variables: Map[BoundedSymbol, Int]) {
     def unary_- = Term(-coeff, variables)
-    def isZero = coeff.expr == 0
+    def isZero = coeff.isZero
     def greaterThanZero = variables.isEmpty && coeff.expr > 0
     def lessThanZero = variables.isEmpty && coeff.expr < 0
 
     def substitute(symbol: BoundedSymbol, expr: Expression): Expression = 
       if(variables.contains(symbol)) {
-        (expr * Polynom(Set(Term(coeff, variables - symbol))))
+        expr * Polynom(Set(Term(coeff, variables - symbol)))
       } else {
         Polynom(Set(this))
       }
 
 
     def + : PartialFunction[Term, Term] = {
-      case Term(ConstantValue(0), s) => this
-      case Term(c, s) if(variables == s) =>
+      case Term(ConstantValue(JBigDecimal.ZERO, _), s) => this
+      case Term(c, s) if variables == s =>
         Term(coeff+c, variables)
     }
 
     def *(that: Term): Term = {
-      val Term(ConstantValue(v), s) = that
+      val Term(ConstantValue(v, _), s) = that
       val newCoeff = coeff.expr*v
-      if(newCoeff == 0) Term(ConstantValue(0), Map.empty)
-      else Term(ConstantValue(newCoeff), (
-        (variables /: s) { (vars, v) =>
+      if(newCoeff == 0) Term(ConstantValue(0, coeff.isInteger), Map.empty)
+      else Term(ConstantValue(newCoeff), (variables /: s) {
+        (vars, v) =>
           val multiplicity = vars.getOrElse(v._1, 0)
           vars + (v._1 -> (v._2 + multiplicity))
-        }
-      ))
+      })
     }
 
     override def toString = {
       if(variables.isEmpty) coeff.toString
-      else if(coeff.expr == 1) ("" /: variables) ((s, t) => s + t._1) 
+      else if(coeff.expr == JBigDecimal.ONE) ("" /: variables) ((s, t) => s + t._1)
       else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1)
     }
 
@@ -153,25 +155,18 @@ trait Expressions {
     override def toString = symbol.toString
   }
 
-  case class ConstantValue(expr: Int) {
+  case class ConstantValue(expr: BigDecimal, isInteger: Boolean = true) {
 
-    def unary_- = ConstantValue(
-      if(expr == Int.MinValue) Int.MaxValue
-      else if(expr == Int.MaxValue) Int.MinValue
-      else -expr
-    )
+    def isZero = expr == 0
+    def unary_- = copy(expr = -expr)
 
-    def +(that: ConstantValue) =
-      if((that.expr > 0 && expr > Int.MaxValue - that.expr))
-        ConstantValue(Int.MaxValue)
-      else if(that.expr < 0 && expr < Int.MinValue - that.expr)
-        ConstantValue(Int.MinValue)
-      else ConstantValue(expr + that.expr)
+    def +(that: ConstantValue) = copy(expr = expr + that.expr)
 
-    def increment = ConstantValue(expr+1)
-    def decrement = ConstantValue(expr-1)
+    def increment = if(isInteger) ConstantValue(expr+1) else this
+    def decrement = if(isInteger) ConstantValue(expr-1) else this
 
     override def toString = expr.toString
     def substitute(symbol: BoundedSymbol, expr: Expression) = this
   }
+
 }

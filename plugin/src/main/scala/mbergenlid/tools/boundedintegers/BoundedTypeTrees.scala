@@ -89,7 +89,9 @@ trait BoundedTypeTrees extends Expressions {
   case class LessThan(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
-      case LessThanOrEqual(v2) => (v2.increment) >= v
+      case LessThanOrEqual(v2) =>
+//        error(s"$that = ${(v2.increment - v).terms.size}")
+        v2.increment >= v
       case _ => super.obviouslySubsetOf(that)
     }
     

@@ -39,14 +39,14 @@ class IfExpressionSpec extends PluginTestRunner {
   test("Test bound to symbol") {
     compile("""
               |val maxValue = 10
-              |def myMethod(@LessThanOrEqual(maxValue) @GreaterThanOrEqual(0) a: Int, b: String) = 1
+              |def myMethod(@LessThanOrEqual(maxValue) @GreaterThanOrEqual(0L) a: Int, b: String) = 1
               |
               |val x = anotherRandomInteger
               |if(x > 0 && x < maxValue)
-              |  testMethod(x)
+              |  myMethod(x, "Should compile")
               |
               |if(x > 0)
-              |  testMethod(x)
+              |  myMethod(x, "Should not compile")
             """.stripMargin)(List(10))
   }
 }

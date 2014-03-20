@@ -4,7 +4,6 @@ import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
 import validators._
-import scala.reflect.api.JavaUniverse
 
 
 trait PluginTestRunner extends FunSuite
