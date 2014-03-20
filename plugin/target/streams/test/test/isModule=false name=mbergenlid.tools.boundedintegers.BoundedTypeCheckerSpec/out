@@ -1,7 +1,0 @@
-[0m[[0minfo[0m] [0m[32mBoundedTypeCheckerSpec:[0m[0m
-[0m[[0minfo[0m] [0m[32m- Failure with constant argument[0m[0m
-[0m[[0minfo[0m] [0m[32m- Should fail if called with variable that is not itself within range[0m[0m
-[0m[[0minfo[0m] [0m[32m- Should not fail if variable is annotated[0m[0m
-[0m[[0minfo[0m] [0m[32m- Should fail if called with arbitrary Int expression[0m[0m
-[0m[[0minfo[0m] [0m[32m- Test return statement[0m[0m
-[0m[[0minfo[0m] [0m[32m- Validation in middle of boolean expression[0m[0m
