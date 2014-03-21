@@ -1,75 +1,81 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.language.implicitConversions
-import java.math.{BigDecimal => JBigDecimal}
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 
 trait Expressions {
   type BoundedSymbol
 
-  implicit def constantToExpression(c: ConstantValue) =
-    Polynom(Set(Term(c, Map.empty)))
+  trait Expression[T] {
+    def terms: Set[Term[T]]
+    def >(that: Expression[T]): Boolean
+    def >=(that: Expression[T]): Boolean
+    def <(that: Expression[T]): Boolean
+    def <=(that: Expression[T]): Boolean
+    def ==(that: Expression[T]): Boolean
 
-  implicit def symbolToExpression(s: SymbolExpression) =
-    Polynom(Set(Term(ConstantValue(1), Map(s.symbol -> 1))))
 
-  implicit def int2BigDecimal(v: Int) = BigDecimal(v)
+    override def equals(obj: scala.Any): Boolean = obj match {
+      case e: Expression[T] => this == e
+      case _ => super.equals(obj)
+    }
 
-  trait Expression {
-    def terms: Set[Term]
-    def >(that: Expression): Boolean
-    def >=(that: Expression): Boolean 
-    def <(that: Expression): Boolean
-    def <=(that: Expression): Boolean 
-    def ==(that: Expression): Boolean 
+    def +(that: Expression[T]): Expression[T]
+    def -(that: Expression[T]): Expression[T]
+    def *(that: Expression[T]): Expression[T]
 
-    def +(that: Expression): Expression
-    def -(that: Expression): Expression
-    def *(that: Expression): Expression
+    def unary_- : Expression[T]
+    def substitute(symbol: BoundedSymbol, expr: Expression[T]): Expression[T]
 
-    def increment: Expression
-    def decrement: Expression
-
-    def unary_- : Expression
-
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression
     def containsSymbols: Boolean
-    def extractSymbols: Set[BoundedSymbol] = for {
-      term <- terms
-      (symbol, mult) <- term.variables
-    } yield symbol
+    def increment: Expression[T]
+    def decrement: Expression[T]
 
-    def map(f: Term => Term) =
-      Polynom(terms.map(f))
-
-    override def toString =
-      if(terms.isEmpty) "0"
-      else terms.mkString(" + ")
+    def extractSymbols: Set[BoundedSymbol]
   }
 
-  case class Polynom(terms: Set[Term]) extends Expression {
-    def >(that: Expression): Boolean = {
+  object Polynom {
+    def apply[T: RichNumeric](terms: Set[Term[T]]) =
+      new Polynom[T](terms)
+
+    def apply[T: RichNumeric](terms: Term[T]*) =
+      new Polynom[T](terms.toSet[Term[T]])
+
+    def fromConstant[T: RichNumeric](constant: T) =
+      new Polynom[T](Set(Term(ConstantValue(constant), Map.empty)))
+
+    def fromSymbol[T: RichNumeric](symbol: BoundedSymbol) =
+      new Polynom[T](
+        Set(Term[T](ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
+        Map(symbol -> 1))))
+
+    def Zero[T: RichNumeric] = new Polynom[T](Set.empty)
+  }
+
+  class Polynom[T: RichNumeric](val terms: Set[Term[T]]) extends Expression[T] {
+    def >(that: Expression[T]): Boolean = {
       val diff = (this - that).terms
       !diff.isEmpty && diff.forall(_.greaterThanZero)
     }
-    def >=(that: Expression): Boolean=
+    def >=(that: Expression[T]): Boolean=
       (this - that).terms.forall(t => t.greaterThanZero || t.isZero)
-    def <(that: Expression): Boolean = {
+    def <(that: Expression[T]): Boolean = {
       val diff = (this - that).terms
       !diff.isEmpty && diff.forall(_.lessThanZero)
     }
-    def <=(that: Expression): Boolean=
+    def <=(that: Expression[T]): Boolean=
       (this - that).terms.forall(t => t.lessThanZero || t.isZero)
-    def ==(that: Expression): Boolean=
+    def ==(that: Expression[T]): Boolean=
       (this - that).terms.forall(_.isZero)
 
 
-    def +(that: Expression): Expression = Polynom(
+    def +(that: Expression[T]): Expression[T] = Polynom(
       (terms /: that.terms) {(set, term) =>
         addTerm(set, term) 
       }
     )
 
-    private def addTerm(terms: Set[Term], that: Term) = {
+    private def addTerm(terms: Set[Term[T]], that: Term[T]): Set[Term[T]] = {
       terms.find(_.+.isDefinedAt(that)) match {
         case Some(t) => 
           val newTerm = t + that
@@ -79,22 +85,20 @@ trait Expressions {
       }
     }
 
-    def -(that: Expression): Expression = this + (-that)
-    def *(that: Expression): Expression = Polynom(for {
+    def -(that: Expression[T]): Expression[T] = this + (-that)
+    def *(that: Expression[T]): Expression[T] = Polynom(for {
       thisTerm <- terms
       thatTerm <- that.terms
     } yield { thisTerm * thatTerm })
 
-    def unary_- : Expression = map(_.unary_-)
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression =
-      terms.foldLeft[Expression](Polynom(Set.empty)) {(p, t) => {
+    def unary_- : Expression[T] = map(_.unary_-)
+    def substitute(symbol: BoundedSymbol, expr: Expression[T]): Expression[T] =
+      terms.foldLeft[Expression[T]](Polynom.Zero) {(p, t) => {
         p + t.substitute(symbol, expr) 
       }}
 
     def containsSymbols =
       terms.exists(_.variables != Map.empty)
-
-
 
     def increment =
       if(terms.size == 1) Polynom(terms.map(_.increment))
@@ -103,33 +107,44 @@ trait Expressions {
     def decrement =
       if(terms.size == 1) Polynom(terms.map(_.decrement))
       else this
+
+    def extractSymbols: Set[BoundedSymbol] = for {
+      term <- terms
+      (symbol, mult) <- term.variables
+    } yield symbol
+
+    def map(f: Term[T] => Term[T]) =
+      Polynom(terms.map(f))
+
+    override def toString =
+      if(terms.isEmpty) "0"
+      else terms.mkString(" + ")
   }
 
-  case class Term(coeff: ConstantValue, variables: Map[BoundedSymbol, Int]) {
+  case class Term[T: RichNumeric](coeff: ConstantValue[T], variables: Map[BoundedSymbol, Int]) {
     def unary_- = Term(-coeff, variables)
     def isZero = coeff.isZero
-    def greaterThanZero = variables.isEmpty && coeff.expr > 0
-    def lessThanZero = variables.isEmpty && coeff.expr < 0
+    def greaterThanZero = variables.isEmpty && coeff.isGreaterThanZero
+    def lessThanZero = variables.isEmpty && coeff.isLessThanZero
 
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression = 
+    def substitute(symbol: BoundedSymbol, expr: Expression[T]): Expression[T] =
       if(variables.contains(symbol)) {
-        expr * Polynom(Set(Term(coeff, variables - symbol)))
+        expr * Polynom(Set(Term[T](coeff, variables - symbol)))
       } else {
         Polynom(Set(this))
       }
 
 
-    def + : PartialFunction[Term, Term] = {
-      case Term(ConstantValue(JBigDecimal.ZERO, _), s) => this
+    def + : PartialFunction[Term[T], Term[T]] = {
+      case t if t.isZero => this
       case Term(c, s) if variables == s =>
         Term(coeff+c, variables)
     }
 
-    def *(that: Term): Term = {
-      val Term(ConstantValue(v, _), s) = that
-      val newCoeff = coeff.expr*v
-      if(newCoeff == 0) Term(ConstantValue(0, coeff.isInteger), Map.empty)
-      else Term(ConstantValue(newCoeff), (variables /: s) {
+    def *(that: Term[T]): Term[T] = {
+      val newCoeff = coeff*that.coeff
+      if(newCoeff.isZero) Term(ConstantValue(that.coeff.num.zero), Map.empty)
+      else Term[T](newCoeff, (variables /: that.variables) {
         (vars, v) =>
           val multiplicity = vars.getOrElse(v._1, 0)
           vars + (v._1 -> (v._2 + multiplicity))
@@ -138,7 +153,7 @@ trait Expressions {
 
     override def toString = {
       if(variables.isEmpty) coeff.toString
-      else if(coeff.expr == JBigDecimal.ONE) ("" /: variables) ((s, t) => s + t._1)
+      else if(coeff.isOne) ("" /: variables) ((s, t) => s + t._1)
       else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1)
     }
 
@@ -155,18 +170,34 @@ trait Expressions {
     override def toString = symbol.toString
   }
 
-  case class ConstantValue(expr: BigDecimal, isInteger: Boolean = true) {
+  case class ConstantValue[T: RichNumeric](value: T) {
+    val num = implicitly[RichNumeric[T]]
+    import num._
 
-    def isZero = expr == 0
-    def unary_- = copy(expr = -expr)
+    def isOne = value == num.one
+    def isZero = value == num.zero
+    def isGreaterThanZero = num.gt(value, num.zero)
+    def isLessThanZero = num.lt(value, num.zero)
 
-    def +(that: ConstantValue) = copy(expr = expr + that.expr)
+    def unary_- = ConstantValue[T](
+      if(value == num.minValue) num.maxValue
+      else if(value == num.maxValue) num.minValue
+      else -value
+    )
 
-    def increment = if(isInteger) ConstantValue(expr+1) else this
-    def decrement = if(isInteger) ConstantValue(expr-1) else this
+    def +(that: ConstantValue[T]) =
+      if(num.gt(that.value, num.zero) && num.gt(value, num.maxValue - that.value))
+        ConstantValue[T](num.maxValue)
+      else if(num.lt(that.value, num.zero) && num.lt(value, num.minValue - that.value))
+        ConstantValue(num.minValue)
+      else ConstantValue(value + that.value)
 
-    override def toString = expr.toString
-    def substitute(symbol: BoundedSymbol, expr: Expression) = this
+    def *(that: ConstantValue[T]): ConstantValue[T] = ConstantValue(value * that.value)
+
+    def increment = if(num.isInstanceOf[Integral[_]]) ConstantValue(value + num.one) else this
+    def decrement = if(num.isInstanceOf[Integral[_]]) ConstantValue(value - num.one) else this
+
+    override def toString = value.toString
+    def substitute(symbol: BoundedSymbol, expr: Expression[T]) = this
   }
-
 }

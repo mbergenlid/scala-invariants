@@ -30,13 +30,13 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         BoundedInteger(Equal(expr(a.scalaArgs.head)))
     }
 
-    private def expr(tree: Tree): Expression = {
+    private def expr(tree: Tree): Expression[Int] = {
       val Apply(_, List(value)) = tree
       value match {
-        case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => ConstantValue(x)
-        case Literal(Constant(x: Long)) => ConstantValue(x.toInt)
+        case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => Polynom.fromConstant(x)
+        case Literal(Constant(x: Long)) => Polynom.fromConstant(x.toInt)
 //        case Literal(Constant(x: Double)) => //
-        case x: Ident if x.symbol != NoSymbol => SymbolExpression(x.symbol)
+        case x: Ident if x.symbol != NoSymbol => Polynom.fromSymbol(x.symbol)
     }}
 
     def apply(symbol: Symbol): BoundedInteger = {
@@ -49,7 +49,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     def apply(tree: Tree): BoundedInteger = {
       tree match {
         case Literal(Constant(value: Int)) =>
-          BoundedInteger(Equal(ConstantValue(value)))
+          BoundedInteger(Equal(Polynom.fromConstant(value)))
         case t if t.symbol != null =>
           BoundsFactory(t.symbol)
         case _ => BoundedInteger.noBounds

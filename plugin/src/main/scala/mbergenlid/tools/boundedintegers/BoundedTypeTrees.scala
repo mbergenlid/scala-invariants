@@ -59,7 +59,7 @@ trait BoundedTypeTrees extends Expressions {
   }
 
   trait SimpleConstraint extends Constraint {
-    def v: Expression
+    def v: Expression[Int]
     def foreach[U](f: Constraint => U): Unit = {
       f(this)
     }
@@ -75,7 +75,7 @@ trait BoundedTypeTrees extends Expressions {
   }
 
   object SimpleConstraint {
-    def unapply(c: SimpleConstraint): Option[Expression] = c match {
+    def unapply(c: SimpleConstraint): Option[Expression[Int]] = c match {
       case s: SimpleConstraint => Some(s.v)
       case _ => None
     }
@@ -86,7 +86,7 @@ trait BoundedTypeTrees extends Expressions {
    * <  2,  <  x
    * <= 1,  <= x
    */
-  case class LessThan(v: Expression) extends SimpleConstraint {
+  case class LessThan(v: Expression[Int]) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
       case LessThanOrEqual(v2) =>
@@ -112,7 +112,7 @@ trait BoundedTypeTrees extends Expressions {
    * <= 5
    * <= 4
    */
-  case class LessThanOrEqual(v: Expression) extends SimpleConstraint {
+  case class LessThanOrEqual(v: Expression[Int]) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 > v 
       case LessThanOrEqual(v2) => v2 >= v
@@ -134,7 +134,7 @@ trait BoundedTypeTrees extends Expressions {
    *  >  2
    *  >= 3
    */
-  case class GreaterThan(v: Expression) extends SimpleConstraint {
+  case class GreaterThan(v: Expression[Int]) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
       case GreaterThanOrEqual(v2) => (v2.decrement) <= v
@@ -151,7 +151,7 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBoundInclusive = this
   }
 
-  case class GreaterThanOrEqual(v: Expression) extends SimpleConstraint {
+  case class GreaterThanOrEqual(v: Expression[Int]) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v
@@ -168,7 +168,7 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBoundInclusive = this
   }
   
-  case class Equal(v: Expression) extends SimpleConstraint {
+  case class Equal(v: Expression[Int]) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v

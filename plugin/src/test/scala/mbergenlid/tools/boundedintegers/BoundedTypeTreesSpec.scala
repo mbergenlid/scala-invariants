@@ -16,20 +16,20 @@ class BoundedTypeTreesSpec extends FunSuite
   val parser = new ExprParser
 
   test("Test Basic Constant values") {
-    val one = ConstantValue(1)
-    val five = ConstantValue(5)
-    val minusOne = ConstantValue(-1)
+    val one = Polynom.fromConstant(1)
+    val five = Polynom.fromConstant(5)
+    val minusOne = Polynom.fromConstant(-1)
 
     assert(one < five, s"$one should be < $five")
     assert(one <= five, s"$one should be <= $five")
     assert(one >= minusOne, s"$one should be >= $minusOne")
     assert(five > minusOne, s"$five should be > $minusOne")
-    assert(five == ConstantValue(5), s"$five should be == $five")
+    assert(five == Polynom.fromConstant(5), s"$five should be == $five")
   }
 
   test("Test Basic SymbolExpression") {
-    val x = SymbolExpression("x")
-    val y = SymbolExpression("y")
+    val x = Polynom.fromSymbol[Int]("x")
+    val y = Polynom.fromSymbol[Int]("y")
 
     assert(!(x < y), s"!($x < $y)")
     assert(!(x < x), s"!($x < $x)")
@@ -84,7 +84,7 @@ class BoundedTypeTreesSpec extends FunSuite
         case "||" => Or.apply _
       }
 
-    def binOp: Parser[Expression => Constraint] = 
+    def binOp: Parser[Expression[Int] => Constraint] =
       (">=" | "<=" | "<" | ">" | "==") ^^ {
         case ">" => GreaterThan.apply _
         case "<" => LessThan.apply _
@@ -94,14 +94,9 @@ class BoundedTypeTreesSpec extends FunSuite
       }
 
 
-    def value: Parser[Expression] =
-      (ident ^^ polynom) | (wholeNumber ^^ {x: String => polynom(x.toInt)} )
+    def value: Parser[Expression[Int]] =
+      (ident ^^ Polynom.fromSymbol[Int]) | (wholeNumber ^^ {x: String => Polynom.fromConstant(x.toInt)} )
 
-    def polynom(s: String) =
-      Polynom(Set(Term(ConstantValue(1), Map(s -> 1))))
-
-    def polynom(c: Int) =
-      Polynom(Set(Term(ConstantValue(c), Map.empty)))
   }
 
   def assertConstraint(expr: String) {

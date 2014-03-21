@@ -3,15 +3,14 @@ package mbergenlid.tools.boundedintegers
 
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
-import scala.util.parsing.combinator.JavaTokenParsers
 
 class ExpressionsSpec extends FunSuite 
     with Expressions {
 
   type BoundedSymbol = String
 
-  implicit def c(v: Int) = constantToExpression(ConstantValue(v))
-  implicit def s(s: String) = symbolToExpression(SymbolExpression(s))
+  implicit def c(v: Int): Expression[Int] = Polynom.fromConstant(v)
+  implicit def s(s: String) = Polynom.fromSymbol(s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[BoundedSymbol, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1
@@ -29,10 +28,10 @@ class ExpressionsSpec extends FunSuite
     assert(e1 === c(9))
 
     val e2 = s("x") + c(4)
-    assert(e2 === Polynom(Set(t(1, "x"), t(4))))
+    assert(e2 === Polynom(t(1, "x"), t(4)))
 
     val e3 = s("x") + s("y") + c(4)
-    assert(e3 === Polynom(Set(t(1, "x"), t(1, "y"), t(4))))
+    assert(e3 === Polynom(t(1, "x"), t(1, "y"), t(4)))
   }
 
   test("Minus arithmetic expressions") {
@@ -43,7 +42,7 @@ class ExpressionsSpec extends FunSuite
     assert(e2 === c(-1))
 
     val e3 = s("y") + c(5) + (s("x") + c(3))
-    assert(e3 === Polynom(Set(t(1, "y"), t(1, "x"), t(8))))
+    assert(e3 === Polynom(t(1, "y"), t(1, "x"), t(8)))
   }
 
   test("Times with constant") {

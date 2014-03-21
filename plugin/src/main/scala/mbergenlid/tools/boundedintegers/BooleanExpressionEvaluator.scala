@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers
 
+
 trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   self: MyUniverse =>
   import global._
@@ -17,7 +18,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   private def n(s: String) = stringToTermName(s)
 
-  private val opToConstraints = Map[Name, (Expression => Constraint)](
+  private val opToConstraints = Map[Name, (Expression[Int] => Constraint)](
     n("$less") -> LessThan,
     n("$greater") -> GreaterThan
   )
@@ -35,8 +36,8 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     } yield { obj && BoundedInteger(constraint(argExpression)) }
   }
 
-  private def fromTree(tree: Tree): Expression = tree match {
-    case Literal(Constant(x: Int)) => ConstantValue(x)
-    case _ => SymbolExpression(tree.symbol)
+  private def fromTree(tree: Tree): Expression[Int] = tree match {
+    case Literal(Constant(x: Int)) => Polynom.fromConstant(x)
+    case _ => Polynom.fromSymbol(tree.symbol)
   }
 }

@@ -87,7 +87,7 @@ trait TypeContext { self: BoundedTypeTrees =>
 
     private def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
-          Option[Expression => SimpleConstraint] = (base, boundedBy) match {
+          Option[Expression[Int] => SimpleConstraint] = (base, boundedBy) match {
 
       case (LessThan(_), LessThan(_)) =>
         Some(LessThan.apply _)
@@ -189,15 +189,15 @@ trait TypeContext { self: BoundedTypeTrees =>
     def apply(constraint: Constraint) = new BoundedInteger(constraint)
     def apply(min: Int, max: Int) = (min, max) match {
       case (Int.MinValue, Int.MaxValue) => new BoundedInteger()
-      case (Int.MinValue, _) => new BoundedInteger(LessThanOrEqual(ConstantValue(max)))
-      case (_, Int.MaxValue) => new BoundedInteger(GreaterThanOrEqual(ConstantValue(min)))
+      case (Int.MinValue, _) => new BoundedInteger(LessThanOrEqual(Polynom.fromConstant(max)))
+      case (_, Int.MaxValue) => new BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(min)))
       case _ => new BoundedInteger(And(
-        LessThanOrEqual(ConstantValue(max)),
-        GreaterThanOrEqual(ConstantValue(min))
+        LessThanOrEqual(Polynom.fromConstant(max)),
+        GreaterThanOrEqual(Polynom.fromConstant(min))
       ))
     }
 
-    implicit def integerToBounded(x: Int) = BoundedInteger(Equal(ConstantValue(x)))
+    implicit def integerToBounded(x: Int) = BoundedInteger(Equal(Polynom.fromConstant(x)))
 
     val noBounds = new BoundedInteger
   }

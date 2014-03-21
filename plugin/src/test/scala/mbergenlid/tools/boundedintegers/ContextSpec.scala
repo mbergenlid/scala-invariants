@@ -2,8 +2,6 @@ package mbergenlid.tools.boundedintegers
 
 
 import org.scalatest.FunSuite
-import scala.tools.reflect.ToolBox
-import scala.reflect.runtime.universe.runtimeMirror
 
 class ContextSpec extends FunSuite 
     with TypeContext with BoundedTypeTrees with Expressions {
@@ -20,7 +18,7 @@ class ContextSpec extends FunSuite
 
   test("Simple retrieval") {
     val expected = BoundedInteger(
-      LessThan(ConstantValue(4))
+      LessThan(Polynom.fromConstant(4))
     )
     val c = new Context(Map(
       "x" -> expected
@@ -33,7 +31,7 @@ class ContextSpec extends FunSuite
     val originalXBound = BoundedInteger(LessThan(Polynom(Set(t(1, "y"), t(4)))))
     val c = new Context(Map(
       "x" -> originalXBound,
-      "y" -> BoundedInteger(GreaterThan(ConstantValue(4)))
+      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
     ))
 
     val xBounds = Context.getBoundedInteger("x", c)
@@ -42,68 +40,68 @@ class ContextSpec extends FunSuite
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(SymbolExpression("y"))),
-      "y" -> BoundedInteger(LessThan(ConstantValue(4)))
-    )))(LessThan(ConstantValue(4)))()
+      "x" -> BoundedInteger(LessThan(Polynom.fromSymbol("y"))),
+      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+    )))(LessThan(Polynom.fromConstant(4)))()
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(LessThan(ConstantValue(4)))
-    )))(LessThan(ConstantValue(8)))(LessThan(ConstantValue(4)))
+      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+    )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(SymbolExpression("y"))),
+      "x" -> BoundedInteger(LessThan(Polynom.fromSymbol("y"))),
       "y" -> BoundedInteger(LessThan(Polynom(Set(t(1, "z"), t(4))))),
-      "z" -> BoundedInteger(LessThan(ConstantValue(1)))
-    )))(LessThan(ConstantValue(5)))(LessThan(ConstantValue(4)))
+      "z" -> BoundedInteger(LessThan(Polynom.fromConstant(1)))
+    )))(LessThan(Polynom.fromConstant(5)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(LessThan(ConstantValue(4)))
-    )))(LessThan(ConstantValue(8)))(LessThan(ConstantValue(4)))
+      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+    )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(ConstantValue(4)))
-    )))(GreaterThan(ConstantValue(8)))(GreaterThan(ConstantValue(9)))
+      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+    )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(Equal(ConstantValue(4)))
+      "y" -> BoundedInteger(Equal(Polynom.fromConstant(4)))
     )))(
-      Equal(ConstantValue(8)), LessThan(ConstantValue(9))
-    )(GreaterThan(ConstantValue(9)))
+      Equal(Polynom.fromConstant(8)), LessThan(Polynom.fromConstant(9))
+    )(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(ConstantValue(4)))
-    )))(GreaterThan(ConstantValue(8)))(GreaterThan(ConstantValue(9)))
+      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+    )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(GreaterThanOrEqual(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(ConstantValue(4)))
-    )))(GreaterThan(ConstantValue(8)))(GreaterThan(ConstantValue(9)))
+      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+    )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(And(LessThan(ConstantValue(10)), GreaterThan(ConstantValue(0))))
+      "y" -> BoundedInteger(And(LessThan(Polynom.fromConstant(10)), GreaterThan(Polynom.fromConstant(0))))
     ))) (
-      LessThan(ConstantValue(14)), GreaterThan(ConstantValue(4))
+      LessThan(Polynom.fromConstant(14)), GreaterThan(Polynom.fromConstant(4))
     )()
 
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(Or(LessThan(ConstantValue(0)), GreaterThan(ConstantValue(10))))
-    ))) ()(LessThan(ConstantValue(4)))
+      "y" -> BoundedInteger(Or(LessThan(Polynom.fromConstant(0)), GreaterThan(Polynom.fromConstant(10))))
+    ))) ()(LessThan(Polynom.fromConstant(4)))
 
   /**
    * x = y - 5
@@ -114,8 +112,8 @@ class ContextSpec extends FunSuite
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(-5))))),
-      "y" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(0)), LessThanOrEqual(ConstantValue(5))))
-    )))(GreaterThanOrEqual(ConstantValue(-5)))(GreaterThan(ConstantValue(-5)))
+      "y" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5))))
+    )))(GreaterThanOrEqual(Polynom.fromConstant(-5)))(GreaterThan(Polynom.fromConstant(-5)))
 
   /**
    * x > y
@@ -126,8 +124,8 @@ class ContextSpec extends FunSuite
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"))))),
-      "y" -> BoundedInteger(GreaterThanOrEqual(ConstantValue(0)))
-    )))(GreaterThan(ConstantValue(0)))()
+      "y" -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0)))
+    )))(GreaterThan(Polynom.fromConstant(0)))()
 
   /**
    * x < y
@@ -138,8 +136,8 @@ class ContextSpec extends FunSuite
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"))))),
-      "y" -> BoundedInteger(LessThanOrEqual(ConstantValue(0)))
-    )))(LessThan(ConstantValue(0)))()
+      "y" -> BoundedInteger(LessThanOrEqual(Polynom.fromConstant(0)))
+    )))(LessThan(Polynom.fromConstant(0)))()
 
   /**
    * _ = y + z
@@ -151,9 +149,9 @@ class ContextSpec extends FunSuite
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
-      "y" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(0)), LessThanOrEqual(ConstantValue(5)))),
-      "z" -> BoundedInteger(And(GreaterThanOrEqual(ConstantValue(1)), LessThanOrEqual(ConstantValue(6)))) 
-    )))(GreaterThanOrEqual(ConstantValue(1)), LessThan(ConstantValue(12)))(LessThanOrEqual(ConstantValue(10)))
+      "y" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5)))),
+      "z" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThanOrEqual(Polynom.fromConstant(6))))
+    )))(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThan(Polynom.fromConstant(12)))(LessThanOrEqual(Polynom.fromConstant(10)))
   
   /**
    * _ = y + z
@@ -165,9 +163,9 @@ class ContextSpec extends FunSuite
   contextTest(
     new Context(Map(
       "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
-      "y" -> BoundedInteger(GreaterThanOrEqual(ConstantValue(0))),
-      "z" -> BoundedInteger(GreaterThan(ConstantValue(1))) 
-    )))(GreaterThanOrEqual(SymbolExpression("z")), GreaterThan(ConstantValue(1)))()
+      "y" -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0))),
+      "z" -> BoundedInteger(GreaterThan(Polynom.fromConstant(1)))
+    )))(GreaterThanOrEqual(Polynom.fromSymbol("z")), GreaterThan(Polynom.fromConstant(1)))()
 
   def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
     test(c.toString) {
