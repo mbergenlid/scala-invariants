@@ -10,7 +10,7 @@ class ExpressionsSpec extends FunSuite
   type BoundedSymbol = String
 
   implicit def c(v: Int): Expression[Int] = Polynom.fromConstant(v)
-  implicit def s(s: String) = Polynom.fromSymbol(s)
+  implicit def s(s: String) = Polynom.fromSymbol[Int](s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[BoundedSymbol, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1

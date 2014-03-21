@@ -24,7 +24,7 @@ trait PluginTestRunner extends FunSuite
   def compile(program: String)(expectedErrorLines: List[Int] = Nil) {
     val withImports =
       """|import mbergenlid.tools.boundedintegers.testclasspath.TestMethods._
-         |import mbergenlid.tools.boundedintegers.annotations.{BoundedType, LessThanOrEqual, Equal, GreaterThanOrEqual}
+         |import mbergenlid.tools.boundedintegers.annotations._
          |println("Start of test")
       """.stripMargin + program
 

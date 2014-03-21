@@ -1,12 +1,8 @@
 package mbergenlid.tools.boundedintegers
 
-
 import scala.reflect.api.Universe
-import mbergenlid.tools.boundedintegers.annotations.{
-                                          BoundedType,
-                                          GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
-                                          LessThanOrEqual => LessThanOrEqualAnnotation,
-                                          Equal => EqualAnnotation}
+import mbergenlid.tools.boundedintegers.annotations.{GreaterThanOrEqual => GreaterThanOrEqualAnnotation, LessThan => LessThanAnnotation, LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, RichNumeric, BoundedType}
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 
 trait MyUniverse extends BoundedTypeTrees with TypeContext {
   val global: Universe
@@ -28,16 +24,23 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         BoundedInteger(LessThanOrEqual(expr(a.scalaArgs.head)))
       case a if a.tpe =:= typeOf[EqualAnnotation] =>
         BoundedInteger(Equal(expr(a.scalaArgs.head)))
+      case a if a.tpe =:= typeOf[LessThanAnnotation] =>
+        BoundedInteger(LessThan(expr(a.scalaArgs.head)))
     }
 
-    private def expr(tree: Tree): Expression[Int] = {
+    private def expr[T: RichNumeric](tree: Tree): Expression[T] = {
       val Apply(_, List(value)) = tree
-      value match {
-        case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue => Polynom.fromConstant(x)
-        case Literal(Constant(x: Long)) => Polynom.fromConstant(x.toInt)
-//        case Literal(Constant(x: Double)) => //
-        case x: Ident if x.symbol != NoSymbol => Polynom.fromSymbol(x.symbol)
-    }}
+      expression(value)(implicitly[RichNumeric[T]])
+    }
+
+    def expression[T](tree: Tree)(implicit ev: RichNumeric[T]): Expression[T] = tree match {
+      case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue =>
+        Polynom.fromConstant[T](ev.fromType[Int](x))
+      case Literal(Constant(x: Long)) =>
+        Polynom.fromConstant[T](ev.fromType[Long](x))
+      //        case Literal(Constant(x: Double)) => //
+      case x: Ident if x.symbol != NoSymbol => Polynom.fromSymbol[T](x.symbol)
+    }
 
     def apply(symbol: Symbol): BoundedInteger = {
       (BoundedInteger.noBounds /: symbol.annotations.collect {
@@ -109,7 +112,11 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case None =>
         BoundsFactory(tree)
     }
-    Context.getBoundedInteger(bounds, context - tree.symbol)
+    if(tree.symbol != null && tree.symbol != NoSymbol) {
+      BoundedInteger(Equal(Polynom.fromSymbol(tree.symbol))) && bounds
+    } else {
+      bounds //Context.getBoundedInteger(bounds, context - tree.symbol)
+    }
   }
 
 }

@@ -20,18 +20,20 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
   )
 
   /**
+   * x < 4
+   * y > 5
+   *
+   * x + y
    * x + 2
    */
   private def validate(implicit context: Context): Validator = {
-    case Apply(Select(op1, method), List(op2)) if operators.contains(method) =>
-      BoundedInteger(Equal(operators(method).apply(fromTree(op1), fromTree(op2))))
-      
+    case a @ Apply(Select(op1, method), List(op2)) if operators.contains(method) =>
+      val lhs = checkBounds(context)(op1)
+      Context.getBoundedInteger(
+        BoundedInteger(
+          Equal(operators(method).apply(BoundsFactory.expression[Int](op1), BoundsFactory.expression[Int](op2)))
+        ),
+        context
+      )
   }
-
-
-  private def fromTree(tree: Tree): Expression[Int] = tree match {
-    case Literal(Constant(x: Int)) => Polynom.fromConstant(x)
-    case _ => Polynom.fromSymbol[Int](tree.symbol)
-  }
-
 }

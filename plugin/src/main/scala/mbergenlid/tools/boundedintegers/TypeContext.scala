@@ -10,7 +10,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     def apply(symbol: BoundedSymbol) = symbols.get(symbol)
     def get(symbol: BoundedSymbol) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
     def removeSymbolConstraints(symbol: BoundedSymbol) =
-      new Context(symbols map { case (k,v) => (k -> v.removeSymbolConstraints(symbol))})
+      new Context(symbols map { case (k,v) => k -> v.removeSymbolConstraints(symbol)})
 
     def &&(other: Context) = combineWith(other, _&&_)
 
@@ -19,7 +19,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     def combineWith(other: Context, op: Operator) = {
       val map = (other.symbols /: symbols) { (map, t) =>
         val bounds = other.symbols.getOrElse(t._1, new BoundedInteger)
-        map + (t._1 -> (op(bounds, t._2)))
+        map + (t._1 -> op(bounds, t._2))
       }
       new Context(map)
     }
@@ -32,7 +32,7 @@ trait TypeContext { self: BoundedTypeTrees =>
       
     def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
     def size = symbols.size
-    override def toString = symbols.toString
+    override def toString = symbols.toString()
   } 
   
   def createBound(symbol: BoundedSymbol): BoundedInteger
@@ -75,11 +75,11 @@ trait TypeContext { self: BoundedTypeTrees =>
               sc2 <- findBoundFunction(sc1)(b)
             } yield { 
               val boundConstr = createBoundConstraint(sc1, sc2)
-              if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v));
+              if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
               else NoConstraints
             },
             rest,
-            context
+            context - symbol
           )
         case Nil => constraint
       }
@@ -90,34 +90,34 @@ trait TypeContext { self: BoundedTypeTrees =>
           Option[Expression[Int] => SimpleConstraint] = (base, boundedBy) match {
 
       case (LessThan(_), LessThan(_)) =>
-        Some(LessThan.apply _)
+        Some(LessThan.apply)
       case (LessThan(_), LessThanOrEqual(_)) => 
-        Some(LessThan.apply _)
+        Some(LessThan.apply)
       case (LessThan(_), Equal(_)) => 
-        Some(LessThan.apply _)
+        Some(LessThan.apply)
       case (GreaterThan(_), GreaterThan(_)) => 
-        Some(GreaterThan.apply _)
+        Some(GreaterThan.apply)
       case (GreaterThan(_), GreaterThanOrEqual(_)) => 
-        Some(GreaterThan.apply _)
+        Some(GreaterThan.apply)
       case (GreaterThan(_), Equal(_)) => 
-        Some(GreaterThan.apply _)
+        Some(GreaterThan.apply)
 
       case (GreaterThanOrEqual(_), GreaterThan(_)) =>
-          Some(GreaterThan.apply _)
+          Some(GreaterThan.apply)
       case (GreaterThanOrEqual(_), GreaterThanOrEqual(_)) =>
-          Some(GreaterThanOrEqual.apply _)
+          Some(GreaterThanOrEqual.apply)
       case (GreaterThanOrEqual(_), Equal(_)) =>
-          Some(GreaterThanOrEqual.apply _)
+          Some(GreaterThanOrEqual.apply)
       case (LessThanOrEqual(_), LessThan(_)) =>
-          Some(LessThan.apply _)
+          Some(LessThan.apply)
       case (LessThanOrEqual(_), LessThanOrEqual(_)) =>
-          Some(LessThanOrEqual.apply _)
+          Some(LessThanOrEqual.apply)
       case (LessThanOrEqual(_), Equal(_)) =>
-          Some(LessThanOrEqual.apply _)
+          Some(LessThanOrEqual.apply)
 
       case (Equal(_), _) =>
         if(boundedBy.isInstanceOf[Equal])
-          Some(Equal.apply _)
+          Some(Equal.apply)
         else 
           createBoundConstraint(boundedBy, base)
       case _ => None
@@ -126,17 +126,15 @@ trait TypeContext { self: BoundedTypeTrees =>
     private def findBoundFunction(c: SimpleConstraint): (Constraint => Constraint) = c match {
       case LessThan(v) => _.upperBound
       case GreaterThan(_) => _.lowerBound
-      case Equal(_) => { con => 
+      case Equal(_) => con =>
         And(con.lowerBoundInclusive, con.upperBoundInclusive)
-      }
       case GreaterThanOrEqual(_) => _.lowerBoundInclusive
       case LessThanOrEqual(_) => _.upperBoundInclusive
     }
   }
 
-  class BoundedInteger(val constraint: Constraint) {
-    import BoundedInteger._
-
+  import scala.reflect.runtime.universe._
+  class BoundedInteger(val constraint: Constraint, val tpe: Type = typeOf[Nothing]) {
     def this() = this(NoConstraints)
 
     def <:<(other: BoundedInteger): Boolean =
@@ -170,9 +168,9 @@ trait TypeContext { self: BoundedTypeTrees =>
       new BoundedInteger(_removeSymbolConstraints(symbol)(constraint))
 
     private def _removeSymbolConstraints(symbol: BoundedSymbol)(c: Constraint): Constraint = c match {
-      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol) _)
-      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol) _)
-      case _ if(c.isSymbolConstraint) => NoConstraints
+      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol))
+      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol))
+      case _ if c.isSymbolConstraint => NoConstraints
       case _ => c
     }
 

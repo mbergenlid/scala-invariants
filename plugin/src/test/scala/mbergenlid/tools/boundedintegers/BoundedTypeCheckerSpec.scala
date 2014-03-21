@@ -46,10 +46,22 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
 
 
   test("Validation in middle of boolean expression") {
-    compile("""|val x = randomInteger
-          |
-          |if(x < 10 && testMethod(x)) println("Should compile")
-          |if(x > 0 && testMethod(x)) println("Should not compile")
-          """.stripMargin)(List(4))
+    compile("""
+              |val x = randomInteger
+              |
+              |if(x < 10 && testMethod(x)) println("Should compile")
+              |if(x > 0 && testMethod(x)) println("Should not compile")
+            """.stripMargin)(List(5))
+  }
+
+  test("Implicitly bound to method") {
+    compile(
+      """
+        |val x = 5
+        |@Equal(x)
+        |val y = x
+        |
+        |testMethod(y)
+      """.stripMargin)(Nil)
   }
 }
