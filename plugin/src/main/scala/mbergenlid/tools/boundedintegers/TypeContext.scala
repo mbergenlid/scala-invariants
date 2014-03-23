@@ -87,7 +87,7 @@ trait TypeContext { self: BoundedTypeTrees =>
 
     private def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
-          Option[Expression[Int] => SimpleConstraint] = (base, boundedBy) match {
+          Option[Expression => SimpleConstraint] = (base, boundedBy) match {
 
       case (LessThan(_), LessThan(_)) =>
         Some(LessThan.apply)
@@ -133,8 +133,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
   }
 
-  import scala.reflect.runtime.universe._
-  class BoundedInteger(val constraint: Constraint, val tpe: Type = typeOf[Nothing]) {
+  class BoundedInteger(val constraint: Constraint) {
     def this() = this(NoConstraints)
 
     def <:<(other: BoundedInteger): Boolean =

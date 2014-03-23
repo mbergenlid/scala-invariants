@@ -10,7 +10,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
   implicit class ConstrainedSymbol(symbol: Symbol) {
 
     def tryAssign(expr: Tree)(implicit context: Context): BoundedInteger = {
-      val target = BoundsFactory.apply(symbol)
+      val target = BoundsFactory.apply(symbol, symbol.typeSignature)
       val boundedExpr = Context.getBoundedInteger(checkBounds(context)(expr), context)
       if(!(boundedExpr <:< target))
         reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))

@@ -1,19 +1,25 @@
 package mbergenlid.tools.boundedintegers
-
-
 import org.scalatest.FunSuite
+import scala.reflect.runtime.universe._
 
+import scala.language.implicitConversions
 class ContextSpec extends FunSuite 
     with TypeContext with BoundedTypeTrees with Expressions {
 
-  type BoundedSymbol = String
+  type BoundedSymbol = Symbol
   def createBound(symbol: BoundedSymbol) =
     BoundedInteger.noBounds
 
+  val x = 0
+  val y = 0
+  val z = 0
+  implicit def sym(s: String): BoundedSymbol =
+    typeOf[this.type].member(newTermName(s))
+
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[BoundedSymbol, Int] /: s) { (map, term) =>
-    val multiplicity = map.getOrElse(term, 0) + 1
-    map + (term -> multiplicity)
+    val multiplicity = map.getOrElse(sym(term), 0) + 1
+    map + (sym(term) -> multiplicity)
   })
 
   test("Simple retrieval") {
@@ -21,7 +27,7 @@ class ContextSpec extends FunSuite
       LessThan(Polynom.fromConstant(4))
     )
     val c = new Context(Map(
-      "x" -> expected
+      sym("x") -> expected
     ))
 
     assert(Context.getBoundedInteger("x", c) === expected)
@@ -30,8 +36,8 @@ class ContextSpec extends FunSuite
   test("More complex transitive with Mixed") {
     val originalXBound = BoundedInteger(LessThan(Polynom(Set(t(1, "y"), t(4)))))
     val c = new Context(Map(
-      "x" -> originalXBound,
-      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+      sym("x") -> originalXBound,
+      sym("y") -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
     ))
 
     val xBounds = Context.getBoundedInteger("x", c)
@@ -40,67 +46,67 @@ class ContextSpec extends FunSuite
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(Polynom.fromSymbol("y"))),
-      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(LessThan(Polynom.fromSymbol[Int]("y"))),
+      sym("y") -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
     )))(LessThan(Polynom.fromConstant(4)))()
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
     )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(Polynom.fromSymbol("y"))),
-      "y" -> BoundedInteger(LessThan(Polynom(Set(t(1, "z"), t(4))))),
-      "z" -> BoundedInteger(LessThan(Polynom.fromConstant(1)))
+      sym("x") -> BoundedInteger(LessThan(Polynom.fromSymbol[Int]("y"))),
+      sym("y") -> BoundedInteger(LessThan(Polynom(Set(t(1, "z"), t(4))))),
+      sym("z") -> BoundedInteger(LessThan(Polynom.fromConstant(1)))
     )))(LessThan(Polynom.fromConstant(5)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(LessThan(Polynom.fromConstant(4)))
     )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(Equal(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(Equal(Polynom.fromConstant(4)))
     )))(
       Equal(Polynom.fromConstant(8)), LessThan(Polynom.fromConstant(9))
     )(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(GreaterThanOrEqual(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
+      sym("x") -> BoundedInteger(GreaterThanOrEqual(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(GreaterThan(Polynom.fromConstant(4)))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(And(LessThan(Polynom.fromConstant(10)), GreaterThan(Polynom.fromConstant(0))))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(And(LessThan(Polynom.fromConstant(10)), GreaterThan(Polynom.fromConstant(0))))
     ))) (
       LessThan(Polynom.fromConstant(14)), GreaterThan(Polynom.fromConstant(4))
     )()
 
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
-      "y" -> BoundedInteger(Or(LessThan(Polynom.fromConstant(0)), GreaterThan(Polynom.fromConstant(10))))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(4))))),
+      sym("y") -> BoundedInteger(Or(LessThan(Polynom.fromConstant(0)), GreaterThan(Polynom.fromConstant(10))))
     ))) ()(LessThan(Polynom.fromConstant(4)))
 
   /**
@@ -111,8 +117,8 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(-5))))),
-      "y" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5))))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(-5))))),
+      sym("y") -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5))))
     )))(GreaterThanOrEqual(Polynom.fromConstant(-5)))(GreaterThan(Polynom.fromConstant(-5)))
 
   /**
@@ -123,8 +129,8 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"))))),
-      "y" -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0)))
+      sym("x") -> BoundedInteger(GreaterThan(Polynom(Set(t(1, "y"))))),
+      sym("y") -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0)))
     )))(GreaterThan(Polynom.fromConstant(0)))()
 
   /**
@@ -135,8 +141,8 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"))))),
-      "y" -> BoundedInteger(LessThanOrEqual(Polynom.fromConstant(0)))
+      sym("x") -> BoundedInteger(LessThan(Polynom(Set(t(1, "y"))))),
+      sym("y") -> BoundedInteger(LessThanOrEqual(Polynom.fromConstant(0)))
     )))(LessThan(Polynom.fromConstant(0)))()
 
   /**
@@ -148,9 +154,9 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
-      "y" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5)))),
-      "z" -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThanOrEqual(Polynom.fromConstant(6))))
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
+      sym("y") -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(0)), LessThanOrEqual(Polynom.fromConstant(5)))),
+      sym("z") -> BoundedInteger(And(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThanOrEqual(Polynom.fromConstant(6))))
     )))(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThan(Polynom.fromConstant(12)))(LessThanOrEqual(Polynom.fromConstant(10)))
   
   /**
@@ -162,10 +168,10 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      "x" -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
-      "y" -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0))),
-      "z" -> BoundedInteger(GreaterThan(Polynom.fromConstant(1)))
-    )))(GreaterThanOrEqual(Polynom.fromSymbol("z")), GreaterThan(Polynom.fromConstant(1)))()
+      sym("x") -> BoundedInteger(Equal(Polynom(Set(t(1, "y"), t(1, "z"))))),
+      sym("y") -> BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(0))),
+      sym("z") -> BoundedInteger(GreaterThan(Polynom.fromConstant(1)))
+    )))(GreaterThanOrEqual(Polynom.fromSymbol[Int]("z")), GreaterThan(Polynom.fromConstant(1)))()
 
   def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
     test(c.toString) {

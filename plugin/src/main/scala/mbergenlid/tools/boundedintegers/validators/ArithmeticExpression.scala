@@ -13,7 +13,7 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
 
   private def n(s: String) = stringToTermName(s)
 
-  private val operators = Map[Name, (Expression[Int], Expression[Int]) => Expression[Int]](
+  private val operators = Map[Name, (Expression, Expression) => Expression](
     n("$plus") -> (_+_),
     n("$minus") -> (_-_),
     n("$times") -> (_*_)
@@ -25,13 +25,19 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
    *
    * x + y
    * x + 2
+   *
+   * Int + Int + Double
    */
   private def validate(implicit context: Context): Validator = {
     case a @ Apply(Select(op1, method), List(op2)) if operators.contains(method) =>
-      val lhs = checkBounds(context)(op1)
+//      val lhs = checkBounds(context)(op1).convertTo(a.tpe)
+//      val rhs = checkBounds(context)(op2).convertTo(a.tpe)
+
+      //Combine lhs and rhs with operators(method)
       Context.getBoundedInteger(
         BoundedInteger(
-          Equal(operators(method).apply(BoundsFactory.expression[Int](op1), BoundsFactory.expression[Int](op2)))
+          Equal(operators(method).apply(
+            BoundsFactory.expression(op1, a.tpe), BoundsFactory.expression(op2, a.tpe)))
         ),
         context
       )

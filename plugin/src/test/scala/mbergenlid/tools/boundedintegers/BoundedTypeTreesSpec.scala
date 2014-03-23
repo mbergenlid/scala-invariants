@@ -4,14 +4,22 @@ import org.scalatest.FunSuite
 import scala.language.implicitConversions
 import scala.util.parsing.combinator.JavaTokenParsers
 
+import scala.reflect.runtime.universe._
+
 class BoundedTypeTreesSpec extends FunSuite 
     with BoundedTypeTrees {
 
-  type BoundedSymbol = String
+  type BoundedSymbol = Symbol
+
+  val x = 0
+  val y = 0
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
-  implicit def stringToSymbol(s: String) = SymbolExpression(s)
+  implicit def stringToSymbol(s: String): BoundedSymbol =
+    typeOf[this.type].member(newTermName(s))
 
+  def stringToExpression(s: String): Expression =
+    Polynom.fromSymbol[Int](stringToSymbol(s))
 
   val parser = new ExprParser
 
@@ -80,22 +88,22 @@ class BoundedTypeTreesSpec extends FunSuite
       
     def boolOp: Parser[(Constraint, Constraint) => Constraint] =
       ("&&" | "||" ) ^^ {
-        case "&&" => And.apply _
-        case "||" => Or.apply _
+        case "&&" => And.apply
+        case "||" => Or.apply
       }
 
-    def binOp: Parser[Expression[Int] => Constraint] =
+    def binOp: Parser[Expression => Constraint] =
       (">=" | "<=" | "<" | ">" | "==") ^^ {
-        case ">" => GreaterThan.apply _
-        case "<" => LessThan.apply _
-        case "<=" => LessThanOrEqual.apply _
-        case ">=" => GreaterThanOrEqual.apply _
-        case "==" => Equal.apply _
+        case ">" => GreaterThan
+        case "<" => LessThan
+        case "<=" => LessThanOrEqual
+        case ">=" => GreaterThanOrEqual
+        case "==" => Equal
       }
 
 
-    def value: Parser[Expression[Int]] =
-      (ident ^^ Polynom.fromSymbol[Int]) | (wholeNumber ^^ {x: String => Polynom.fromConstant(x.toInt)} )
+    def value: Parser[Expression] =
+      (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => Polynom.fromConstant(x.toInt)} )
 
   }
 

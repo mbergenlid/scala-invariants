@@ -3,18 +3,24 @@ package mbergenlid.tools.boundedintegers
 
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
-
+import scala.reflect.runtime.universe._
 class ExpressionsSpec extends FunSuite 
     with Expressions {
 
-  type BoundedSymbol = String
+  type BoundedSymbol = Symbol
 
-  implicit def c(v: Int): Expression[Int] = Polynom.fromConstant(v)
+  val x = 0
+  val y = 0
+  val z = 0
+  implicit def sym(s: String): BoundedSymbol =
+    typeOf[this.type].member(newTermName(s))
+
+  implicit def c(v: Int): Expression = Polynom.fromConstant(v)
   implicit def s(s: String) = Polynom.fromSymbol[Int](s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[BoundedSymbol, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1
-    map + (term -> multiplicity)
+    map + (sym(term) -> multiplicity)
   })
 
   test("Comparison") {
