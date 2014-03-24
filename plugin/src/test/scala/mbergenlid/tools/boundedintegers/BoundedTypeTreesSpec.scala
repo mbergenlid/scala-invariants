@@ -9,13 +9,14 @@ import scala.reflect.runtime.universe._
 class BoundedTypeTreesSpec extends FunSuite 
     with BoundedTypeTrees {
 
-  type BoundedSymbol = Symbol
-
+  type SymbolType = Symbol
+  type TypeType = Type
+  val TypeNothing = typeOf[Nothing]
   val x = 0
   val y = 0
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
-  implicit def stringToSymbol(s: String): BoundedSymbol =
+  implicit def stringToSymbol(s: String): SymbolType =
     typeOf[this.type].member(newTermName(s))
 
   def stringToExpression(s: String): Expression =
@@ -44,7 +45,7 @@ class BoundedTypeTreesSpec extends FunSuite
     assert(x <= x, s"!($x <= $x)")
     assert(!(x <= y), s"!($x <= $y)")
   }
-  
+
   assertConstraint("x > 0 <!< x <= 10")
   assertConstraint("x >= 1 <:< x > 0")
   assertConstraint("x < 11 <:< x <= 10")

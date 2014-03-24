@@ -37,7 +37,8 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
       Context.getBoundedInteger(
         BoundedInteger(
           Equal(operators(method).apply(
-            BoundsFactory.expression(op1, a.tpe), BoundsFactory.expression(op2, a.tpe)))
+            BoundsFactory.expression(op1, a.tpe), BoundsFactory.expression(op2, a.tpe))),
+          a.tpe
         ),
         context
       )

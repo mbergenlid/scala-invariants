@@ -5,8 +5,10 @@ import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
 
 trait Expressions {
-  type BoundedSymbol <: scala.reflect.api.Symbols#SymbolApi
-  type BoundedType <: scala.reflect.api.Types#TypeApi
+  type SymbolType <: scala.reflect.api.Symbols#SymbolApi
+  type TypeType <: scala.reflect.api.Types#TypeApi
+
+  val TypeNothing: TypeType
 
   trait Expression {
     def terms: Set[Term]
@@ -27,18 +29,28 @@ trait Expressions {
     def *(that: Expression): Expression
 
     def unary_- : Expression
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression
+    def substitute(symbol: SymbolType, expr: Expression): Expression
 
     def containsSymbols: Boolean
     def increment: Expression
     def decrement: Expression
 
-    def extractSymbols: Set[BoundedSymbol]
+    def extractSymbols: Set[SymbolType]
+    def typeInfo: TypeTag[_] = terms.headOption match {
+      case Some(term) => term.coeff.typeInfo
+      case None => typeTag[Nothing]
+    }
   }
 
   class ExpressionFactory[T: RichNumeric: TypeTag] {
     def fromConstant(constant: T) = Polynom.fromConstant(constant)
-    def fromSymbol(symbol: BoundedSymbol) = Polynom.fromSymbol(symbol)
+    def fromSymbol(symbol: SymbolType) = Polynom.fromSymbol(symbol)
+    def convertConstant[U: RichNumeric](constant: U) =
+      Polynom.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
+
+    def convertExpression(expr: Expression): Expression =
+      Polynom(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
+
   }
 
   object Polynom {
@@ -51,7 +63,7 @@ trait Expressions {
     def fromConstant[T: RichNumeric :TypeTag](constant: T) =
       new Polynom(Set(Term(ConstantValue(constant), Map.empty)))
 
-    def fromSymbol[T: RichNumeric :TypeTag](symbol: BoundedSymbol) = {
+    def fromSymbol[T: RichNumeric :TypeTag](symbol: SymbolType) = {
       new Polynom(
         Set(Term(ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
         Map(symbol -> 1))))
@@ -100,7 +112,7 @@ trait Expressions {
     } yield { thisTerm * thatTerm })
 
     def unary_- : Expression = map(_.unary_-)
-    def substitute(symbol: BoundedSymbol, expr: Expression): Expression =
+    def substitute(symbol: SymbolType, expr: Expression): Expression =
       terms.foldLeft[Expression](Polynom.Zero) {(p, t) => {
         p + t.substitute(symbol, expr) 
       }}
@@ -116,7 +128,7 @@ trait Expressions {
       if(terms.size == 1) Polynom(terms.map(_.decrement))
       else this
 
-    def extractSymbols: Set[BoundedSymbol] = for {
+    def extractSymbols: Set[SymbolType] = for {
       term <- terms
       (symbol, mult) <- term.variables
     } yield symbol
@@ -129,13 +141,13 @@ trait Expressions {
       else terms.mkString(" + ")
   }
 
-  case class Term(coeff: ConstantValue, variables: Map[BoundedSymbol, Int]) {
+  case class Term(coeff: ConstantValue, variables: Map[SymbolType, Int]) {
     def unary_- = Term(-coeff, variables)
     def isZero = coeff.isZero
     def greaterThanZero = variables.isEmpty && coeff.isGreaterThanZero
     def lessThanZero = variables.isEmpty && coeff.isLessThanZero
 
-    def substitute(symbol: BoundedSymbol, expr: Expression ): Expression  =
+    def substitute(symbol: SymbolType, expr: Expression ): Expression  =
       if(variables.contains(symbol)) {
         expr * Polynom(Set(Term(coeff, variables - symbol)))
       } else {
@@ -174,15 +186,18 @@ trait Expressions {
       else this
   }
 
-  case class SymbolExpression(symbol: BoundedSymbol) {
+  case class SymbolExpression(symbol: SymbolType) {
     override def toString = symbol.toString
   }
 
   trait ConstantValue {
     type T
-    implicit protected def typeInfo: TypeTag[T]
+    implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
     protected def value: T
+
+    def convertTo[U: RichNumeric: TypeTag] =
+      ConstantValue(implicitly[RichNumeric[U]].fromType[T](value))
 
     def zero = TypedConstantValue(num.zero)
     def isOne = value == num.one
@@ -213,10 +228,10 @@ trait Expressions {
     def decrement = if(num.isInstanceOf[Integral[_]]) ConstantValue(num.minus(value, num.one)) else this
 
     override def toString = value.toString
-    def substitute(symbol: BoundedSymbol, expr: Expression) = this
+    def substitute(symbol: SymbolType, expr: Expression) = this
 
     private def withConcreteType(const: ConstantValue)(f: T => ConstantValue): ConstantValue = {
-      assert(const.typeInfo == typeInfo)
+        assert(const.typeInfo == typeInfo, s"Type Mismatch in Expression: ${const.typeInfo} vs $typeInfo")
       val thatValue = const.value.asInstanceOf[T]
       f(thatValue)
     }
@@ -229,7 +244,7 @@ trait Expressions {
 
   case class TypedConstantValue[U](protected val value: U)
                                   (implicit ev1: RichNumeric[U],
-                                   protected val typeInfo: TypeTag[U]) extends ConstantValue {
+                                   protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
     type T = U
     override protected def num = implicitly[RichNumeric[U]]
   }

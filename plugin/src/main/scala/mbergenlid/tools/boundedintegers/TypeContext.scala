@@ -4,12 +4,14 @@ import scala.language.implicitConversions
 
 trait TypeContext { self: BoundedTypeTrees =>
 
-  class Context(private val symbols: Map[BoundedSymbol, BoundedInteger]) {
+  def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]]
+
+  class Context(private val symbols: Map[SymbolType, BoundedInteger]) {
     type Operator = (BoundedInteger, BoundedInteger) => BoundedInteger
     def this() = this(Map.empty)
-    def apply(symbol: BoundedSymbol) = symbols.get(symbol)
-    def get(symbol: BoundedSymbol) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
-    def removeSymbolConstraints(symbol: BoundedSymbol) =
+    def apply(symbol: SymbolType) = symbols.get(symbol)
+    def get(symbol: SymbolType) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
+    def removeSymbolConstraints(symbol: SymbolType) =
       new Context(symbols map { case (k,v) => k -> v.removeSymbolConstraints(symbol)})
 
     def &&(other: Context) = combineWith(other, _&&_)
@@ -24,29 +26,30 @@ trait TypeContext { self: BoundedTypeTrees =>
       new Context(map)
     }
 
-    def &(s: BoundedSymbol, bounds: BoundedInteger) = {
+    def &(s: SymbolType, bounds: BoundedInteger) = {
       val oldBounds = symbols.getOrElse(s, new BoundedInteger)
       new Context(symbols + (s -> (oldBounds && bounds)))
     }
-    def -(s: BoundedSymbol) = new Context(symbols - s)
+    def -(s: SymbolType) = new Context(symbols - s)
       
     def unary_! = new Context(symbols map (kv => kv._1 -> !kv._2))
     def size = symbols.size
     override def toString = symbols.toString()
   } 
   
-  def createBound(symbol: BoundedSymbol): BoundedInteger
+  def createBound(symbol: SymbolType): BoundedInteger
   object Context {
 
 
-    def getBoundedInteger(symbol: BoundedSymbol, context: Context): BoundedInteger = {
-      val bounds = context(symbol).getOrElse(createBound(symbol))
+    def getBoundedInteger(symbol: SymbolType, resultType: TypeType, context: Context): BoundedInteger = {
+      val bounds = context(symbol).getOrElse(createBound(symbol)).convertTo(resultType)
       getBoundedInteger(bounds, context - symbol)
     }
 
     def getBoundedInteger(start: BoundedInteger, context: Context): BoundedInteger = {
       BoundedInteger(
-        findTransitiveConstraints(start.constraint, context)
+        findTransitiveConstraints(start.constraint, start.tpe, context),
+        start.tpe
       )
     }
 
@@ -56,29 +59,30 @@ trait TypeContext { self: BoundedTypeTrees =>
      *   _ < x && _ < y
      * 
      */
-    def findTransitiveConstraints(c: Constraint, context: Context): Constraint =
-      for {
-        sc <- c
-      } yield substitute(sc, sc.v.extractSymbols.toList, context)
-
+    def findTransitiveConstraints(c: Constraint, resultType: TypeType, context: Context): Constraint =
+      c.map {sc: SimpleConstraint =>
+        substitute(sc, sc.v.extractSymbols.toList, resultType, context)
+      }
 
     private[boundedintegers]
     def substitute( constraint: Constraint,
-                    symbols: List[BoundedSymbol],
+                    symbols: List[SymbolType],
+                    resultType: TypeType,
                     context: Context): Constraint =
       symbols match {
         case symbol :: rest => 
-          val b = getBoundedInteger(symbol, context).constraint
+          val b = getBoundedInteger(symbol, resultType, context).constraint
           substitute (
             for {
               sc1 <- constraint
-              sc2 <- findBoundFunction(sc1)(b)
+              sc2: SimpleConstraint <- findBoundFunction(sc1)(b)
             } yield { 
               val boundConstr = createBoundConstraint(sc1, sc2)
               if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
               else NoConstraints
             },
             rest,
+            resultType,
             context - symbol
           )
         case Nil => constraint
@@ -133,21 +137,37 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
   }
 
-  class BoundedInteger(val constraint: Constraint) {
-    def this() = this(NoConstraints)
+  class BoundedInteger(val constraint: Constraint, val tpe: TypeType) {
+    def this() = this(NoConstraints, TypeNothing)
+
+    private def assertSameType(other: BoundedInteger) =
+      assert(tpe == TypeNothing || other.tpe == TypeNothing || tpe == other.tpe)
+
+    def convertTo(tpe: TypeType): BoundedInteger = {
+      import Constraint._
+      val f = expressionForType(tpe)
+      val newConstraint = constraint.map { sc => f.convertExpression(sc.v) }
+      BoundedInteger(newConstraint, tpe)
+    }
+
+
 
     def <:<(other: BoundedInteger): Boolean =
       constraint.obviouslySubsetOf(other.constraint)
 
 
-    def &&(other: BoundedInteger) = constraint match {
-      case NoConstraints => new BoundedInteger(other.constraint)
-      case c => new BoundedInteger(And(constraint, other.constraint))
+    def &&(other: BoundedInteger) = {
+      assertSameType(other)
+      if(constraint == NoConstraints) new BoundedInteger(other.constraint, other.tpe)
+      else if(other.constraint == NoConstraints) new BoundedInteger(constraint, tpe)
+      else new BoundedInteger(And(constraint, other.constraint), tpe)
     }
-      
-    def ||(other: BoundedInteger) = constraint match {
-      case NoConstraints => new BoundedInteger(other.constraint)
-      case c => new BoundedInteger(Or(constraint, other.constraint))
+
+    def ||(other: BoundedInteger) = {
+      assertSameType(other)
+      if(constraint == NoConstraints) new BoundedInteger(other.constraint, other.tpe)
+      else if(other.constraint == NoConstraints) new BoundedInteger(constraint, tpe)
+      else new BoundedInteger(Or(constraint, other.constraint), tpe)
     }
 
     /** 
@@ -157,23 +177,28 @@ trait TypeContext { self: BoundedTypeTrees =>
      *  x < y 
      *  y < 10 || y > 100
      */
-    def <|(other: BoundedInteger) =
-      BoundedInteger(other.constraint.upperBound) && this
+    def <|(other: BoundedInteger) = {
+      assertSameType(other)
+      BoundedInteger(other.constraint.upperBound, tpe) && this
+    }
 
-    def >|(other: BoundedInteger) =
-      BoundedInteger(other.constraint.lowerBound) && this
 
-    def removeSymbolConstraints(symbol: BoundedSymbol): BoundedInteger =
-      new BoundedInteger(_removeSymbolConstraints(symbol)(constraint))
+    def >|(other: BoundedInteger) = {
+      assertSameType(other)
+      BoundedInteger(other.constraint.lowerBound, tpe) && this
+    }
 
-    private def _removeSymbolConstraints(symbol: BoundedSymbol)(c: Constraint): Constraint = c match {
-      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol))
-      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol))
+    def removeSymbolConstraints(symbol: SymbolType): BoundedInteger =
+      new BoundedInteger(_removeSymbolConstraints(symbol)(constraint), tpe)
+
+    private def _removeSymbolConstraints(symbol: SymbolType)(c: Constraint): Constraint = c match {
+      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol) _)
+      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol) _)
       case _ if c.isSymbolConstraint => NoConstraints
       case _ => c
     }
 
-    def unary_! = new BoundedInteger(!constraint)
+    def unary_! = new BoundedInteger(!constraint, tpe)
 
     override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
     override def equals(other: Any) = 
@@ -182,19 +207,9 @@ trait TypeContext { self: BoundedTypeTrees =>
   }
 
   object BoundedInteger {
-
-    def apply(constraint: Constraint) = new BoundedInteger(constraint)
-    def apply(min: Int, max: Int) = (min, max) match {
-      case (Int.MinValue, Int.MaxValue) => new BoundedInteger()
-      case (Int.MinValue, _) => new BoundedInteger(LessThanOrEqual(Polynom.fromConstant(max)))
-      case (_, Int.MaxValue) => new BoundedInteger(GreaterThanOrEqual(Polynom.fromConstant(min)))
-      case _ => new BoundedInteger(And(
-        LessThanOrEqual(Polynom.fromConstant(max)),
-        GreaterThanOrEqual(Polynom.fromConstant(min))
-      ))
+    def apply(constraint: Constraint, tpe: TypeType) = {
+      new BoundedInteger(constraint, tpe)
     }
-
-    implicit def integerToBounded(x: Int) = BoundedInteger(Equal(Polynom.fromConstant(x)))
 
     val noBounds = new BoundedInteger
   }

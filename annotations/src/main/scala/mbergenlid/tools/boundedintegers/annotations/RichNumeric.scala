@@ -3,7 +3,7 @@ package tools
 package boundedintegers
 package annotations
 
-import scala.math.Numeric.{LongIsIntegral, IntIsIntegral}
+import scala.math.Numeric.{DoubleIsFractional, LongIsIntegral, IntIsIntegral}
 import scala.math.Ordering
 
 sealed trait RichNumeric[T] extends Numeric[T] {
@@ -32,4 +32,13 @@ object RichNumeric {
       implicitly[RichNumeric[U]].toLong(value)
   }
   implicit object LongIsRichNumeric extends LongIsRichNumeric with Ordering.LongOrdering
+
+  trait DoubleIsRichNumeric extends RichNumeric[Double] with DoubleIsFractional {
+    override def minValue = Double.MinValue
+    override def maxValue = Double.MaxValue
+
+    override def fromType[U: RichNumeric](value: U) =
+      implicitly[RichNumeric[U]].toDouble(value)
+  }
+  implicit object DoubleIsRichNumeric extends DoubleIsRichNumeric with Ordering.DoubleOrdering
 }

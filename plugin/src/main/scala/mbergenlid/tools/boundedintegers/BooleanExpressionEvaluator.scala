@@ -35,7 +35,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     val argExpression = BoundsFactory.expression(arg, arg.tpe)
     for {
       constraint <- opToConstraints.get(method)
-    } yield { obj && BoundedInteger(constraint(argExpression)) }
+    } yield { obj && BoundedInteger(constraint(argExpression), obj.tpe) }
   }
 
 }

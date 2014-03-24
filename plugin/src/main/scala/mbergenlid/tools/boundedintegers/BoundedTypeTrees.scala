@@ -1,8 +1,17 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.language.implicitConversions
+import scala.annotation.implicitNotFound
 
 trait BoundedTypeTrees extends Expressions {
+
+  @implicitNotFound(msg = "Can not create Constraint from ${From}")
+  trait ConstraintBuilder[From] {
+    def apply(from: From, previous: SimpleConstraint): Constraint
+  }
+  class DefaultConstraintBuilder extends ConstraintBuilder[Constraint] {
+    def apply(from: Constraint, previous: SimpleConstraint) = from
+  }
 
   sealed trait Constraint {
     def obviouslySubsetOf(that: Constraint): Boolean = that match {
@@ -25,8 +34,24 @@ trait BoundedTypeTrees extends Expressions {
 
     def isSymbolConstraint: Boolean
 
-    def map(f: SimpleConstraint => Constraint): Constraint
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
+
     def flatMap(f: SimpleConstraint => Traversable[Constraint]): Constraint
+  }
+
+  object Constraint {
+    implicit val constraintBuilder = new DefaultConstraintBuilder
+
+    implicit val fromExpression: ConstraintBuilder[Expression] =
+      new ConstraintBuilder[Expression] {
+        def apply(from: Expression, previous: SimpleConstraint): Constraint = previous match {
+          case LessThan(_) => LessThan(from)
+          case LessThanOrEqual(_) => LessThanOrEqual(from)
+          case GreaterThan(_) => GreaterThan(from)
+          case GreaterThanOrEqual(_) => GreaterThanOrEqual(from)
+          case _ => Equal(from)
+        }
+      }
   }
 
   implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
@@ -54,7 +79,7 @@ trait BoundedTypeTrees extends Expressions {
 
     def isSymbolConstraint = false
 
-    def map(f: SimpleConstraint => Constraint) = this
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) = this
   }
 
@@ -66,8 +91,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def isSymbolConstraint = v.containsSymbols
 
-    def map(f: SimpleConstraint => Constraint) = 
-      f(this)
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+      bf(f(this), this)
 
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) =
       (this.asInstanceOf[Constraint] /: f(this)) (And.apply)
@@ -104,6 +129,10 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound = NoConstraints
     def upperBoundInclusive = this
     def lowerBoundInclusive = NoConstraints
+
+    def map(f: SimpleConstraint => Expression) =
+      LessThan(f(this))
+
   }
   /**
    * <= x
@@ -128,6 +157,10 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound = NoConstraints
     def upperBoundInclusive = this
     def lowerBoundInclusive = NoConstraints
+
+    def map(f: SimpleConstraint => Expression) =
+      LessThanOrEqual(f(this))
+
   }
 
   /**
@@ -149,6 +182,10 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound = this
     def upperBoundInclusive = NoConstraints
     def lowerBoundInclusive = this
+
+    def map(f: SimpleConstraint => Expression) =
+      GreaterThan(f(this))
+
   }
 
   case class GreaterThanOrEqual(v: Expression) extends SimpleConstraint {
@@ -166,6 +203,9 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound = GreaterThan(v)
     def upperBoundInclusive = NoConstraints
     def lowerBoundInclusive = this
+
+    def map(f: SimpleConstraint => Expression) =
+      GreaterThanOrEqual(f(this))
   }
   
   case class Equal(v: Expression) extends SimpleConstraint {
@@ -186,6 +226,10 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBound = Equal(v)
     def upperBoundInclusive = this
     def lowerBoundInclusive = this
+
+    def map(f: SimpleConstraint => Expression) =
+      Equal(f(this))
+
   }
 
   trait ComplexConstraint extends Constraint {
@@ -197,7 +241,12 @@ trait BoundedTypeTrees extends Expressions {
 
     def combine(c1: Constraint, c2: Constraint): Constraint
 
-    def map(f: SimpleConstraint => Constraint) = combine(left.map(f), right.map(f))
+    def upperBound = combine(left.upperBound, right.upperBound)
+    def lowerBound = combine(left.lowerBound, right.lowerBound)
+    def upperBoundInclusive = combine(left.upperBoundInclusive, right.upperBoundInclusive)
+    def lowerBoundInclusive = combine(left.lowerBoundInclusive, right.lowerBoundInclusive)
+
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = combine(left.map(f), right.map(f))
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) = combine(left.flatMap(f), right.flatMap(f))
   }
   /**
@@ -218,11 +267,6 @@ trait BoundedTypeTrees extends Expressions {
     //!(a && b)
     //!a || !b
     def unary_! = Or(!left, !right)
-
-    def upperBound = map ((_:SimpleConstraint).upperBound)
-    def lowerBound = map ((_:SimpleConstraint).lowerBound)
-    def upperBoundInclusive = map ((_:SimpleConstraint).upperBoundInclusive)
-    def lowerBoundInclusive = map ((_:SimpleConstraint).lowerBoundInclusive)
 
     def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
       case (NoConstraints, NoConstraints) => NoConstraints
@@ -252,11 +296,6 @@ trait BoundedTypeTrees extends Expressions {
       case (x, NoConstraints) => NoConstraints
       case (x, y) => Or(x,y)
     }
-
-    def upperBound = map ((_:SimpleConstraint).upperBound)
-    def lowerBound = map ((_:SimpleConstraint).lowerBound)
-    def upperBoundInclusive = map ((_:SimpleConstraint).upperBoundInclusive)
-    def lowerBoundInclusive = map ((_:SimpleConstraint).lowerBoundInclusive)
 
     override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
