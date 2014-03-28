@@ -6,7 +6,7 @@ import scala.reflect.runtime.universe._
 
 trait Expressions {
   type SymbolType <: scala.reflect.api.Symbols#SymbolApi
-  type TypeType <: scala.reflect.api.Types#TypeApi
+  type TypeType = scala.reflect.api.Types#TypeApi
 
   val TypeNothing: TypeType
 
@@ -42,7 +42,7 @@ trait Expressions {
     }
   }
 
-  class ExpressionFactory[T: RichNumeric: TypeTag] {
+  class ExpressionFactory[T: RichNumeric: TypeTag](val convertedType: TypeType) {
     def fromConstant(constant: T) = Polynom.fromConstant(constant)
     def fromSymbol(symbol: SymbolType) = Polynom.fromSymbol(symbol)
     def convertConstant[U: RichNumeric](constant: U) =

@@ -10,7 +10,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     type Operator = (BoundedInteger, BoundedInteger) => BoundedInteger
     def this() = this(Map.empty)
     def apply(symbol: SymbolType) = symbols.get(symbol)
-    def get(symbol: SymbolType) = symbols.getOrElse(symbol, BoundedInteger.noBounds)
+    def get(symbol: SymbolType) = symbols.getOrElse(symbol, new BoundedInteger(symbol.typeSignature))
     def removeSymbolConstraints(symbol: SymbolType) =
       new Context(symbols map { case (k,v) => k -> v.removeSymbolConstraints(symbol)})
 
@@ -20,14 +20,14 @@ trait TypeContext { self: BoundedTypeTrees =>
 
     def combineWith(other: Context, op: Operator) = {
       val map = (other.symbols /: symbols) { (map, t) =>
-        val bounds = other.symbols.getOrElse(t._1, new BoundedInteger)
+        val bounds = other.symbols.getOrElse(t._1, BoundedInteger.noBounds)
         map + (t._1 -> op(bounds, t._2))
       }
       new Context(map)
     }
 
     def &(s: SymbolType, bounds: BoundedInteger) = {
-      val oldBounds = symbols.getOrElse(s, new BoundedInteger)
+      val oldBounds = symbols.getOrElse(s, new BoundedInteger(bounds.tpe))
       new Context(symbols + (s -> (oldBounds && bounds)))
     }
     def -(s: SymbolType) = new Context(symbols - s)
@@ -47,6 +47,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
 
     def getBoundedInteger(start: BoundedInteger, context: Context): BoundedInteger = {
+      assert(start.tpe != TypeNothing)
       BoundedInteger(
         findTransitiveConstraints(start.constraint, start.tpe, context),
         start.tpe
@@ -73,23 +74,33 @@ trait TypeContext { self: BoundedTypeTrees =>
         case symbol :: rest => 
           val b = getBoundedInteger(symbol, resultType, context).constraint
           substitute (
-            for {
-              sc1 <- constraint
-              sc2: SimpleConstraint <- findBoundFunction(sc1)(b)
-            } yield { 
-              val boundConstr = createBoundConstraint(sc1, sc2)
-              if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
-              else NoConstraints
-            },
+            And.combine(constraint,
+              constraint.newFlatMap { sc1 =>
+                b.newFlatMap {sc2 =>
+                  createBoundConstraint(sc1, sc2).map {f =>
+                    val c = f(sc1.v.substitute(symbol, sc2.v))
+                    c
+                  }
+                }
+              }
+            ),
             rest,
             resultType,
             context - symbol
           )
         case Nil => constraint
       }
-    
 
-    private def createBoundConstraint(
+//    for {
+//      sc1 <- constraint
+//      sc2: SimpleConstraint <- findBoundFunction(sc1)(b)
+//    } yield {
+//      val boundConstr = createBoundConstraint(sc1, sc2)
+//      if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
+//      else NoConstraints
+//    }
+
+    protected[boundedintegers] def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
           Option[Expression => SimpleConstraint] = (base, boundedBy) match {
 
@@ -138,13 +149,14 @@ trait TypeContext { self: BoundedTypeTrees =>
   }
 
   class BoundedInteger(val constraint: Constraint, val tpe: TypeType) {
-    def this() = this(NoConstraints, TypeNothing)
+    assert(constraint == NoConstraints || tpe != TypeNothing)
+    private def this() = this(NoConstraints, TypeNothing)
+    def this(tpe: TypeType) = this(NoConstraints, tpe)
 
     private def assertSameType(other: BoundedInteger) =
       assert(tpe == TypeNothing || other.tpe == TypeNothing || tpe == other.tpe)
 
     def convertTo(tpe: TypeType): BoundedInteger = {
-      import Constraint._
       val f = expressionForType(tpe)
       val newConstraint = constraint.map { sc => f.convertExpression(sc.v) }
       BoundedInteger(newConstraint, tpe)
@@ -211,6 +223,6 @@ trait TypeContext { self: BoundedTypeTrees =>
       new BoundedInteger(constraint, tpe)
     }
 
-    val noBounds = new BoundedInteger
+    def noBounds = new BoundedInteger
   }
 }

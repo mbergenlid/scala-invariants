@@ -8,7 +8,6 @@ class ExpressionsSpec extends FunSuite
     with Expressions {
 
   type SymbolType = Symbol
-  type TypeType = Type
   val TypeNothing = typeOf[Nothing]
 
   val x = 0

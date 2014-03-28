@@ -30,17 +30,39 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
    */
   private def validate(implicit context: Context): Validator = {
     case a @ Apply(Select(op1, method), List(op2)) if operators.contains(method) =>
-//      val lhs = checkBounds(context)(op1).convertTo(a.tpe)
-//      val rhs = checkBounds(context)(op2).convertTo(a.tpe)
+      val lhs = checkBounds(context)(op1).convertTo(a.tpe)
+      val rhs = checkBounds(context)(op2).convertTo(a.tpe)
 
-      //Combine lhs and rhs with operators(method)
-      Context.getBoundedInteger(
-        BoundedInteger(
-          Equal(operators(method).apply(
-            BoundsFactory.expression(op1, a.tpe), BoundsFactory.expression(op2, a.tpe))),
-          a.tpe
-        ),
-        context
-      )
+//      val newConstraint = for {
+//        sc1 <- lhs.constraint
+//        sc2 <- rhs.constraint
+//        f <- Context.createBoundConstraint(sc1, sc2)
+//      } yield {
+//         val c = f(operators(method).apply(sc1.v, sc2.v))
+//         c
+//      }
+      val newConstraint = lhs.constraint.newFlatMap {sc1 =>
+        rhs.constraint.newFlatMap {sc2 =>
+          Context.createBoundConstraint(sc1, sc2).map {f =>
+            f(operators(method).apply(sc1.v, sc2.v))
+          }
+        }
+      }
+
+      /**
+       * x + 4
+       *
+       * == method && >= 0 && <= 5
+       * == 4
+       *
+       *        == 4 && == method + 4
+       *
+       * >= 4
+       */
+//      println(newConstraint.prettyPrint())
+//      println(s"\t${lhs.constraint.prettyPrint()}")
+//      println(s"\t${rhs.constraint.prettyPrint()}")
+
+      BoundedInteger(newConstraint, a.tpe)
   }
 }

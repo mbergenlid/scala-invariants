@@ -37,22 +37,22 @@ trait BoundedTypeTrees extends Expressions {
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
 
     def flatMap(f: SimpleConstraint => Traversable[Constraint]): Constraint
+    def newFlatMap(f: SimpleConstraint => Constraint): Constraint
   }
 
-  object Constraint {
-    implicit val constraintBuilder = new DefaultConstraintBuilder
+  implicit val fromConstraint = new DefaultConstraintBuilder
 
-    implicit val fromExpression: ConstraintBuilder[Expression] =
-      new ConstraintBuilder[Expression] {
-        def apply(from: Expression, previous: SimpleConstraint): Constraint = previous match {
-          case LessThan(_) => LessThan(from)
-          case LessThanOrEqual(_) => LessThanOrEqual(from)
-          case GreaterThan(_) => GreaterThan(from)
-          case GreaterThanOrEqual(_) => GreaterThanOrEqual(from)
-          case _ => Equal(from)
-        }
+  implicit val fromExpression: ConstraintBuilder[Expression] =
+    new ConstraintBuilder[Expression] {
+      def apply(from: Expression, previous: SimpleConstraint): Constraint = previous match {
+        case LessThan(_) => LessThan(from)
+        case LessThanOrEqual(_) => LessThanOrEqual(from)
+        case GreaterThan(_) => GreaterThan(from)
+        case GreaterThanOrEqual(_) => GreaterThanOrEqual(from)
+        case _ => Equal(from)
       }
-  }
+    }
+
 
   implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
     def foreach[U](f: SimpleConstraint => U): Unit = {
@@ -65,6 +65,10 @@ trait BoundedTypeTrees extends Expressions {
     }
   }
 
+  implicit def option2Constraint(c: Option[Constraint]): Constraint = c match {
+    case Some(x) => x
+    case None => NoConstraints
+  }
 
   case object NoConstraints extends Constraint {
     override def obviouslySubsetOf(that: Constraint) =
@@ -81,6 +85,7 @@ trait BoundedTypeTrees extends Expressions {
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) = this
+    def newFlatMap(f: SimpleConstraint => Constraint) = this
   }
 
   trait SimpleConstraint extends Constraint {
@@ -97,6 +102,7 @@ trait BoundedTypeTrees extends Expressions {
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) =
       (this.asInstanceOf[Constraint] /: f(this)) (And.apply)
 
+    def newFlatMap(f: SimpleConstraint => Constraint) = f(this)
   }
 
   object SimpleConstraint {
@@ -248,6 +254,7 @@ trait BoundedTypeTrees extends Expressions {
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = combine(left.map(f), right.map(f))
     def flatMap(f: SimpleConstraint => Traversable[Constraint]) = combine(left.flatMap(f), right.flatMap(f))
+    def newFlatMap(f: SimpleConstraint => Constraint) = combine(left.newFlatMap(f), right.newFlatMap(f))
   }
   /**
    * x > 0 && x < 100
@@ -268,12 +275,7 @@ trait BoundedTypeTrees extends Expressions {
     //!a || !b
     def unary_! = Or(!left, !right)
 
-    def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
-      case (NoConstraints, NoConstraints) => NoConstraints
-      case (NoConstraints, x) => x
-      case (x, NoConstraints) => x
-      case (x, y) => And(x,y)
-    }
+    def combine(c1: Constraint, c2: Constraint) = And.combine(c1, c2)
 
     override def prettyPrint(variable: String = "_") =
       s"${prettyPrint(left, variable)} && ${prettyPrint(right, variable)}"
@@ -284,18 +286,23 @@ trait BoundedTypeTrees extends Expressions {
     }
   }
 
+  object And {
+    def combine(c1: Constraint, c2: Constraint) =
+      if(c1 obviouslySubsetOf c2) c1
+      else if(c2 obviouslySubsetOf c1) c2
+      else And(c1, c2)
+  }
+
   case class Or(left: Constraint, right: Constraint) extends ComplexConstraint {
     override def obviouslySubsetOf(that: Constraint) = 
       (left obviouslySubsetOf that) && (right obviouslySubsetOf that)
 
     def unary_! = And(!left, !right)
 
-    def combine(c1: Constraint, c2: Constraint) = (c1, c2) match {
-      case (NoConstraints, NoConstraints) => NoConstraints
-      case (NoConstraints, x) => NoConstraints
-      case (x, NoConstraints) => NoConstraints
-      case (x, y) => Or(x,y)
-    }
+    def combine(c1: Constraint, c2: Constraint) =
+      if(c1 obviouslySubsetOf c2) c2
+      else if(c2 obviouslySubsetOf c1) c1
+      else Or(c1, c2)
 
     override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"

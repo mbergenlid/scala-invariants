@@ -10,7 +10,7 @@ class IfExpressionSpec extends PluginTestRunner {
   
   test("Should succeed if inside appropriate if expression") {
     compile("""
-          |val x = anotherRandomInteger
+          |val x: Int = anotherRandomInteger
           |if(x < 11) upperBoundMethod(x)
           |
           """.stripMargin)(Nil)

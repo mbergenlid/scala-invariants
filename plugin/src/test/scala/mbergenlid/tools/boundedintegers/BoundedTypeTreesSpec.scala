@@ -10,7 +10,6 @@ class BoundedTypeTreesSpec extends FunSuite
     with BoundedTypeTrees {
 
   type SymbolType = Symbol
-  type TypeType = Type
   val TypeNothing = typeOf[Nothing]
   val x = 0
   val y = 0

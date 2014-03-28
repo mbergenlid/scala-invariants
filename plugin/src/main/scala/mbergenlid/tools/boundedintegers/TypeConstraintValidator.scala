@@ -11,7 +11,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
     def tryAssign(expr: Tree)(implicit context: Context): BoundedInteger = {
       val target = BoundsFactory.apply(symbol, symbol.typeSignature)
-      val boundedExpr = Context.getBoundedInteger(checkBounds(context)(expr), context)
+      val boundedExpr = checkBounds(context)(expr)
       if(!(boundedExpr <:< target))
         reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
       boundedExpr

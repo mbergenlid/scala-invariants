@@ -6,14 +6,14 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   import global._
 
   def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
-    case Apply(Select(obj, method), List(arg)) if obj.tpe <:< typeOf[Int] && !obj.symbol.isMethod =>
+    case Apply(Select(boolExpr, method), List(arg)) if boolExpr.tpe <:< typeOf[Boolean] =>
+      apply(evaluate(boolExpr), method, arg)
+    case Apply(Select(obj, method), List(arg)) if opToConstraints.contains(method) && !obj.symbol.isMethod =>
       new Context(Map(
         obj.symbol -> apply(BoundsFactory(obj), method, arg).getOrElse(BoundedInteger.noBounds)
       ))
-    case Apply(Select(boolExpr, method), List(arg)) if boolExpr.tpe <:< typeOf[Boolean] =>
-      apply(evaluate(boolExpr), method, arg) 
-    case a @ Apply(method, args) =>
-      checkBounds(c)(a); new Context
+    case _ =>
+      checkBounds(c)(expr); new Context
   }
 
   private def n(s: String) = stringToTermName(s)

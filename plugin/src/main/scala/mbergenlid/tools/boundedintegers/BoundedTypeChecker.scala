@@ -9,7 +9,6 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   import global._
 
   type SymbolType = global.Symbol
-  type TypeType = global.Type
 
   trait BoundedTypeError {
     def pos: Position
@@ -19,10 +18,12 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   case class Warning(pos: Position, message: String) extends BoundedTypeError
 
   lazy val TypeNothing = typeOf[Nothing]
-  lazy val IntType = typeOf[Int]
+  lazy val IntType: TypeType = typeOf[Int]
+  lazy val LongType = typeOf[Long]
+  lazy val DoubleType = typeOf[Double]
   lazy val IntSymbol = IntType.typeSymbol
-  lazy val LongSymbol = typeOf[Long].typeSymbol
-  lazy val DoubleSymbol = typeOf[Double].typeSymbol
+  lazy val LongSymbol = LongType.typeSymbol
+  lazy val DoubleSymbol = DoubleType.typeSymbol
 
   object BoundsFactory {
 
@@ -42,7 +43,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
       expression(value, resultType)
     }
 
-    def convertExpression[From: RichNumeric](from: From, to: Type): Expression = to match {
+    def convertExpression[From: RichNumeric](from: From, to: TypeType): Expression = to match {
       case ConstantType(Constant(x: Int)) =>
         Polynom.fromConstant[Int](implicitly[RichNumeric[Int]].fromType(from))
       case TypeRef(_, IntSymbol, Nil) =>
@@ -57,7 +58,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         Polynom.fromConstant[Double](implicitly[RichNumeric[Double]].fromType(from))
     }
 
-    def symbolExpression(symbol: SymbolType, tpe: Type): Expression = tpe match {
+    def symbolExpression(symbol: SymbolType, tpe: TypeType): Expression = tpe match {
       case TypeRef(_, IntSymbol, Nil) =>
         Polynom.fromSymbol[Int](symbol)
       case TypeRef(_, LongSymbol, Nil) =>
@@ -66,7 +67,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         Polynom.fromSymbol[Double](symbol)
     }
 
-    def expression(tree: Tree, tpe: Type): Expression = tree match {
+    def expression(tree: Tree, tpe: TypeType): Expression = tree match {
       case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue =>
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Long)) =>
@@ -77,20 +78,23 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         symbolExpression(x.symbol, tpe)
     }
 
-    def apply(symbol: Symbol, tpe: Type): BoundedInteger = {
-      (BoundedInteger.noBounds /: symbol.annotations.collect {
+    def apply(symbol: Symbol, tpe: TypeType): BoundedInteger = {
+      (new BoundedInteger(tpe) /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory(a, tpe)
       }) (_ && _)
     }
 
     def apply(tree: Tree): BoundedInteger = {
-      tree match {
-        case Literal(Constant(value: Int)) =>
-          BoundedInteger(Equal(Polynom.fromConstant(value)), tree.tpe)
-        case t if t.symbol != null =>
-          BoundsFactory(t.symbol, t.tpe)
-        case _ => BoundedInteger.noBounds
+      if(expressionForType.isDefinedAt(tree.tpe)) {
+        val f = expressionForType(tree.tpe)
+        if(tree.symbol != null && tree.symbol != NoSymbol) {
+          BoundsFactory(tree.symbol, f.convertedType)
+        } else {
+          BoundedInteger(Equal(expression(tree, tree.tpe)), f.convertedType)
+        }
+      } else {
+        BoundedInteger.noBounds
       }
     }
 
@@ -101,16 +105,21 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
     case ConstantType(Constant(x: Int)) =>
-      new ExpressionFactory[Int]
+      new ExpressionFactory[Int](IntType)
+    case ConstantType(Constant(x: Double)) =>
+      new ExpressionFactory[Double](DoubleType)
     case TypeRef(_, IntSymbol, Nil) =>
-      new ExpressionFactory[Int]
+      new ExpressionFactory[Int](IntType)
     case TypeRef(_, LongSymbol, Nil) =>
-      new ExpressionFactory[Long]
+      new ExpressionFactory[Long](LongType)
     case TypeRef(_, DoubleSymbol, Nil) =>
-      new ExpressionFactory[Double]
+      new ExpressionFactory[Double](DoubleType)
 
     case NullaryMethodType(IntType) =>
-      new ExpressionFactory[Int]
+      new ExpressionFactory[Int](IntType)
+
+    case s@SingleType(_, _) if s <:< IntType.asInstanceOf[Type] =>
+      new ExpressionFactory[Int](IntType)
   }
 }
 
@@ -156,21 +165,27 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
-    val bounds = context(tree.symbol) match {
-      case Some(x) => x
-      case None =>
-        BoundsFactory(tree)
-    }
-    if(tree.symbol != null && tree.symbol != NoSymbol) {
-      val constraintOption =
-        for(e <- expressionForType.lift(tree.tpe))
-        yield Equal(e.fromSymbol(tree.symbol))
+    if(expressionForType.isDefinedAt(tree.tpe)) {
+      val bounds = context(tree.symbol) match {
+        case Some(x) => x
+        case None =>
+          BoundsFactory(tree)
+      }
+      if(tree.symbol != null && tree.symbol != NoSymbol) {
+        val constraintOption =
+          for(e <- expressionForType.lift(tree.tpe))
+          yield Equal(e.fromSymbol(tree.symbol))
 
-      val resultType = if(bounds.tpe == TypeNothing) tree.tpe else bounds.tpe
-      BoundedInteger(constraintOption.getOrElse(NoConstraints), resultType) && bounds
+        val resultType = if(bounds.tpe == TypeNothing) tree.tpe else bounds.tpe
+        BoundedInteger(constraintOption.getOrElse(NoConstraints), resultType) &&
+          Context.getBoundedInteger(bounds, context - tree.symbol)
+      } else {
+        Context.getBoundedInteger(bounds, context - tree.symbol)
+      }
     } else {
-      bounds //Context.getBoundedInteger(bounds, context - tree.symbol)
+      BoundedInteger.noBounds
     }
+
   }
 
 }

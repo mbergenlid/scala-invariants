@@ -7,7 +7,6 @@ class ContextSpec extends FunSuite
     with TypeContext with BoundedTypeTrees with Expressions {
 
   type SymbolType = Symbol
-  type TypeType = Type
   val TypeNothing = typeOf[Nothing]
   val IntSymbol = typeOf[Int].typeSymbol
   def createBound(symbol: SymbolType) =
@@ -15,7 +14,7 @@ class ContextSpec extends FunSuite
 
   def expressionForType = {
     case TypeRef(_, IntSymbol, Nil) =>
-      new ExpressionFactory[Int]
+      new ExpressionFactory[Int](typeOf[Int])
   }
 
   val x = 0
@@ -192,10 +191,13 @@ class ContextSpec extends FunSuite
       if(debug) {
         println(xBounds.prettyPrint("x"))
       }
-      assert(positiveAsserts.forall ( xBounds obviouslySubsetOf _ ))
-      negativeAsserts.foreach {x => 
+      positiveAsserts foreach { x =>
+        assert(xBounds obviouslySubsetOf x,
+          s"Expected ${xBounds.prettyPrint("x")} to be a subset of ${x.prettyPrint("x")}")
+      }
+      negativeAsserts.foreach {x =>
         assert(!(xBounds obviouslySubsetOf x),
-          s"Expected ${xBounds.prettyPrint("x")} to not be a subset of ${x.prettyPrint("x")}")
+          s"Expected ${xBounds.prettyPrint("x")} to NOT be a subset of ${x.prettyPrint("x")}")
       }
     }
   }
