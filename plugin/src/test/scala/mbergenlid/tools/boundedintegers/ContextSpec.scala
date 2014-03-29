@@ -30,92 +30,91 @@ class ContextSpec extends FunSuite
   })
 
   test("Simple retrieval") {
-    val expected = BoundedType(
-      LessThan(Polynom.fromConstant(4)), typeOf[Int]
-    )
+    val expected =
+      LessThan(Polynom.fromConstant(4))
     val c = new Context(Map(
       sym("x") -> expected
     ))
 
-    assert(Context.getBoundedInteger("x", typeOf[Int], c) === expected)
+    assert(Context.getConstraint("x", c) === expected)
   }
 
   test("More complex transitive with Mixed") {
-    val originalXBound = BoundedType(LessThan(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int])
+    val originalXBound = LessThan(Polynom(Set(t(1, "y"), t(4))))
     val c = new Context(Map(
       sym("x") -> originalXBound,
-      sym("y") -> BoundedType(GreaterThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("y") -> GreaterThan(Polynom.fromConstant(4))
     ))
 
-    val xBounds = Context.getBoundedInteger("x", typeOf[Int], c)
+    val xBounds = Context.getConstraint("x", c)
     assert(xBounds === originalXBound)
   }
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(LessThan(Polynom.fromSymbol[Int]("y")), typeOf[Int]),
-      sym("y") -> BoundedType(LessThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> LessThan(Polynom.fromSymbol[Int]("y")),
+      sym("y") -> LessThan(Polynom.fromConstant(4))
     )))(LessThan(Polynom.fromConstant(4)))()
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(LessThan(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(LessThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> LessThan(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> LessThan(Polynom.fromConstant(4))
     )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(LessThan(Polynom.fromSymbol[Int]("y")), typeOf[Int]),
-      sym("y") -> BoundedType(LessThan(Polynom(Set(t(1, "z"), t(4)))), typeOf[Int]),
-      sym("z") -> BoundedType(LessThan(Polynom.fromConstant(1)), typeOf[Int])
+      sym("x") -> LessThan(Polynom.fromSymbol[Int]("y")) ,
+      sym("y") -> LessThan(Polynom(Set(t(1, "z"), t(4)))) ,
+      sym("z") -> LessThan(Polynom.fromConstant(1))
     )))(LessThan(Polynom.fromConstant(5)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(LessThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> LessThan(Polynom.fromConstant(4))
     )))(LessThan(Polynom.fromConstant(8)))(LessThan(Polynom.fromConstant(4)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(4)))),  typeOf[Int]),
-      sym("y") -> BoundedType(GreaterThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> GreaterThan(Polynom.fromConstant(4))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(Equal(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> Equal(Polynom.fromConstant(4))
     )))(
       Equal(Polynom.fromConstant(8)), LessThan(Polynom.fromConstant(9))
     )(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(GreaterThan(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(GreaterThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> GreaterThan(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> GreaterThan(Polynom.fromConstant(4))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(GreaterThanOrEqual(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(GreaterThan(Polynom.fromConstant(4)), typeOf[Int])
+      sym("x") -> GreaterThanOrEqual(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> GreaterThan(Polynom.fromConstant(4))
     )))(GreaterThan(Polynom.fromConstant(8)))(GreaterThan(Polynom.fromConstant(9)))
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(4)))), typeOf[Int]),
-      sym("y") -> BoundedType(And(LessThan(Polynom.fromConstant(10)),
-                                     GreaterThan(Polynom.fromConstant(0))), typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> And(LessThan(Polynom.fromConstant(10)),
+                                     GreaterThan(Polynom.fromConstant(0)))
     ))) (
       LessThan(Polynom.fromConstant(14)), GreaterThan(Polynom.fromConstant(4))
     )()
 
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(4)))),  typeOf[Int]),
-      sym("y") -> BoundedType(Or(LessThan(Polynom.fromConstant(0)),
-                                    GreaterThan(Polynom.fromConstant(10))),  typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(4)))) ,
+      sym("y") -> Or(LessThan(Polynom.fromConstant(0)),
+                                    GreaterThan(Polynom.fromConstant(10)))
     ))) ()(LessThan(Polynom.fromConstant(4)))
 
   /**
@@ -126,9 +125,9 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(-5)))),  typeOf[Int]),
-      sym("y") -> BoundedType(And(GreaterThanOrEqual(Polynom.fromConstant(0)),
-                                    LessThanOrEqual(Polynom.fromConstant(5))),  typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(-5)))) ,
+      sym("y") -> And(GreaterThanOrEqual(Polynom.fromConstant(0)),
+                                    LessThanOrEqual(Polynom.fromConstant(5)))
     )))(GreaterThanOrEqual(Polynom.fromConstant(-5)))(GreaterThan(Polynom.fromConstant(-5)))
 
   /**
@@ -139,8 +138,8 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(GreaterThan(Polynom(Set(t(1, "y")))),  typeOf[Int]),
-      sym("y") -> BoundedType(GreaterThanOrEqual(Polynom.fromConstant(0)),  typeOf[Int])
+      sym("x") -> GreaterThan(Polynom(Set(t(1, "y")))) ,
+      sym("y") -> GreaterThanOrEqual(Polynom.fromConstant(0))
     )))(GreaterThan(Polynom.fromConstant(0)))()
 
   /**
@@ -151,8 +150,8 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(LessThan(Polynom(Set(t(1, "y")))),  typeOf[Int]),
-      sym("y") -> BoundedType(LessThanOrEqual(Polynom.fromConstant(0)),  typeOf[Int])
+      sym("x") -> LessThan(Polynom(Set(t(1, "y")))) ,
+      sym("y") -> LessThanOrEqual(Polynom.fromConstant(0))
     )))(LessThan(Polynom.fromConstant(0)))()
 
   /**
@@ -164,11 +163,11 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(1, "z")))), typeOf[Int]),
-      sym("y") -> BoundedType(And(GreaterThanOrEqual(Polynom.fromConstant(0)),
-                                     LessThanOrEqual(Polynom.fromConstant(5))), typeOf[Int]),
-      sym("z") -> BoundedType(And(GreaterThanOrEqual(Polynom.fromConstant(1)),
-                                      LessThanOrEqual(Polynom.fromConstant(6))),  typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(1, "z")))),
+      sym("y") -> And(GreaterThanOrEqual(Polynom.fromConstant(0)),
+                                     LessThanOrEqual(Polynom.fromConstant(5))),
+      sym("z") -> And(GreaterThanOrEqual(Polynom.fromConstant(1)),
+                                      LessThanOrEqual(Polynom.fromConstant(6)))
     )))(GreaterThanOrEqual(Polynom.fromConstant(1)), LessThan(Polynom.fromConstant(12)))(LessThanOrEqual(Polynom.fromConstant(10)))
   
   /**
@@ -180,14 +179,14 @@ class ContextSpec extends FunSuite
    */
   contextTest(
     new Context(Map(
-      sym("x") -> BoundedType(Equal(Polynom(Set(t(1, "y"), t(1, "z")))),  typeOf[Int]),
-      sym("y") -> BoundedType(GreaterThanOrEqual(Polynom.fromConstant(0)),  typeOf[Int]),
-      sym("z") -> BoundedType(GreaterThan(Polynom.fromConstant(1)),  typeOf[Int])
+      sym("x") -> Equal(Polynom(Set(t(1, "y"), t(1, "z")))),
+      sym("y") -> GreaterThanOrEqual(Polynom.fromConstant(0)),
+      sym("z") -> GreaterThan(Polynom.fromConstant(1))
     )))(GreaterThanOrEqual(Polynom.fromSymbol[Int]("z")), GreaterThan(Polynom.fromConstant(1)))()
 
   def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
     test(c.toString) {
-      val xBounds = Context.getBoundedInteger("x", typeOf[Int], c).constraint
+      val xBounds = Context.getConstraint("x", c)
       if(debug) {
         println(xBounds.prettyPrint("x"))
       }

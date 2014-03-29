@@ -6,13 +6,20 @@ trait TypeContext { self: BoundedTypeTrees =>
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]]
 
-  class Context(private val symbols: Map[SymbolType, BoundedType]) {
-    type Operator = (BoundedType, BoundedType) => BoundedType
+  class Context(private val symbols: Map[SymbolType, Constraint]) {
+    type Operator = (Constraint, Constraint) => Constraint
     def this() = this(Map.empty)
     def apply(symbol: SymbolType) = symbols.get(symbol)
     def get(symbol: SymbolType) = symbols.getOrElse(symbol, new BoundedType(symbol.typeSignature))
     def removeSymbolConstraints(symbol: SymbolType) =
-      new Context(symbols map { case (k,v) => k -> v.removeSymbolConstraints(symbol)})
+      new Context(symbols map { case (k,v) => k -> _removeSymbolConstraints(symbol)(v)})
+
+    private def _removeSymbolConstraints(symbol: SymbolType)(c: Constraint): Constraint = c match {
+      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol))
+      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol))
+      case _ if c.isSymbolConstraint => NoConstraints
+      case _ => c
+    }
 
     def &&(other: Context) = combineWith(other, _&&_)
 
@@ -20,15 +27,15 @@ trait TypeContext { self: BoundedTypeTrees =>
 
     def combineWith(other: Context, op: Operator) = {
       val map = (other.symbols /: symbols) { (map, t) =>
-        val bounds = other.symbols.getOrElse(t._1, BoundedType.noBounds)
-        map + (t._1 -> op(bounds, t._2))
+        val constraint = other.symbols.getOrElse(t._1, NoConstraints)
+        map + (t._1 -> op(constraint, t._2))
       }
       new Context(map)
     }
 
-    def &(s: SymbolType, bounds: BoundedType) = {
-      val oldBounds = symbols.getOrElse(s, new BoundedType(bounds.tpe))
-      new Context(symbols + (s -> (oldBounds && bounds)))
+    def &(s: SymbolType, constraint: Constraint) = {
+      val oldConstraint = symbols.getOrElse(s, NoConstraints)
+      new Context(symbols + (s -> (oldConstraint && constraint)))
     }
     def -(s: SymbolType) = new Context(symbols - s)
       
@@ -41,17 +48,13 @@ trait TypeContext { self: BoundedTypeTrees =>
   object Context {
 
 
-    def getBoundedInteger(symbol: SymbolType, resultType: TypeType, context: Context): BoundedType = {
-      val bounds = context(symbol).getOrElse(createBound(symbol)).convertTo(resultType)
-      getBoundedInteger(bounds, context - symbol)
+    def getConstraint(symbol: SymbolType, context: Context): Constraint = {
+      val constraint = context(symbol).getOrElse(createBound(symbol).constraint)
+      getConstraint(constraint, context)
     }
 
-    def getBoundedInteger(start: BoundedType, context: Context): BoundedType = {
-      assert(start.tpe != TypeNothing)
-      BoundedType(
-        findTransitiveConstraints(start.constraint, start.tpe, context),
-        start.tpe
-      )
+    def getConstraint(start: Constraint, context: Context): Constraint = {
+      findTransitiveConstraints(start, context)
     }
 
     /**
@@ -60,19 +63,18 @@ trait TypeContext { self: BoundedTypeTrees =>
      *   _ < x && _ < y
      * 
      */
-    def findTransitiveConstraints(c: Constraint, resultType: TypeType, context: Context): Constraint =
+    def findTransitiveConstraints(c: Constraint, context: Context): Constraint =
       c.map {sc: SimpleConstraint =>
-        substitute(sc, sc.v.extractSymbols.toList, resultType, context)
+        substitute(sc, sc.v.extractSymbols.toList, context)
       }
 
     private[boundedintegers]
     def substitute( constraint: Constraint,
                     symbols: List[SymbolType],
-                    resultType: TypeType,
                     context: Context): Constraint =
       symbols match {
         case symbol :: rest => 
-          val b = getBoundedInteger(symbol, resultType, context).constraint
+          val b = getConstraint(symbol, context)
           substitute (
             And.combine(constraint,
               constraint.newFlatMap { sc1 =>
@@ -85,7 +87,6 @@ trait TypeContext { self: BoundedTypeTrees =>
               }
             ),
             rest,
-            resultType,
             context - symbol
           )
         case Nil => constraint
@@ -141,7 +142,7 @@ trait TypeContext { self: BoundedTypeTrees =>
 
   class BoundedType(val constraint: Constraint, val tpe: TypeType) {
     assert(constraint == NoConstraints || tpe != TypeNothing)
-    private def this() = this(NoConstraints, TypeNothing)
+    def this() = this(NoConstraints, TypeNothing)
     def this(tpe: TypeType) = this(NoConstraints, tpe)
 
     private def assertSameType(other: BoundedType) =
@@ -191,16 +192,6 @@ trait TypeContext { self: BoundedTypeTrees =>
       BoundedType(other.constraint.lowerBound, tpe) && this
     }
 
-    def removeSymbolConstraints(symbol: SymbolType): BoundedType =
-      new BoundedType(_removeSymbolConstraints(symbol)(constraint), tpe)
-
-    private def _removeSymbolConstraints(symbol: SymbolType)(c: Constraint): Constraint = c match {
-      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol) _)
-      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol) _)
-      case _ if c.isSymbolConstraint => NoConstraints
-      case _ => c
-    }
-
     def unary_! = new BoundedType(!constraint, tpe)
 
     override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
@@ -211,7 +202,14 @@ trait TypeContext { self: BoundedTypeTrees =>
 
   object BoundedType {
     def apply(constraint: Constraint, tpe: TypeType) = {
-      new BoundedType(constraint, tpe)
+      expressionForType.lift(tpe) match {
+        case Some(expressionFactory) =>
+          new BoundedType(constraint.map { sc =>
+            expressionFactory.convertExpression(sc.v)
+          }, expressionFactory.convertedType)
+        case None => BoundedType.noBounds
+      }
+
     }
 
     def noBounds = new BoundedType

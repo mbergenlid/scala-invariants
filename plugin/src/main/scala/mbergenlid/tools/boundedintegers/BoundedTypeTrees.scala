@@ -38,6 +38,9 @@ trait BoundedTypeTrees extends Expressions {
 
     def flatMap(f: SimpleConstraint => Traversable[Constraint]): Constraint
     def newFlatMap(f: SimpleConstraint => Constraint): Constraint
+
+    def &&(other: Constraint) = And.combine(this, other)
+    def ||(other: Constraint) = Or.combine(this, other)
   }
 
   implicit val fromConstraint = new DefaultConstraintBuilder
@@ -299,12 +302,16 @@ trait BoundedTypeTrees extends Expressions {
 
     def unary_! = And(!left, !right)
 
+    def combine(c1: Constraint, c2: Constraint) = Or.combine(c1, c2)
+
+    override def prettyPrint(variable: String = "_") =
+      s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
+  }
+
+  object Or {
     def combine(c1: Constraint, c2: Constraint) =
       if(c1 obviouslySubsetOf c2) c2
       else if(c2 obviouslySubsetOf c1) c1
       else Or(c1, c2)
-
-    override def prettyPrint(variable: String = "_") =
-      s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
   }
 }

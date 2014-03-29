@@ -27,15 +27,15 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
   object BoundsFactory {
 
-    def apply(bounds: Annotation, tpe: TypeType): BoundedType = bounds match {
+    private def constraint(bounds: Annotation, tpe: TypeType): Constraint = bounds match {
       case a if a.tpe =:= typeOf[GreaterThanOrEqualAnnotation] =>
-        BoundedType(GreaterThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
+        GreaterThanOrEqual(expr(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[LessThanOrEqualAnnotation] =>
-        BoundedType(LessThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
+        LessThanOrEqual(expr(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[EqualAnnotation] =>
-        BoundedType(Equal(expr(a.scalaArgs.head, tpe)), tpe)
+        Equal(expr(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[LessThanAnnotation] =>
-        BoundedType(LessThan(expr(a.scalaArgs.head, tpe)), tpe)
+        LessThan(expr(a.scalaArgs.head, tpe))
     }
 
     private def expr(tree: Tree, resultType: TypeType): Expression = {
@@ -79,10 +79,12 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     }
 
     def apply(symbol: Symbol, tpe: TypeType): BoundedType = {
-      (new BoundedType(tpe) /: symbol.annotations.collect {
-        case a if a.tpe <:< typeOf[Bounded] =>
-          BoundsFactory(a, tpe)
-      }) (_ && _)
+      val c =
+        (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+          case a if a.tpe <:< typeOf[Bounded] =>
+            BoundsFactory.constraint(a, tpe)
+        }) (_ && _)
+      BoundedType(c, tpe)
     }
 
     def apply(tree: Tree): BoundedType = {
@@ -151,36 +153,35 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case _ => 
         (context /: tree.children) {(c,child) =>
           val bounds = checkBounds(c)(child)
-          updateContext(c, child, bounds)
+          updateContext(c, child, bounds.constraint)
         }
         BoundedType.noBounds
     }
   }
 
-  def updateContext(context: Context, tree: Tree, bounds: BoundedType): Context = tree match {
+  def updateContext(context: Context, tree: Tree, constraint: Constraint): Context = tree match {
     case Assign(_, _) => context.removeSymbolConstraints(tree.symbol)
-    case _ if bounds != BoundedType.noBounds =>
-      context && new Context(Map(tree.symbol -> bounds))
+    case _ if constraint != NoConstraints =>
+      context && new Context(Map(tree.symbol -> constraint))
     case _ => context      
   }
 
-  private def getBoundedIntegerFromContext(tree: Tree, context: Context) = {
+  private def getBoundedIntegerFromContext(tree: Tree, context: Context): BoundedType = {
     if(expressionForType.isDefinedAt(tree.tpe)) {
-      val bounds = context(tree.symbol) match {
+      val bounds: Constraint = context(tree.symbol) match {
         case Some(x) => x
         case None =>
-          BoundsFactory(tree)
+          BoundsFactory(tree).constraint
       }
       if(tree.symbol != null && tree.symbol != NoSymbol) {
         val constraintOption =
           for(e <- expressionForType.lift(tree.tpe))
           yield Equal(e.fromSymbol(tree.symbol))
 
-        val resultType = if(bounds.tpe == TypeNothing) tree.tpe else bounds.tpe
-        BoundedType(constraintOption.getOrElse(NoConstraints), resultType) &&
-          Context.getBoundedInteger(bounds, context - tree.symbol)
+        BoundedType(constraintOption.getOrElse(NoConstraints) &&
+          Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
       } else {
-        Context.getBoundedInteger(bounds, context - tree.symbol)
+        BoundedType(Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
       }
     } else {
       BoundedType.noBounds
