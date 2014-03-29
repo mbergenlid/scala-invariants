@@ -29,53 +29,29 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
     private def constraint(bounds: Annotation, tpe: TypeType): Constraint = bounds match {
       case a if a.tpe =:= typeOf[GreaterThanOrEqualAnnotation] =>
-        GreaterThanOrEqual(expr(a.scalaArgs.head, tpe))
+        GreaterThanOrEqual(annotationExpression(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[LessThanOrEqualAnnotation] =>
-        LessThanOrEqual(expr(a.scalaArgs.head, tpe))
+        LessThanOrEqual(annotationExpression(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[EqualAnnotation] =>
-        Equal(expr(a.scalaArgs.head, tpe))
+        Equal(annotationExpression(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[LessThanAnnotation] =>
-        LessThan(expr(a.scalaArgs.head, tpe))
+        LessThan(annotationExpression(a.scalaArgs.head, tpe))
     }
 
-    private def expr(tree: Tree, resultType: TypeType): Expression = {
+    private def annotationExpression(tree: Tree, resultType: TypeType): Expression = {
       val Apply(_, List(value)) = tree
       expression(value, resultType)
-    }
-
-    def convertExpression[From: RichNumeric](from: From, to: TypeType): Expression = to match {
-      case ConstantType(Constant(x: Int)) =>
-        Polynom.fromConstant[Int](implicitly[RichNumeric[Int]].fromType(from))
-      case TypeRef(_, IntSymbol, Nil) =>
-        Polynom.fromConstant[Int](implicitly[RichNumeric[Int]].fromType(from))
-      case NullaryMethodType(IntType) =>
-        Polynom.fromConstant[Int](implicitly[RichNumeric[Int]].fromType(from))
-      case ConstantType(Constant(x: Long)) =>
-        Polynom.fromConstant[Long](implicitly[RichNumeric[Long]].fromType(from))
-      case TypeRef(_, LongSymbol, Nil) =>
-        Polynom.fromConstant[Long](implicitly[RichNumeric[Long]].fromType(from))
-      case TypeRef(_, DoubleSymbol, Nil) =>
-        Polynom.fromConstant[Double](implicitly[RichNumeric[Double]].fromType(from))
-    }
-
-    def symbolExpression(symbol: SymbolType, tpe: TypeType): Expression = tpe match {
-      case TypeRef(_, IntSymbol, Nil) =>
-        Polynom.fromSymbol[Int](symbol)
-      case TypeRef(_, LongSymbol, Nil) =>
-        Polynom.fromSymbol[Long](symbol)
-      case TypeRef(_, DoubleSymbol, Nil) =>
-        Polynom.fromSymbol[Double](symbol)
     }
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
       case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue =>
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Long)) =>
-        convertExpression(x, tpe)
+        expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Double)) =>
         expressionForType(tpe).convertConstant(x)
       case x: Ident if x.symbol != NoSymbol =>
-        symbolExpression(x.symbol, tpe)
+        expressionForType(tpe).fromSymbol(x.symbol)
     }
 
     def apply(symbol: Symbol, tpe: TypeType): BoundedType = {
