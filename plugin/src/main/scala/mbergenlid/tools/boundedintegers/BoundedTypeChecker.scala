@@ -27,15 +27,15 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
   object BoundsFactory {
 
-    def apply(bounds: Annotation, tpe: TypeType): BoundedInteger = bounds match {
+    def apply(bounds: Annotation, tpe: TypeType): BoundedType = bounds match {
       case a if a.tpe =:= typeOf[GreaterThanOrEqualAnnotation] =>
-        BoundedInteger(GreaterThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
+        BoundedType(GreaterThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
       case a if a.tpe =:= typeOf[LessThanOrEqualAnnotation] =>
-        BoundedInteger(LessThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
+        BoundedType(LessThanOrEqual(expr(a.scalaArgs.head, tpe)), tpe)
       case a if a.tpe =:= typeOf[EqualAnnotation] =>
-        BoundedInteger(Equal(expr(a.scalaArgs.head, tpe)), tpe)
+        BoundedType(Equal(expr(a.scalaArgs.head, tpe)), tpe)
       case a if a.tpe =:= typeOf[LessThanAnnotation] =>
-        BoundedInteger(LessThan(expr(a.scalaArgs.head, tpe)), tpe)
+        BoundedType(LessThan(expr(a.scalaArgs.head, tpe)), tpe)
     }
 
     private def expr(tree: Tree, resultType: TypeType): Expression = {
@@ -78,23 +78,23 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         symbolExpression(x.symbol, tpe)
     }
 
-    def apply(symbol: Symbol, tpe: TypeType): BoundedInteger = {
-      (new BoundedInteger(tpe) /: symbol.annotations.collect {
+    def apply(symbol: Symbol, tpe: TypeType): BoundedType = {
+      (new BoundedType(tpe) /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory(a, tpe)
       }) (_ && _)
     }
 
-    def apply(tree: Tree): BoundedInteger = {
+    def apply(tree: Tree): BoundedType = {
       if(expressionForType.isDefinedAt(tree.tpe)) {
         val f = expressionForType(tree.tpe)
         if(tree.symbol != null && tree.symbol != NoSymbol) {
           BoundsFactory(tree.symbol, f.convertedType)
         } else {
-          BoundedInteger(Equal(expression(tree, tree.tpe)), f.convertedType)
+          BoundedType(Equal(expression(tree, tree.tpe)), f.convertedType)
         }
       } else {
-        BoundedInteger.noBounds
+        BoundedType.noBounds
       }
     }
 
@@ -142,7 +142,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
     errors.reverse
   }
 
-  def checkBounds(context: Context)(tree: Tree): BoundedInteger = {
+  def checkBounds(context: Context)(tree: Tree): BoundedType = {
     if(tree.children.isEmpty) {
       val b = getBoundedIntegerFromContext(tree, context)
       b
@@ -153,13 +153,13 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
           val bounds = checkBounds(c)(child)
           updateContext(c, child, bounds)
         }
-        BoundedInteger.noBounds
+        BoundedType.noBounds
     }
   }
 
-  def updateContext(context: Context, tree: Tree, bounds: BoundedInteger): Context = tree match {
+  def updateContext(context: Context, tree: Tree, bounds: BoundedType): Context = tree match {
     case Assign(_, _) => context.removeSymbolConstraints(tree.symbol)
-    case _ if bounds != BoundedInteger.noBounds =>
+    case _ if bounds != BoundedType.noBounds =>
       context && new Context(Map(tree.symbol -> bounds))
     case _ => context      
   }
@@ -177,13 +177,13 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
           yield Equal(e.fromSymbol(tree.symbol))
 
         val resultType = if(bounds.tpe == TypeNothing) tree.tpe else bounds.tpe
-        BoundedInteger(constraintOption.getOrElse(NoConstraints), resultType) &&
+        BoundedType(constraintOption.getOrElse(NoConstraints), resultType) &&
           Context.getBoundedInteger(bounds, context - tree.symbol)
       } else {
         Context.getBoundedInteger(bounds, context - tree.symbol)
       }
     } else {
-      BoundedInteger.noBounds
+      BoundedType.noBounds
     }
 
   }

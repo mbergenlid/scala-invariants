@@ -7,7 +7,7 @@ import scala.reflect.api.Universe
 trait IfExpression extends BooleanExpressionEvaluator {
   self: MyUniverse =>
   import global._
-  import BoundedInteger._
+  import BoundedType._
 
   abstract override def checkBounds(context: Context)(tree: Tree) =
     validate(context).applyOrElse(tree, super.checkBounds(context) _)

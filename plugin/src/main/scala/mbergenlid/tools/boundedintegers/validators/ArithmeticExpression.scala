@@ -63,6 +63,6 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
 //      println(s"\t${lhs.constraint.prettyPrint()}")
 //      println(s"\t${rhs.constraint.prettyPrint()}")
 
-      BoundedInteger(newConstraint, a.tpe)
+      BoundedType(newConstraint, a.tpe)
   }
 }
