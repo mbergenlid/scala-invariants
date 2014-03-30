@@ -63,6 +63,10 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
 //      println(s"\t${lhs.constraint.prettyPrint()}")
 //      println(s"\t${rhs.constraint.prettyPrint()}")
 
-      BoundedType(newConstraint, a.tpe)
+      val expression = for {
+        exp1 <- lhs.expression
+        exp2 <- rhs.expression
+      } yield operators(method).apply(exp1, exp2)
+      BoundedType(expression, newConstraint)
   }
 }

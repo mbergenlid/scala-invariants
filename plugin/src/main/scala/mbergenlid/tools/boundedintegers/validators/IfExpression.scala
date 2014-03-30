@@ -15,8 +15,10 @@ trait IfExpression extends BooleanExpressionEvaluator {
   private def validate(implicit context: Context): Validator = {
     case If(cond, _then, _else) => {
       val newContext = evaluate(cond)
-      checkBounds(context && newContext)(_then) ||
-      checkBounds(context && !newContext)(_else)
+      val newConstraint = checkBounds(context && newContext)(_then).constraint ||
+            checkBounds(context && !newContext)(_else).constraint
+
+      BoundedType(None, newConstraint)
     }
   }
 }

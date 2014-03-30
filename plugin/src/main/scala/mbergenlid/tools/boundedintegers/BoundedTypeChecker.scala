@@ -50,26 +50,25 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Double)) =>
         expressionForType(tpe).convertConstant(x)
-      case x: Ident if x.symbol != NoSymbol =>
+      case x if x.symbol != NoSymbol =>
         expressionForType(tpe).fromSymbol(x.symbol)
     }
 
-    def apply(symbol: Symbol, tpe: TypeType): BoundedType = {
-      val c =
-        (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
-          case a if a.tpe <:< typeOf[Bounded] =>
-            BoundsFactory.constraint(a, tpe)
-        }) (_ && _)
-      BoundedType(c, tpe)
+    def apply(symbol: Symbol, tpe: TypeType): Constraint = {
+      (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+        case a if a.tpe <:< typeOf[Bounded] =>
+          BoundsFactory.constraint(a, tpe)
+      }) (_ && _)
     }
 
     def apply(tree: Tree): BoundedType = {
       if(expressionForType.isDefinedAt(tree.tpe)) {
         val f = expressionForType(tree.tpe)
+        val exp = f.convertExpression(expression(tree, tree.tpe))
         if(tree.symbol != null && tree.symbol != NoSymbol) {
-          BoundsFactory(tree.symbol, f.convertedType)
+          BoundedType(exp, Equal(exp) && BoundsFactory(tree.symbol, f.convertedType))
         } else {
-          BoundedType(Equal(expression(tree, tree.tpe)), f.convertedType)
+          BoundedType(exp, Equal(exp))
         }
       } else {
         BoundedType.noBounds
@@ -79,7 +78,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
   }
 
-  def createBound(symbol: SymbolType) = BoundsFactory(symbol, symbol.typeSignature)
+  def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol, symbol.typeSignature)
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
     case ConstantType(Constant(x: Int)) =>
@@ -122,10 +121,10 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
 
   def checkBounds(context: Context)(tree: Tree): BoundedType = {
     if(tree.children.isEmpty) {
-      val b = getBoundedIntegerFromContext(tree, context)
+      val b = BoundsFactory(tree)
       b
     } else tree match {
-      case Select(_,_) => getBoundedIntegerFromContext(tree, context)
+      case Select(_,_) => BoundsFactory(tree)
       case _ => 
         (context /: tree.children) {(c,child) =>
           val bounds = checkBounds(c)(child)
@@ -142,27 +141,27 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
     case _ => context      
   }
 
-  private def getBoundedIntegerFromContext(tree: Tree, context: Context): BoundedType = {
-    if(expressionForType.isDefinedAt(tree.tpe)) {
-      val bounds: Constraint = context(tree.symbol) match {
-        case Some(x) => x
-        case None =>
-          BoundsFactory(tree).constraint
-      }
-      if(tree.symbol != null && tree.symbol != NoSymbol) {
-        val constraintOption =
-          for(e <- expressionForType.lift(tree.tpe))
-          yield Equal(e.fromSymbol(tree.symbol))
+//  private def getBoundedIntegerFromContext(tree: Tree, context: Context): BoundedType = {
+//    if(expressionForType.isDefinedAt(tree.tpe)) {
+//      val bounds: Constraint = context(tree.symbol) match {
+//        case Some(x) => x
+//        case None =>
+//          BoundsFactory(tree).constraint
+//      }
+//      if(tree.symbol != null && tree.symbol != NoSymbol) {
+//        val constraintOption =
+//          for(e <- expressionForType.lift(tree.tpe))
+//          yield Equal(e.fromSymbol(tree.symbol))
+//
+//        BoundedType(constraintOption.getOrElse(NoConstraints) &&
+//          Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
+//      } else {
+//        BoundedType(Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
+//      }
+//    } else {
+//      BoundedType.noBounds
+//    }
 
-        BoundedType(constraintOption.getOrElse(NoConstraints) &&
-          Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
-      } else {
-        BoundedType(Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
-      }
-    } else {
-      BoundedType.noBounds
-    }
-
-  }
+//  }
 
 }

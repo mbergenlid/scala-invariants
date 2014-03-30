@@ -10,15 +10,20 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
   implicit class ConstrainedSymbol(symbol: Symbol) {
 
     def tryAssign(expr: Tree)(implicit context: Context): BoundedType = {
-      val target = BoundsFactory.apply(symbol, symbol.typeSignature)
-      val boundedExpr = checkBounds(context)(expr)
-      if(!(boundedExpr <:< target))
-        reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundedExpr)(context)))
-      boundedExpr
+      if(expressionForType.isDefinedAt(symbol.typeSignature)) {
+        val target = BoundsFactory.apply(symbol, symbol.typeSignature)
+        val boundExpr = checkBounds(context)(expr)
+        val assignee = Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+        if(!(assignee obviouslySubsetOf target))
+          reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
+        boundExpr
+      } else {
+        BoundedType.noBounds
+      }
     }
 
-    private def createErrorMessage(targetSymbol: Symbol, targetBounds: BoundedType,
-                                   assignee: Tree, assigneeBounds: BoundedType)
+    private def createErrorMessage(targetSymbol: Symbol, targetBounds: Constraint,
+                                   assignee: Tree, assigneeBounds: Constraint)
                                  (context: Context): String = {
       val targetName = targetSymbol.name
       val assigneeName = assignee.symbol match {
@@ -29,9 +34,9 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       s"""
         |Could not assign $assigneeName to $targetName.
         |Unable to prove that:
-        |  $assigneeName constrained by (${assigneeBounds.constraint.prettyPrint(assigneeName.toString)})
+        |  $assigneeName constrained by (${assigneeBounds.prettyPrint(assigneeName.toString)})
         |is a subtype of
-        |  $targetName constrained by (${targetBounds.constraint.prettyPrint(targetName.toString)})
+        |  $targetName constrained by (${targetBounds.prettyPrint(targetName.toString)})
       """.stripMargin
     }
   }

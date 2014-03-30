@@ -15,7 +15,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
       apply(evaluate(boolExpr), method, arg)
     case Apply(Select(obj, method), List(arg)) if opToConstraints.contains(method) && !obj.symbol.isMethod =>
       new Context(Map(
-        obj.symbol -> apply(BoundsFactory(obj), method, arg).getOrElse(NoConstraints)
+        obj.symbol -> apply(method, arg).getOrElse(NoConstraints)
       ))
     case _ =>
       checkBounds(c)(expr); new Context
@@ -36,11 +36,11 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     case _ => obj
   }
 
-  def apply(obj: BoundedType, method: Name, arg: Tree)(implicit c: Context): Option[Constraint] = {
+  def apply(method: Name, arg: Tree)(implicit c: Context): Option[Constraint] = {
     val argExpression = BoundsFactory.expression(arg, arg.tpe)
     for {
       constraint <- opToConstraints.get(method)
-    } yield { obj.constraint && constraint(argExpression) }
+    } yield { constraint(argExpression) }
   }
 
 }

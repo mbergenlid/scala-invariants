@@ -10,7 +10,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     type Operator = (Constraint, Constraint) => Constraint
     def this() = this(Map.empty)
     def apply(symbol: SymbolType) = symbols.get(symbol)
-    def get(symbol: SymbolType) = symbols.getOrElse(symbol, new BoundedType(symbol.typeSignature))
+    def get(symbol: SymbolType) = symbols.getOrElse(symbol, NoConstraints)
     def removeSymbolConstraints(symbol: SymbolType) =
       new Context(symbols map { case (k,v) => k -> _removeSymbolConstraints(symbol)(v)})
 
@@ -44,37 +44,37 @@ trait TypeContext { self: BoundedTypeTrees =>
     override def toString = symbols.toString()
   } 
   
-  def createBound(symbol: SymbolType): BoundedType
+  def createConstraintFromSymbol(symbol: SymbolType): Constraint
   object Context {
 
 
-    def getConstraint(symbol: SymbolType, context: Context): Constraint = {
-      val constraint = context(symbol).getOrElse(createBound(symbol).constraint)
-      getConstraint(constraint, context)
+    def getConstraint(symbol: SymbolType, resultType: TypeType, context: Context): Constraint = {
+      val f = expressionForType(resultType)
+      val constraint =
+        context(symbol).getOrElse(createConstraintFromSymbol(symbol)).map { sc =>
+          f.convertExpression(sc.v)
+        }
+      for {
+        sc <- constraint
+      } yield substitute(sc, sc.v.extractSymbols.filterNot(_ == symbol).toList, resultType, context - symbol)
+
     }
 
-    def getConstraint(start: Constraint, context: Context): Constraint = {
-      findTransitiveConstraints(start, context)
+    def getConstraint(start: Constraint, resultType: TypeType, context: Context): Constraint = {
+      val f = expressionForType(resultType)
+      for {
+        sc <- start.map(s => f.convertExpression(s.v))
+      } yield substitute(sc, sc.v.extractSymbols.toList, resultType, context)
     }
-
-    /**
-     *   _ < x && _ < y
-     * upperBound
-     *   _ < x && _ < y
-     * 
-     */
-    def findTransitiveConstraints(c: Constraint, context: Context): Constraint =
-      c.map {sc: SimpleConstraint =>
-        substitute(sc, sc.v.extractSymbols.toList, context)
-      }
 
     private[boundedintegers]
     def substitute( constraint: Constraint,
                     symbols: List[SymbolType],
+                    resultType: TypeType,
                     context: Context): Constraint =
       symbols match {
         case symbol :: rest => 
-          val b = getConstraint(symbol, context)
+          val b = getConstraint(symbol, resultType, context)
           substitute (
             And.combine(constraint,
               constraint.newFlatMap { sc1 =>
@@ -87,6 +87,7 @@ trait TypeContext { self: BoundedTypeTrees =>
               }
             ),
             rest,
+            resultType,
             context - symbol
           )
         case Nil => constraint
@@ -140,59 +141,24 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
   }
 
-  class BoundedType(val constraint: Constraint, val tpe: TypeType) {
-    assert(constraint == NoConstraints || tpe != TypeNothing)
-    def this() = this(NoConstraints, TypeNothing)
-    def this(tpe: TypeType) = this(NoConstraints, tpe)
 
+  class BoundedType(val expression: Option[Expression], val constraint: Constraint) {
+    assert(constraint == NoConstraints || tpe != TypeNothing)
+    protected def this() = this(None, NoConstraints)
+//    def this(tpe: TypeType) = this(NoConstraints)
+
+    def tpe = expression.map(_.tpe).getOrElse(TypeNothing)
     private def assertSameType(other: BoundedType) =
       assert(tpe == TypeNothing || other.tpe == TypeNothing || tpe == other.tpe)
 
     def convertTo(tpe: TypeType): BoundedType = {
       val f = expressionForType(tpe)
       val newConstraint = constraint.map { sc => f.convertExpression(sc.v) }
-      BoundedType(newConstraint, tpe)
+      new BoundedType(expression.map(e => f.convertExpression(e)), newConstraint)
     }
-
-
 
     def <:<(other: BoundedType): Boolean =
       constraint.obviouslySubsetOf(other.constraint)
-
-
-    def &&(other: BoundedType) = {
-      assertSameType(other)
-      if(constraint == NoConstraints) new BoundedType(other.constraint, other.tpe)
-      else if(other.constraint == NoConstraints) new BoundedType(constraint, tpe)
-      else new BoundedType(And(constraint, other.constraint), tpe)
-    }
-
-    def ||(other: BoundedType) = {
-      assertSameType(other)
-      if(constraint == NoConstraints) new BoundedType(other.constraint, other.tpe)
-      else if(other.constraint == NoConstraints) new BoundedType(constraint, tpe)
-      else new BoundedType(Or(constraint, other.constraint), tpe)
-    }
-
-    /** 
-     *  x < y < 10
-     *  y < 10 && y > 0
-     *
-     *  x < y 
-     *  y < 10 || y > 100
-     */
-    def <|(other: BoundedType) = {
-      assertSameType(other)
-      BoundedType(other.constraint.upperBound, tpe) && this
-    }
-
-
-    def >|(other: BoundedType) = {
-      assertSameType(other)
-      BoundedType(other.constraint.lowerBound, tpe) && this
-    }
-
-    def unary_! = new BoundedType(!constraint, tpe)
 
     override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
     override def equals(other: Any) = 
@@ -201,17 +167,20 @@ trait TypeContext { self: BoundedTypeTrees =>
   }
 
   object BoundedType {
-    def apply(constraint: Constraint, tpe: TypeType) = {
-      expressionForType.lift(tpe) match {
+    def apply(expression: Expression, constraint: Constraint) = {
+      expressionForType.lift(expression.tpe) match {
         case Some(expressionFactory) =>
-          new BoundedType(constraint.map { sc =>
+          new BoundedType(Some(expression), constraint.map { sc =>
             expressionFactory.convertExpression(sc.v)
-          }, expressionFactory.convertedType)
+          })
         case None => BoundedType.noBounds
       }
-
     }
 
-    def noBounds = new BoundedType
+    def apply(expression: Option[Expression], constraint: Constraint) = {
+      new BoundedType(expression, constraint)
+    }
+
+    def noBounds = new BoundedType()
   }
 }

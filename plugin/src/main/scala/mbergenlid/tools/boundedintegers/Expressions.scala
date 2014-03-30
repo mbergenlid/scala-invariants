@@ -36,9 +36,9 @@ trait Expressions {
     def decrement: Expression
 
     def extractSymbols: Set[SymbolType]
-    def typeInfo: TypeTag[_] = terms.headOption match {
-      case Some(term) => term.coeff.typeInfo
-      case None => typeTag[Nothing]
+    def tpe: TypeType = terms.headOption match {
+      case Some(term) => term.tpe
+      case None => TypeNothing
     }
   }
 
@@ -184,6 +184,8 @@ trait Expressions {
     def decrement =
       if(variables.isEmpty) Term(coeff.decrement, variables)
       else this
+
+    def tpe: TypeType = coeff.tpe
   }
 
   case class SymbolExpression(symbol: SymbolType) {
@@ -195,6 +197,7 @@ trait Expressions {
     implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
     protected def value: T
+    def tpe: TypeType = typeInfo.tpe
 
     def convertTo[U: RichNumeric: TypeTag] =
       ConstantValue(implicitly[RichNumeric[U]].fromType[T](value))

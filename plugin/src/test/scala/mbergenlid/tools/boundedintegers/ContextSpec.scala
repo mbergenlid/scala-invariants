@@ -9,8 +9,8 @@ class ContextSpec extends FunSuite
   type SymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
   val IntSymbol = typeOf[Int].typeSymbol
-  def createBound(symbol: SymbolType) =
-    BoundedType.noBounds
+  def createConstraintFromSymbol(symbol: SymbolType) =
+    NoConstraints
 
   def expressionForType = {
     case TypeRef(_, IntSymbol, Nil) =>
@@ -36,7 +36,7 @@ class ContextSpec extends FunSuite
       sym("x") -> expected
     ))
 
-    assert(Context.getConstraint("x", c) === expected)
+    assert(Context.getConstraint("x", typeOf[Int], c) === expected)
   }
 
   test("More complex transitive with Mixed") {
@@ -46,7 +46,7 @@ class ContextSpec extends FunSuite
       sym("y") -> GreaterThan(Polynom.fromConstant(4))
     ))
 
-    val xBounds = Context.getConstraint("x", c)
+    val xBounds = Context.getConstraint("x", typeOf[Int], c)
     assert(xBounds === originalXBound)
   }
 
@@ -186,7 +186,7 @@ class ContextSpec extends FunSuite
 
   def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
     test(c.toString) {
-      val xBounds = Context.getConstraint("x", c)
+      val xBounds = Context.getConstraint("x", typeOf[Int], c)
       if(debug) {
         println(xBounds.prettyPrint("x"))
       }
