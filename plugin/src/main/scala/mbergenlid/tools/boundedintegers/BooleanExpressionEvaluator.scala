@@ -13,10 +13,8 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
     case Apply(Select(boolExpr, method), List(arg)) if boolExpr.tpe <:< typeOf[Boolean] =>
       apply(evaluate(boolExpr), method, arg)
-    case Apply(Select(obj, method), List(arg)) if opToConstraints.contains(method) && !obj.symbol.isMethod =>
-      new Context(Map(
-        obj.symbol -> apply(method, arg).getOrElse(NoConstraints)
-      ))
+    case Apply(Select(obj, method), List(arg)) if opToConstraints.contains(method) =>
+      apply(obj, method, arg)
     case _ =>
       checkBounds(c)(expr); new Context
   }
@@ -25,9 +23,9 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   type Factory = (Expression => Constraint)
 
-  private val opToConstraints = Map[Name, Factory](
-    n("$less") -> LessThan,
-    n("$greater") -> GreaterThan
+  private val opToConstraints = Map[Name, (Factory, Factory)](
+    n("$less") -> (LessThan, GreaterThan),
+    n("$greater") -> (GreaterThan, LessThan)
   )
 
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
@@ -36,11 +34,23 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     case _ => obj
   }
 
-  def apply(method: Name, arg: Tree)(implicit c: Context): Option[Constraint] = {
-    val argExpression = BoundsFactory.expression(arg, arg.tpe)
-    for {
-      constraint <- opToConstraints.get(method)
-    } yield { constraint(argExpression) }
+  private def apply(lhs: Tree, method: Name, rhs: Tree)(implicit c: Context): Context = {
+    val lhsBounds = checkBounds(c)(lhs)
+    val rhsBounds = checkBounds(c)(rhs)
+
+    val constraints = for {
+      exp1 <- lhsBounds.expression.toList
+      exp2 <- rhsBounds.expression.toList
+      (f1, f2) <- opToConstraints.get(method).toList
+      c <- createConstraints(exp1, exp2, f1) ++ createConstraints(exp2, exp1, f2)
+    } yield { c }
+
+    new Context(constraints.toMap)
   }
 
+  private def createConstraints(exp1: Expression, exp2: Expression, factory: Factory) = {
+    for {
+      symbol <- exp1.extractSymbols
+    } yield { symbol -> factory(exp2) }
+  }
 }

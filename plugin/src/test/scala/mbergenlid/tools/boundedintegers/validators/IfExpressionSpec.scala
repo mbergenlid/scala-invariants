@@ -19,7 +19,7 @@ class IfExpressionSpec extends PluginTestRunner {
   test("Test more complicated if expression") {
     compile("""
           |val x = anotherRandomInteger
-          |if(x < 11 && x > -1)
+          |if(x < 11 && -1 < x)
           |  testMethod(x)
           |else
           |  testMethod(x)
@@ -48,5 +48,16 @@ class IfExpressionSpec extends PluginTestRunner {
               |if(x > 0)
               |  myMethod(x, "Should not compile")
             """.stripMargin)(List(10))
+  }
+
+  test("Bound to symbol two-ways") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = 0
+        |
+        |if(x < 10 && y < x)
+        |  testMethod(x)
+      """.stripMargin)(Nil)
   }
 }

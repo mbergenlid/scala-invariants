@@ -51,7 +51,7 @@ trait TypeContext { self: BoundedTypeTrees =>
     def getConstraint(symbol: SymbolType, resultType: TypeType, context: Context): Constraint = {
       val f = expressionForType(resultType)
       val constraint =
-        context(symbol).getOrElse(createConstraintFromSymbol(symbol)).map { sc =>
+        And.combine(createConstraintFromSymbol(symbol), context.get(symbol)).map { sc =>
           f.convertExpression(sc.v)
         }
       for {
