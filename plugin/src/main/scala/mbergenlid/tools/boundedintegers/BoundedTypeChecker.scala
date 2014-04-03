@@ -98,6 +98,10 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     case s@SingleType(_, _) if s <:< IntType.asInstanceOf[Type] =>
       new ExpressionFactory[Int](IntType)
   }
+
+//  case class Scope(expr: Tree) extends Tree {
+//
+//  }
 }
 
 
@@ -120,24 +124,24 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   def checkBounds(context: Context)(tree: Tree): this.BoundedType = {
+    def traverseChildren(children: List[Tree]) = {
+      (context /: children) {(c,child) =>
+        val bounds = checkBounds(c)(child)
+        updateContext(c, child, bounds.constraint)
+      }
+    }
     if(tree.children.isEmpty) {
       val b = BoundsFactory(tree)
       b
     } else tree match {
       case Select(_,_) => BoundsFactory(tree)
       case Block(body, res) =>
-        val newContext = (context /: body) {(c,child) =>
-          val bounds = checkBounds(c)(child)
-          updateContext(c, child, bounds.constraint)
-        }
+        val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
-        val blockConstraint = Context.getConstraint(bounds.constraint, tree.tpe, newContext)
+        val blockConstraint = Context.getConstraint(bounds.constraint, res.tpe, newContext)
         BoundedType(bounds.expression, blockConstraint)
       case _ => 
-        (context /: tree.children) {(c,child) =>
-          val bounds = checkBounds(c)(child)
-          updateContext(c, child, bounds.constraint)
-        }
+        traverseChildren(tree.children)
         BoundedType.noBounds
     }
   }

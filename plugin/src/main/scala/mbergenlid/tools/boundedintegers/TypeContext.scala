@@ -186,7 +186,6 @@ trait TypeContext { self: BoundedTypeTrees =>
 
 
   class BoundedType(val expression: Option[Expression], val constraint: Constraint) {
-    assert(constraint == NoConstraints || tpe != TypeNothing)
     protected def this() = this(None, NoConstraints)
 //    def this(tpe: TypeType) = this(NoConstraints)
 

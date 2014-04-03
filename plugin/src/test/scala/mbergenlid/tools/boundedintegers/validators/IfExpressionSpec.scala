@@ -2,9 +2,6 @@ package mbergenlid.tools.boundedintegers.validators
 
 
 import mbergenlid.tools.boundedintegers._
-import org.scalatest.FunSuite
-import scala.tools.reflect.ToolBox
-import scala.reflect.runtime.universe.runtimeMirror
 
 class IfExpressionSpec extends PluginTestRunner {
   
@@ -134,5 +131,31 @@ class IfExpressionSpec extends PluginTestRunner {
         |if(x + intBetween0And5 == 10)
         |  testMethod(x)
       """.stripMargin)(List(6))
+  }
+
+  test("Result of if expression") {
+    val bounds = expression(
+      """
+        |val x = anotherRandomInteger
+        |
+        |if(x > 0) x + 10
+        |else -1
+      """.stripMargin)
+
+    assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
+  }
+
+  test("Result of if expression with Block") {
+    val bounds = expression(
+      """
+        |val x = anotherRandomInteger
+        |
+        |if(x > 0) {
+        |  val y = x
+        |  y + 10
+        |} else -1
+      """.stripMargin)
+
+    assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
   }
 }

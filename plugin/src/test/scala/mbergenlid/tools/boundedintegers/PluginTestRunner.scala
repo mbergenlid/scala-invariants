@@ -51,7 +51,10 @@ trait PluginTestRunner extends FunSuite {
   implicit def int2Expression(v: Int) =
     Polynomial.fromConstant(v)
 
-  def assertThat[C1 <: cut.Constraint](c: C1) = new {
+  trait ConstraintAssert[C1 <: cut.Constraint] {
+    def definiteSubsetOf[C2 <: cut.Constraint](other: C2): Unit
+  }
+  def assertThat[C1 <: cut.Constraint](c: C1) = new ConstraintAssert[C1] {
     def definiteSubsetOf[C2 <: cut.Constraint](other: C2) {
       assert(c obviouslySubsetOf other,
         s"Expected ${c.prettyPrint("x")} to be a subset of ${other.prettyPrint("x")}")
