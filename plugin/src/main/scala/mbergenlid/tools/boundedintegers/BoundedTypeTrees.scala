@@ -36,8 +36,7 @@ trait BoundedTypeTrees extends Expressions {
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
 
-    def flatMap(f: SimpleConstraint => Traversable[Constraint]): Constraint
-    def newFlatMap(f: SimpleConstraint => Constraint): Constraint
+    def flatMap(f: SimpleConstraint => Constraint): Constraint
 
     def &&(other: Constraint) = And.combine(this, other)
     def ||(other: Constraint) = Or.combine(this, other)
@@ -60,7 +59,7 @@ trait BoundedTypeTrees extends Expressions {
   implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
     def foreach[U](f: SimpleConstraint => U): Unit = {
       def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
-        case NoConstraints => {}
+        case NoConstraints =>
         case s: SimpleConstraint => f(s)
         case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
       }
@@ -87,8 +86,7 @@ trait BoundedTypeTrees extends Expressions {
     def isSymbolConstraint = false
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
-    def flatMap(f: SimpleConstraint => Traversable[Constraint]) = this
-    def newFlatMap(f: SimpleConstraint => Constraint) = this
+    def flatMap(f: SimpleConstraint => Constraint) = this
   }
 
   trait SimpleConstraint extends Constraint {
@@ -102,10 +100,7 @@ trait BoundedTypeTrees extends Expressions {
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) =
       bf(f(this), this)
 
-    def flatMap(f: SimpleConstraint => Traversable[Constraint]) =
-      (this.asInstanceOf[Constraint] /: f(this)) (And.apply)
-
-    def newFlatMap(f: SimpleConstraint => Constraint) = f(this)
+    def flatMap(f: SimpleConstraint => Constraint) = f(this)
   }
 
   object SimpleConstraint {
@@ -179,7 +174,7 @@ trait BoundedTypeTrees extends Expressions {
   case class GreaterThan(v: Expression) extends SimpleConstraint {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
-      case GreaterThanOrEqual(v2) => (v2.decrement) <= v
+      case GreaterThanOrEqual(v2) => v2.decrement <= v
       case _ => super.obviouslySubsetOf(that)
     }
 
@@ -256,8 +251,7 @@ trait BoundedTypeTrees extends Expressions {
     def lowerBoundInclusive = combine(left.lowerBoundInclusive, right.lowerBoundInclusive)
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = combine(left.map(f), right.map(f))
-    def flatMap(f: SimpleConstraint => Traversable[Constraint]) = combine(left.flatMap(f), right.flatMap(f))
-    def newFlatMap(f: SimpleConstraint => Constraint) = combine(left.newFlatMap(f), right.newFlatMap(f))
+    def flatMap(f: SimpleConstraint => Constraint) = combine(left.flatMap(f), right.flatMap(f))
   }
   /**
    * x > 0 && x < 100

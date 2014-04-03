@@ -80,11 +80,11 @@ trait TypeContext { self: BoundedTypeTrees =>
           val b = getConstraint(symbol, resultType, context)
           substitute (
             And.combine(constraint,
-              constraint.newFlatMap { sc1 =>
-                b.newFlatMap {sc2 =>
-                  trySubstitute(symbol, sc1, sc2)
-                }
-              }
+              for {
+                sc1 <- constraint
+                sc2 <- b
+                s <- trySubstitute(symbol, sc1, sc2)
+              } yield s
             ),
             rest,
             resultType,
@@ -92,15 +92,6 @@ trait TypeContext { self: BoundedTypeTrees =>
           )
         case Nil => constraint
       }
-
-//    for {
-//      sc1 <- constraint
-//      sc2: SimpleConstraint <- findBoundFunction(sc1)(b)
-//    } yield {
-//      val boundConstr = createBoundConstraint(sc1, sc2)
-//      if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
-//      else NoConstraints
-//    }
 
     protected[boundedintegers] def trySubstitute(
           symbol: SymbolType, base: SimpleConstraint, boundedBy: SimpleConstraint) = {

@@ -14,7 +14,7 @@ trait PluginTestRunner extends FunSuite {
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
                                           with IfExpression
                                           with Assignment
-                                          with ArithmeticExpressionValidator
+                                          with ArithmeticExpression
                                           with MethodDefinition
 
   import cut._

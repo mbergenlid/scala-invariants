@@ -4,7 +4,7 @@ package mbergenlid.tools.boundedintegers.validators
 import mbergenlid.tools.boundedintegers._
 
 
-trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
+trait ArithmeticExpression extends AbstractBoundsValidator {
   self: MyUniverse =>
   import global._
 
@@ -33,23 +33,16 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
       val lhs = checkBounds(context)(op1).convertTo(a.tpe)
       val rhs = checkBounds(context)(op2).convertTo(a.tpe)
 
-//      val newConstraint = for {
-//        sc1 <- lhs.constraint
-//        sc2 <- rhs.constraint
-//        f <- Context.createBoundConstraint(sc1, sc2)
-//      } yield {
-//         val c = f(operators(method).apply(sc1.v, sc2.v))
-//         c
-//      }
-      val newConstraint = lhs.constraint.newFlatMap {sc1 =>
-        rhs.constraint.newFlatMap {sc2 =>
-          Context.createBoundConstraint(sc1, sc2).map {f =>
-            f(operators(method).apply(sc1.v, sc2.v))
-          }
-        }
+      val newConstraint = for {
+        sc1 <- lhs.constraint
+        sc2 <- rhs.constraint
+        f <- Context.createBoundConstraint(sc1, sc2)
+      } yield {
+         val c = f(operators(method).apply(sc1.v, sc2.v))
+         c
       }
 
-      /**
+      /*
        * x + 4
        *
        * == method && >= 0 && <= 5
@@ -59,9 +52,6 @@ trait ArithmeticExpressionValidator extends AbstractBoundsValidator {
        *
        * >= 4
        */
-//      println(newConstraint.prettyPrint())
-//      println(s"\t${lhs.constraint.prettyPrint()}")
-//      println(s"\t${rhs.constraint.prettyPrint()}")
 
       val expression = for {
         exp1 <- lhs.expression
