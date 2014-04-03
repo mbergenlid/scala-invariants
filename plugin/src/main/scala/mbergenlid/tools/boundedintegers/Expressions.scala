@@ -44,36 +44,36 @@ trait Expressions {
   }
 
   class ExpressionFactory[T: RichNumeric: TypeTag](val convertedType: TypeType) {
-    def fromConstant(constant: T) = Polynom.fromConstant(constant)
-    def fromSymbol(symbol: SymbolType) = Polynom.fromSymbol(symbol)
+    def fromConstant(constant: T) = Polynomial.fromConstant(constant)
+    def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
     def convertConstant[U: RichNumeric](constant: U) =
-      Polynom.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
+      Polynomial.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
 
     def convertExpression(expr: Expression): Expression =
-      Polynom(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
+      Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
   }
 
-  object Polynom {
+  object Polynomial {
     def apply(terms: Set[Term]) =
-      new Polynom(terms)
+      new Polynomial(terms)
 
     def apply(terms: Term*) =
-      new Polynom(terms.toSet[Term])
+      new Polynomial(terms.toSet[Term])
 
     def fromConstant[T: RichNumeric :TypeTag](constant: T) =
-      new Polynom(Set(Term(ConstantValue(constant), Map.empty)))
+      new Polynomial(Set(Term(ConstantValue(constant), Map.empty)))
 
     def fromSymbol[T: RichNumeric :TypeTag](symbol: SymbolType) = {
-      new Polynom(
+      new Polynomial(
         Set(Term(ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
         Map(symbol -> 1))))
     }
 
-    def Zero = new Polynom(Set.empty)
+    def Zero = new Polynomial(Set.empty)
   }
 
-  class Polynom(val terms: Set[Term]) extends Expression  {
+  class Polynomial(val terms: Set[Term]) extends Expression  {
     def >(that: Expression ): Boolean = {
       val diff = (this - that).terms
       !diff.isEmpty && diff.forall(_.greaterThanZero)
@@ -90,7 +90,7 @@ trait Expressions {
       (this - that).terms.forall(_.isZero)
 
 
-    def +(that: Expression ): Expression  = Polynom(
+    def +(that: Expression ): Expression  = Polynomial(
       (terms /: that.terms) {(set, term) =>
         addTerm(set, term) 
       }
@@ -107,14 +107,14 @@ trait Expressions {
     }
 
     def -(that: Expression ): Expression  = this + (-that)
-    def *(that: Expression ): Expression  = Polynom(for {
+    def *(that: Expression ): Expression  = Polynomial(for {
       thisTerm <- terms
       thatTerm <- that.terms
     } yield { thisTerm * thatTerm })
 
     def unary_- : Expression = map(_.unary_-)
     def substitute(symbol: SymbolType, expr: Expression): Expression =
-      terms.foldLeft[Expression](Polynom.Zero) {(p, t) => {
+      terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
         p + t.substitute(symbol, expr) 
       }}
 
@@ -122,11 +122,11 @@ trait Expressions {
       terms.exists(_.variables != Map.empty)
 
     def increment =
-      if(terms.size == 1) Polynom(terms.map(_.increment))
+      if(terms.size == 1) Polynomial(terms.map(_.increment))
       else this
 
     def decrement =
-      if(terms.size == 1) Polynom(terms.map(_.decrement))
+      if(terms.size == 1) Polynomial(terms.map(_.decrement))
       else this
 
     def extractSymbols: Set[SymbolType] = for {
@@ -137,7 +137,7 @@ trait Expressions {
     def extractSymbol(symbol: SymbolType) = {
       terms.find(_.variables.contains(symbol)) match {
         case Some(term) =>
-          new Polynom(terms.collect {
+          new Polynomial(terms.collect {
             case t if t != term => -t
           })
         case None => this
@@ -145,7 +145,7 @@ trait Expressions {
     }
 
     def map(f: Term  => Term ) =
-      Polynom(terms.map(f))
+      Polynomial(terms.map(f))
 
     override def toString =
       if(terms.isEmpty) "0"
@@ -160,9 +160,9 @@ trait Expressions {
 
     def substitute(symbol: SymbolType, expr: Expression ): Expression  =
       if(variables.contains(symbol)) {
-        expr * Polynom(Set(Term(coeff, variables - symbol)))
+        expr * Polynomial(Set(Term(coeff, variables - symbol)))
       } else {
-        Polynom(Set(this))
+        Polynomial(Set(this))
       }
 
 

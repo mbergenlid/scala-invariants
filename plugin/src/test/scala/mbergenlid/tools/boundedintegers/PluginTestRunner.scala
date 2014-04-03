@@ -49,7 +49,7 @@ trait PluginTestRunner extends FunSuite {
   }
 
   implicit def int2Expression(v: Int) =
-    Polynom.fromConstant(v)
+    Polynomial.fromConstant(v)
 
   def assertThat[C1 <: cut.Constraint](c: C1) = new {
     def definiteSubsetOf[C2 <: cut.Constraint](other: C2) {

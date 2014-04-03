@@ -16,8 +16,8 @@ class ExpressionsSpec extends FunSuite
   implicit def sym(s: String): SymbolType =
     typeOf[this.type].member(newTermName(s))
 
-  implicit def c(v: Int): Expression = Polynom.fromConstant(v)
-  implicit def s(s: String) = Polynom.fromSymbol[Int](s)
+  implicit def c(v: Int): Expression = Polynomial.fromConstant(v)
+  implicit def s(s: String) = Polynomial.fromSymbol[Int](s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolType, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1
@@ -35,10 +35,10 @@ class ExpressionsSpec extends FunSuite
     assert(e1 === c(9))
 
     val e2 = s("x") + c(4)
-    assert(e2 === Polynom(t(1, "x"), t(4)))
+    assert(e2 === Polynomial(t(1, "x"), t(4)))
 
     val e3 = s("x") + s("y") + c(4)
-    assert(e3 === Polynom(t(1, "x"), t(1, "y"), t(4)))
+    assert(e3 === Polynomial(t(1, "x"), t(1, "y"), t(4)))
   }
 
   test("Minus arithmetic expressions") {
@@ -49,7 +49,7 @@ class ExpressionsSpec extends FunSuite
     assert(e2 === c(-1))
 
     val e3 = s("y") + c(5) + (s("x") + c(3))
-    assert(e3 === Polynom(t(1, "y"), t(1, "x"), t(8)))
+    assert(e3 === Polynomial(t(1, "y"), t(1, "x"), t(8)))
   }
 
   test("Times with constant") {
@@ -59,12 +59,12 @@ class ExpressionsSpec extends FunSuite
     val e10 = c(10)
     val x = s("x")
 
-    assert(e2*x === Polynom(Set(t(2, "x"))))
+    assert(e2*x === Polynomial(Set(t(2, "x"))))
     assert(e0*x === e0)
     assert(e1*x === x)
 
     assert(e10*e2 === c(20))
-    assert(-e1*x === Polynom(Set(t(-1, "x"))))
+    assert(-e1*x === Polynomial(Set(t(-1, "x"))))
   }
 
 
@@ -73,17 +73,17 @@ class ExpressionsSpec extends FunSuite
     val e2 = c(4) + s("y")
     val e3 = s("x")
 
-    assert(c(4)*e1 === Polynom(Set(t(16), t(4, "x"))))
-    assert(e1*e2 === Polynom(Set(t(16), t(4, "x"), t(4, "y"), t(1, "x", "y"))))
+    assert(c(4)*e1 === Polynomial(Set(t(16), t(4, "x"))))
+    assert(e1*e2 === Polynomial(Set(t(16), t(4, "x"), t(4, "y"), t(1, "x", "y"))))
 
-    assert(e1*e3 === Polynom(Set(t(4, "x"), t(1, "x", "x"))))
+    assert(e1*e3 === Polynomial(Set(t(4, "x"), t(1, "x", "x"))))
   }
 
   test("Add products") {
-    val e1 = Polynom(Set(t(2, "x")))
-    val e2 = Polynom(Set(t(4, "y")))
+    val e1 = Polynomial(Set(t(2, "x")))
+    val e2 = Polynomial(Set(t(4, "y")))
 
-    assert(e1+e2 === Polynom(Set(t(2, "x"), t(4, "y"))))
+    assert(e1+e2 === Polynomial(Set(t(2, "x"), t(4, "y"))))
   }
 
 }

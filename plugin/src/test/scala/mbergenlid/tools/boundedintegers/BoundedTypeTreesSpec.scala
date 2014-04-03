@@ -19,25 +19,25 @@ class BoundedTypeTreesSpec extends FunSuite
     typeOf[this.type].member(newTermName(s))
 
   def stringToExpression(s: String): Expression =
-    Polynom.fromSymbol[Int](stringToSymbol(s))
+    Polynomial.fromSymbol[Int](stringToSymbol(s))
 
   val parser = new ExprParser
 
   test("Test Basic Constant values") {
-    val one = Polynom.fromConstant(1)
-    val five = Polynom.fromConstant(5)
-    val minusOne = Polynom.fromConstant(-1)
+    val one = Polynomial.fromConstant(1)
+    val five = Polynomial.fromConstant(5)
+    val minusOne = Polynomial.fromConstant(-1)
 
     assert(one < five, s"$one should be < $five")
     assert(one <= five, s"$one should be <= $five")
     assert(one >= minusOne, s"$one should be >= $minusOne")
     assert(five > minusOne, s"$five should be > $minusOne")
-    assert(five == Polynom.fromConstant(5), s"$five should be == $five")
+    assert(five == Polynomial.fromConstant(5), s"$five should be == $five")
   }
 
   test("Test Basic SymbolExpression") {
-    val x = Polynom.fromSymbol[Int]("x")
-    val y = Polynom.fromSymbol[Int]("y")
+    val x = Polynomial.fromSymbol[Int]("x")
+    val y = Polynomial.fromSymbol[Int]("y")
 
     assert(!(x < y), s"!($x < $y)")
     assert(!(x < x), s"!($x < $x)")
@@ -103,7 +103,7 @@ class BoundedTypeTreesSpec extends FunSuite
 
 
     def value: Parser[Expression] =
-      (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => Polynom.fromConstant(x.toInt)} )
+      (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => Polynomial.fromConstant(x.toInt)} )
 
   }
 
