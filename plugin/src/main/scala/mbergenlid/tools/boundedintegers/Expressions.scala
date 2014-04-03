@@ -36,6 +36,7 @@ trait Expressions {
     def decrement: Expression
 
     def extractSymbols: Set[SymbolType]
+    def extractSymbol(symbol: SymbolType): Expression
     def tpe: TypeType = terms.headOption match {
       case Some(term) => term.tpe
       case None => TypeNothing
@@ -132,6 +133,16 @@ trait Expressions {
       term <- terms
       (symbol, mult) <- term.variables
     } yield symbol
+
+    def extractSymbol(symbol: SymbolType) = {
+      terms.find(_.variables.contains(symbol)) match {
+        case Some(term) =>
+          new Polynom(terms.collect {
+            case t if t != term => -t
+          })
+        case None => this
+      }
+    }
 
     def map(f: Term  => Term ) =
       Polynom(terms.map(f))

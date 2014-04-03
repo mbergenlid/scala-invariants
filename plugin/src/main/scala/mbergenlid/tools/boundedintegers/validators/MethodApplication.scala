@@ -21,9 +21,10 @@ trait MethodApplication extends AbstractBoundsValidator {
   protected[boundedintegers] 
   def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(Symbol, Tree)] = {
     val symbol = methodApplication.symbol.asMethod
-    symbol.paramss.headOption match {
+    val res = symbol.paramss.headOption match {
       case Some(list) => list.zip(args)
       case None => Nil
     }
+    res
   }
 }

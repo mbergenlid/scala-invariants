@@ -4,11 +4,11 @@ import org.scalatest.FunSuite
 import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
 import validators._
+import scala.language.implicitConversions
+import scala.language.reflectiveCalls
 
+trait PluginTestRunner extends FunSuite {
 
-trait PluginTestRunner extends FunSuite
-  with MyUniverse {
-  
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
@@ -16,6 +16,8 @@ trait PluginTestRunner extends FunSuite
                                           with Assignment
                                           with ArithmeticExpressionValidator
                                           with MethodDefinition
+
+  import cut._
                                          
 
   def typeCheck(program: String) =
@@ -34,5 +36,25 @@ trait PluginTestRunner extends FunSuite
     if(errorPositions != expectedErrorsAdjusted) {
       fail(s"Expected: $expectedErrorsAdjusted\nGot: $errors")
     } 
+  }
+
+  def expression(expression: String) = {
+    val withImports =
+      """|import mbergenlid.tools.boundedintegers.testclasspath.TestMethods._
+        |import mbergenlid.tools.boundedintegers.annotations._
+        |println("Start of test")
+      """.stripMargin + expression
+
+    cut.checkBounds(new cut.Context())(typeCheck(withImports))
+  }
+
+  implicit def int2Expression(v: Int) =
+    Polynom.fromConstant(v)
+
+  def assertThat[C1 <: cut.Constraint](c: C1) = new {
+    def definiteSubsetOf[C2 <: cut.Constraint](other: C2) {
+      assert(c obviouslySubsetOf other,
+        s"Expected ${c.prettyPrint("x")} to be a subset of ${other.prettyPrint("x")}")
+    }
   }
 }

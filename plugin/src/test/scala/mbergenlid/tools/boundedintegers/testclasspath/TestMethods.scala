@@ -22,10 +22,15 @@ object TestMethods {
   def randomInteger = 4
 
   @GreaterThanOrEqual(1)
-  @LessThanOrEqual(0)
+  @LessThanOrEqual(10)
   def intBetween0And10 = 4
   @LessThanOrEqual(5)
   @GreaterThanOrEqual(0)
   def intBetween0And5 = 4
+
+  @LessThanOrEqual(10)
+  @GreaterThanOrEqual(5)
+  def intBetween5And10 = 6
+
   def anotherRandomInteger = 20
 }

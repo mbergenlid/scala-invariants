@@ -61,10 +61,13 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
 
     def getConstraint(start: Constraint, resultType: TypeType, context: Context): Constraint = {
-      val f = expressionForType(resultType)
-      for {
-        sc <- start.map(s => f.convertExpression(s.v))
-      } yield substitute(sc, sc.v.extractSymbols.toList, resultType, context)
+      val f = expressionForType.lift(resultType)
+      if(f.isDefined)
+        for {
+          sc <- start.map(s => f.get.convertExpression(s.v))
+        } yield substitute(sc, sc.v.extractSymbols.toList, resultType, context)
+      else
+        NoConstraints
     }
 
     private[boundedintegers]
@@ -79,10 +82,7 @@ trait TypeContext { self: BoundedTypeTrees =>
             And.combine(constraint,
               constraint.newFlatMap { sc1 =>
                 b.newFlatMap {sc2 =>
-                  createBoundConstraint(sc1, sc2).map {f =>
-                    val c = f(sc1.v.substitute(symbol, sc2.v))
-                    c
-                  }
+                  trySubstitute(symbol, sc1, sc2)
                 }
               }
             ),
@@ -101,6 +101,20 @@ trait TypeContext { self: BoundedTypeTrees =>
 //      if(boundConstr.isDefined) boundConstr.get(sc1.v.substitute(symbol, sc2.v))
 //      else NoConstraints
 //    }
+
+    protected[boundedintegers] def trySubstitute(
+          symbol: SymbolType, base: SimpleConstraint, boundedBy: SimpleConstraint) = {
+
+      for {
+        term <- base.v.terms.find(_.variables.contains(symbol))
+        f <- if(term.coeff.isLessThanZero)
+               createNegativeBoundConstraint(base, boundedBy)
+             else
+               createBoundConstraint(base, boundedBy)
+      } yield {f(base.v.substitute(symbol, boundedBy.v))}
+
+
+    }
 
     protected[boundedintegers] def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
@@ -137,6 +151,44 @@ trait TypeContext { self: BoundedTypeTrees =>
           Some(Equal.apply)
         else 
           createBoundConstraint(boundedBy, base)
+      case _ => None
+    }
+
+    protected[boundedintegers] def createNegativeBoundConstraint(
+              base: SimpleConstraint, boundedBy: SimpleConstraint):
+              Option[Expression => SimpleConstraint] = (base, boundedBy) match {
+
+      case (LessThan(_), GreaterThan(_)) =>
+        Some(LessThan.apply)
+      case (LessThan(_), GreaterThanOrEqual(_)) =>
+        Some(LessThan.apply)
+      case (LessThan(_), Equal(_)) =>
+        Some(LessThan.apply)
+      case (GreaterThan(_), LessThan(_)) =>
+        Some(GreaterThan.apply)
+      case (GreaterThan(_), LessThanOrEqual(_)) =>
+        Some(GreaterThan.apply)
+      case (GreaterThan(_), Equal(_)) =>
+        Some(GreaterThan.apply)
+
+      case (GreaterThanOrEqual(_), LessThan(_)) =>
+        Some(GreaterThan.apply)
+      case (GreaterThanOrEqual(_), LessThanOrEqual(_)) =>
+        Some(GreaterThanOrEqual.apply)
+      case (GreaterThanOrEqual(_), Equal(_)) =>
+        Some(LessThanOrEqual.apply)
+      case (LessThanOrEqual(_), GreaterThan(_)) =>
+        Some(LessThan.apply)
+      case (LessThanOrEqual(_), GreaterThanOrEqual(_)) =>
+        Some(LessThanOrEqual.apply)
+      case (LessThanOrEqual(_), Equal(_)) =>
+        Some(GreaterThanOrEqual.apply)
+
+      case (Equal(_), _) =>
+        if(boundedBy.isInstanceOf[Equal])
+          Some(Equal.apply)
+        else
+          createNegativeBoundConstraint(boundedBy, base)
       case _ => None
     }
   }

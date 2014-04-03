@@ -60,4 +60,79 @@ class IfExpressionSpec extends PluginTestRunner {
         |  testMethod(x)
       """.stripMargin)(Nil)
   }
+
+  test("Bound to expression") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |
+        |if(x > 0 && x + 1 < 12)
+        |  testMethod(x)
+        |
+        |if(x > 0 && x + 2 < 14)
+        |  testMethod(x)
+      """.stripMargin)(List(8))
+  }
+
+  /**
+   * x < 15 + 5
+   * x < 20
+   *
+   * x < 15 - [0,5]
+   *   < 15
+   *
+   */
+  test("Bound to symbol expression") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = intBetween0And5
+        |
+        |if(x > 0 && x + intBetween0And5 < 15)
+        |  testMethod(x)  //error
+        |
+        |if(x > 0 && x + intBetween5And10 < 15)
+        |  testMethod(x)
+        |
+        |if(x < 11 && x + intBetween5And10 > 10)
+        |  testMethod(x)
+        |
+        |if(x < 11 && x + intBetween0And5 > 2)
+        |  testMethod(x)  //error
+      """.stripMargin)(List(6, 15))
+  }
+
+  test("Bound to symbol expression with <=") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = intBetween0And5
+        |
+        |if(x > 0 && x + intBetween0And5 <= 15)
+        |  testMethod(x)  //error
+        |
+        |if(x > 0 && x + intBetween5And10 <= 15)
+        |  testMethod(x)
+        |
+        |if(x < 11 && x + intBetween5And10 >= 10)
+        |  testMethod(x)
+        |
+        |if(x < 11 && x + intBetween0And5 >= 2)
+        |  testMethod(x)  //error
+      """.stripMargin)(List(6, 15))
+  }
+
+  test("Bound to symbol expression with ==") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = intBetween0And5
+        |
+        |if(x + intBetween0And5 == 15)
+        |  testMethod(x)  //error
+        |
+        |if(x + intBetween0And5 == 10)
+        |  testMethod(x)
+      """.stripMargin)(List(6))
+  }
 }

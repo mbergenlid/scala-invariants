@@ -119,12 +119,20 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
     errors.reverse
   }
 
-  def checkBounds(context: Context)(tree: Tree): BoundedType = {
+  def checkBounds(context: Context)(tree: Tree): this.BoundedType = {
     if(tree.children.isEmpty) {
       val b = BoundsFactory(tree)
       b
     } else tree match {
       case Select(_,_) => BoundsFactory(tree)
+      case Block(body, res) =>
+        val newContext = (context /: body) {(c,child) =>
+          val bounds = checkBounds(c)(child)
+          updateContext(c, child, bounds.constraint)
+        }
+        val bounds = checkBounds(newContext)(res)
+        val blockConstraint = Context.getConstraint(bounds.constraint, tree.tpe, newContext)
+        BoundedType(bounds.expression, blockConstraint)
       case _ => 
         (context /: tree.children) {(c,child) =>
           val bounds = checkBounds(c)(child)

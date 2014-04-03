@@ -1,6 +1,7 @@
 package mbergenlid.tools.boundedintegers.validators
 
 import mbergenlid.tools.boundedintegers._
+import scala.language.reflectiveCalls
 
 class ArithmeticExpressionSpec extends PluginTestRunner {
 
@@ -62,5 +63,28 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
               |val z = x + y
               |1
             """.stripMargin)(List(7))
+  }
+
+  test("Subtract symbol from constant") {
+    val bounds = expression(
+      """
+        |val x = intBetween0And5
+        |10 - x
+      """.stripMargin)
+
+    assertThat(bounds.constraint) definiteSubsetOf cut.LessThan(11)
+    assertThat(bounds.constraint).definiteSubsetOf(cut.GreaterThan(4))
+    assert(!bounds.constraint.obviouslySubsetOf(cut.LessThanOrEqual(5)))
+  }
+
+  test("Multiply symbol to constant") {
+    val bounds = expression(
+      """
+        |val x = intBetween0And5
+        |2*x
+      """.stripMargin)
+
+    assertThat(bounds.constraint) definiteSubsetOf cut.GreaterThanOrEqual(0)
+    assertThat(bounds.constraint).definiteSubsetOf(cut.LessThanOrEqual(10))
   }
 }

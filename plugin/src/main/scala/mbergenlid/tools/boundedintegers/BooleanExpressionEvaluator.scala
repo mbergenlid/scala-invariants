@@ -25,7 +25,10 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   private val opToConstraints = Map[Name, (Factory, Factory)](
     n("$less") -> (LessThan, GreaterThan),
-    n("$greater") -> (GreaterThan, LessThan)
+    n("$greater") -> (GreaterThan, LessThan),
+    n("$less$eq") -> (LessThanOrEqual, GreaterThanOrEqual),
+    n("$greater$eq") -> (GreaterThanOrEqual, LessThanOrEqual),
+    n("$eq$eq") -> (Equal, Equal)
   )
 
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
@@ -51,6 +54,6 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   private def createConstraints(exp1: Expression, exp2: Expression, factory: Factory) = {
     for {
       symbol <- exp1.extractSymbols
-    } yield { symbol -> factory(exp2) }
+    } yield { symbol -> factory(exp2 + exp1.extractSymbol(symbol)) }
   }
 }
