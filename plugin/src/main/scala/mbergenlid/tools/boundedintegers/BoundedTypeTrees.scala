@@ -119,8 +119,7 @@ trait BoundedTypeTrees extends Expressions {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= v 
       case LessThanOrEqual(v2) =>
-//        error(s"$that = ${(v2.increment - v).terms.size}")
-        v2.increment >= v
+        v.decrement <= v2
       case _ => super.obviouslySubsetOf(that)
     }
     

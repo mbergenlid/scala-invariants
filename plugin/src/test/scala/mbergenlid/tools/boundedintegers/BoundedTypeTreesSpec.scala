@@ -64,6 +64,10 @@ class BoundedTypeTreesSpec extends FunSuite
   assertConstraint("x == 9 <:< x < 10")
   assertConstraint("x == 4 <:< x >= 0 && x <= 10")
   assertConstraint("x > 0 && x < maxValue <:< x >= 0")
+  assertConstraint("x < 10 <!< x <= -2147483648")
+
+  assertConstraint("x < -2147483648 <:< x <= 10")
+  assertConstraint("x < 10 <:< x <= 2147483647")
 
   class ExprParser extends JavaTokenParsers {
 

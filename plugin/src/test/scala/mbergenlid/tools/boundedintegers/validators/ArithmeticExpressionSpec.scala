@@ -87,4 +87,43 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
     assertThat(bounds.constraint) definiteSubsetOf cut.GreaterThanOrEqual(0)
     assertThat(bounds.constraint).definiteSubsetOf(cut.LessThanOrEqual(10))
   }
+
+  test("Add to if expression") {
+    val bounds = expression(
+      """
+        |val x = anotherRandomInteger
+        |
+        |10 + (if(x < 0) -1 else x)
+      """.stripMargin)
+
+    assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.Equal(9), cut.GreaterThanOrEqual(10)))
+  }
+
+  /*
+   *   == x + 1
+   *   <= Overflow
+   */
+  test("Add constant to symbol should be greater than symbol") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = anotherRandomInteger
+        |
+        |def myMethod(@GreaterThanOrEqual(x) in: Int) = false
+        |myMethod(x+1) //should fail because x+1 could overflow
+        |
+        |if(x < 10)
+        |  myMethod(x+1)
+        |
+        |if(x < 10 && y < 10 && y > 0)
+        |  myMethod(x - y + 11)
+        |
+        |if(x < 10 && y > 0 && y < 10)
+        |  myMethod(x + y + 10)
+        |
+        |val z = x + 1
+        |true
+      """.stripMargin)(List(6))
+
+  }
 }

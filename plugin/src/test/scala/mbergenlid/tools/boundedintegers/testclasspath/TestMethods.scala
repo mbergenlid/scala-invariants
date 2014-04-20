@@ -4,15 +4,9 @@ import mbergenlid.tools.boundedintegers.annotations.{ConstantNumber, LessThanOrE
 import mbergenlid.tools.boundedintegers.annotations.ConstantNumber._
 
 object TestMethods {
-  import mbergenlid.tools.boundedintegers.annotations.Bounded
 
   var globalVariable = 5
-//  @Bounded(min=0, max=10)
-//  var globalBoundedVariable = 5
-//  @Bounded(min=0, max=10)
-//  var globalBoundedValue = 5
 
-  
   def testMethod( @GreaterThanOrEqual(0)
                   @LessThanOrEqual(10) a: Int) = a == 3
 
@@ -33,4 +27,5 @@ object TestMethods {
   def intBetween5And10 = 6
 
   def anotherRandomInteger = 20
+
 }

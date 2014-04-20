@@ -52,6 +52,7 @@ trait Expressions {
     def convertExpression(expr: Expression): Expression =
       Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
+    lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
   }
 
   object Polynomial {
@@ -100,7 +101,7 @@ trait Expressions {
       terms.find(_.+.isDefinedAt(that)) match {
         case Some(t) => 
           val newTerm = t + that
-          if(newTerm.isZero) terms - t
+          if(!newTerm.coeff.isNaN && newTerm.isZero) terms - t
           else (terms - t) + newTerm
         case None => terms + that
       }
@@ -203,12 +204,14 @@ trait Expressions {
     override def toString = symbol.toString
   }
 
-  trait ConstantValue {
+  trait ConstantValue extends Ordered[ConstantValue] {
     type T
     implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
     protected def value: T
     def tpe: TypeType = typeInfo.tpe
+
+    def isNaN = false
 
     def convertTo[U: RichNumeric: TypeTag] =
       ConstantValue(implicitly[RichNumeric[U]].fromType[T](value))
@@ -221,13 +224,13 @@ trait Expressions {
 
     def unary_- = ConstantValue(
       if(value == num.minValue) num.maxValue
-      else if(value == num.maxValue) num.minValue
+      else if(value == num.maxValue) num.negate(value)
       else num.negate(value)
     )
 
     def +(that: ConstantValue) = withConcreteType(that) { thatValue =>
       if(num.gt(thatValue, num.zero) && num.gt(value, num.minus(num.maxValue, thatValue)))
-        ConstantValue(num.maxValue)
+        ConstantValue.overflow[T]
       else if(num.lt(thatValue, num.zero) && num.lt(value, num.minus(num.minValue, thatValue)))
         ConstantValue(num.minValue)
       else ConstantValue(num.plus(value, thatValue))
@@ -238,13 +241,25 @@ trait Expressions {
       ConstantValue(num.times(value, thatValue))
     }
 
-    def increment = if(num.isInstanceOf[Integral[_]]) ConstantValue(num.plus(value, num.one)) else this
-    def decrement = if(num.isInstanceOf[Integral[_]]) ConstantValue(num.minus(value, num.one)) else this
+    def increment =
+      if(num.isInstanceOf[Integral[_]] && num.lt(value, num.maxValue))
+        ConstantValue(num.plus(value, num.one))
+      else
+        this
 
+    def decrement =
+      if(num.isInstanceOf[Integral[_]] && num.gt(value, num.minValue))
+        ConstantValue(num.minus(value, num.one))
+      else
+        this
+
+    override def compare(other: ConstantValue) = withConcreteType(other) { v =>
+      num.compare(value, v)
+    }
     override def toString = value.toString
     def substitute(symbol: SymbolType, expr: Expression) = this
 
-    private def withConcreteType(const: ConstantValue)(f: T => ConstantValue): ConstantValue = {
+    private def withConcreteType[U](const: ConstantValue)(f: T => U): U = {
         assert(const.typeInfo == typeInfo, s"Type Mismatch in Expression: ${const.typeInfo} vs $typeInfo")
       val thatValue = const.value.asInstanceOf[T]
       f(thatValue)
@@ -254,6 +269,18 @@ trait Expressions {
   object ConstantValue {
     def apply[U: RichNumeric : TypeTag](value: U): ConstantValue =
       TypedConstantValue[U](value)
+
+    def overflow[U: RichNumeric : TypeTag] =
+      new OverflowConstant[U]
+  }
+
+  class OverflowConstant[U](implicit val num: RichNumeric[U],
+                            protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
+    override protected val value = implicitly[RichNumeric[T]].maxValue
+    override type T = U
+    override def toString = "Overflow"
+    override def isNaN = true
+    override def unary_- = this
   }
 
   case class TypedConstantValue[U](protected val value: U)
@@ -261,5 +288,9 @@ trait Expressions {
                                    protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
     type T = U
     override protected def num = implicitly[RichNumeric[U]]
+  }
+
+  implicit object ConstantValueOrdering extends Ordering[ConstantValue] {
+    override def compare(x: ConstantValue, y: ConstantValue): Int = x.compare(y)
   }
 }

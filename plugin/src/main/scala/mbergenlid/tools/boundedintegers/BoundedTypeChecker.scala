@@ -55,10 +55,15 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     }
 
     def apply(symbol: Symbol, tpe: TypeType): Constraint = {
-      (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+      val annotadedConstraints = (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
       }) (_ && _)
+      val f = expressionForType(tpe)
+      if(annotadedConstraints.lowerBound != NoConstraints)
+        annotadedConstraints && LessThanOrEqual(f.MaxValue)
+      else
+        annotadedConstraints
     }
 
     def apply(tree: Tree): BoundedType = {
