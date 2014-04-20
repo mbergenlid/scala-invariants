@@ -3,7 +3,8 @@ import org.scalatest.FunSuite
 import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
-class ContextSpec extends FunSuite 
+
+class ContextSpec extends FunSuite
     with TypeContext with BoundedTypeTrees with Expressions {
 
   type SymbolType = Symbol
@@ -17,11 +18,15 @@ class ContextSpec extends FunSuite
       new ExpressionFactory[Int](typeOf[Int])
   }
 
-  val x = 0
-  val y = 0
-  val z = 0
-  implicit def sym(s: String): SymbolType =
-    typeOf[this.type].member(newTermName(s))
+  var symbolCache = Map[String, SymbolType]()
+
+  implicit def sym(s: String): SymbolType = {
+    if(!symbolCache.contains(s)) {
+      symbolCache += (s -> typeOf[this.type].termSymbol.
+        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))
+    }
+    symbolCache(s)
+  }
 
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolType, Int] /: s) { (map, term) =>

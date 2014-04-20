@@ -16,7 +16,8 @@ class BoundedTypeTreesSpec extends FunSuite
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def stringToSymbol(s: String): SymbolType =
-    typeOf[this.type].member(newTermName(s))
+    typeOf[this.type].termSymbol.
+      newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL )
 
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))

@@ -148,4 +148,25 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |true
       """.stripMargin)(List(6))
   }
+
+  test("Should not be able to cancel out methods") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = anotherRandomInteger
+        |var v1 = anotherRandomInteger
+        |val x1 = v1
+        |val y1 = v1
+        |
+        |@Equal(1)
+        |val a = x - y + 1
+        |
+        |@Equal(1)
+        |val b = x - x + 1
+        |
+        |@Equal(1)
+        |val c = x1 - y1 + 1
+        |true
+      """.stripMargin)(List(9, 15))
+  }
 }

@@ -10,11 +10,15 @@ class ExpressionsSpec extends FunSuite
   type SymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
 
-  val x = 0
-  val y = 0
-  val z = 0
-  implicit def sym(s: String): SymbolType =
-    typeOf[this.type].member(newTermName(s))
+  var symbolCache = Map[String, SymbolType]()
+
+  implicit def sym(s: String): SymbolType = {
+    if(!symbolCache.contains(s)) {
+      symbolCache += (s -> typeOf[this.type].termSymbol.
+        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))
+    }
+    symbolCache(s)
+  }
 
   implicit def c(v: Int): Expression = Polynomial.fromConstant(v)
   implicit def s(s: String) = Polynomial.fromSymbol[Int](s)

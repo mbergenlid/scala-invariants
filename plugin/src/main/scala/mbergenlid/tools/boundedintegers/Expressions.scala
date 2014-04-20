@@ -185,9 +185,12 @@ trait Expressions {
 
     def + : PartialFunction[Term, Term] = {
       case t if t.isZero => this
-      case Term(c, s) if variables == s =>
+      case Term(c, s) if variables == s && isAllVals =>
         Term(coeff+c, variables)
     }
+
+    def isAllVals =
+      variables.forall(_._1.asTerm.isVal)
 
     def *(that: Term ): Term  = {
       val newCoeff = coeff*that.coeff
