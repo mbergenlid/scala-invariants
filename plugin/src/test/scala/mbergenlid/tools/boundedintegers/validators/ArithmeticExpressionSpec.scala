@@ -124,6 +124,28 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |val z = x + 1
         |true
       """.stripMargin)(List(6))
+  }
 
+  test("Subtract constant from symbol should be less than symbol") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |val y = anotherRandomInteger
+        |
+        |def myMethod(@LessThanOrEqual(x) in: Int) = false
+        |myMethod(x-1) //should fail because x-1 could underflow
+        |
+        |if(x > 0)
+        |  myMethod(x-1)
+        |
+        |if(x > 0 && y < 10 && y > 0)
+        |  myMethod(x - y - 11)
+        |
+        |if(x > 0 && y > 0 && y < 10)
+        |  myMethod(x + y - 10)
+        |
+        |val z = x - 1
+        |true
+      """.stripMargin)(List(6))
   }
 }

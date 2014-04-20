@@ -77,7 +77,7 @@ trait TypeContext { self: BoundedTypeTrees =>
                     context: Context): Constraint =
       symbols match {
         case symbol :: rest => 
-          val b = getConstraint(symbol, resultType, context)
+          val b = getConstraintWitUpperLowerBounds(symbol, resultType, context)
           substitute (
             And.combine(constraint,
               for {
@@ -93,6 +93,14 @@ trait TypeContext { self: BoundedTypeTrees =>
         case Nil => constraint
       }
 
+    private def getConstraintWitUpperLowerBounds(symbol: SymbolType, resultType: TypeType, context: Context) = {
+      val c = getConstraint(symbol, resultType, context)
+      val f = expressionForType(resultType)
+      if(!c.lowerBound.exists(_.v.isConstant))
+        c && GreaterThanOrEqual(f.MinValue)
+      else
+        c
+    }
     protected[boundedintegers] def trySubstitute(
           symbol: SymbolType, base: SimpleConstraint, boundedBy: SimpleConstraint) = {
 

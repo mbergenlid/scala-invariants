@@ -11,6 +11,9 @@ trait Expressions {
   val TypeNothing: TypeType
 
   trait Expression {
+    def isConstant: Boolean =
+      terms.size <= 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true)
+
     def terms: Set[Term]
     def >(that: Expression): Boolean
     def >=(that: Expression): Boolean
@@ -41,6 +44,9 @@ trait Expressions {
       case Some(term) => term.tpe
       case None => TypeNothing
     }
+
+    def isNaN =
+      terms.exists(_.coeff.isNaN)
   }
 
   class ExpressionFactory[T: RichNumeric: TypeTag](val convertedType: TypeType) {
@@ -53,6 +59,7 @@ trait Expressions {
       Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
     lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
+    lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
   }
 
   object Polynomial {
@@ -75,18 +82,27 @@ trait Expressions {
   }
 
   class Polynomial(val terms: Set[Term]) extends Expression  {
-    def >(that: Expression ): Boolean = {
-      val diff = (this - that).terms
-      !diff.isEmpty && diff.forall(_.greaterThanZero)
-    }
+    def >(that: Expression ): Boolean =
+      (!isNaN && !that.isNaN) && {
+        val diff = (this - that).terms
+        !diff.isEmpty && diff.forall(t => t.greaterThanZero)
+      }
+
     def >=(that: Expression ): Boolean=
-      (this - that).terms.forall(t => t.greaterThanZero || t.isZero)
+      (!isNaN && !that.isNaN) &&
+        (this - that).terms.forall(t => t.greaterThanZero || t.isZero)
+
     def <(that: Expression ): Boolean = {
-      val diff = (this - that).terms
-      !diff.isEmpty && diff.forall(_.lessThanZero)
+      (!isNaN && !that.isNaN) && {
+        val diff = (this - that).terms
+        !diff.isEmpty && diff.forall(t => t.lessThanZero)
+      }
     }
-    def <=(that: Expression ): Boolean=
-      (this - that).terms.forall(t => t.lessThanZero || t.isZero)
+    def <=(that: Expression ): Boolean = {
+      (!isNaN && !that.isNaN) &&
+        (this - that).terms.forall(t => t.lessThanZero || t.isZero)
+    }
+
     def ==(that: Expression ): Boolean=
       (this - that).terms.forall(_.isZero)
 
@@ -232,7 +248,7 @@ trait Expressions {
       if(num.gt(thatValue, num.zero) && num.gt(value, num.minus(num.maxValue, thatValue)))
         ConstantValue.overflow[T]
       else if(num.lt(thatValue, num.zero) && num.lt(value, num.minus(num.minValue, thatValue)))
-        ConstantValue(num.minValue)
+        ConstantValue.underflow[T]
       else ConstantValue(num.plus(value, thatValue))
     }
 
@@ -272,6 +288,9 @@ trait Expressions {
 
     def overflow[U: RichNumeric : TypeTag] =
       new OverflowConstant[U]
+
+    def underflow[U: RichNumeric : TypeTag] =
+      new UnderflowConstant[U]
   }
 
   class OverflowConstant[U](implicit val num: RichNumeric[U],
@@ -279,6 +298,15 @@ trait Expressions {
     override protected val value = implicitly[RichNumeric[T]].maxValue
     override type T = U
     override def toString = "Overflow"
+    override def isNaN = true
+    override def unary_- = this
+  }
+
+  class UnderflowConstant[U](implicit val num: RichNumeric[U],
+                            protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
+    override protected val value = implicitly[RichNumeric[T]].minValue
+    override type T = U
+    override def toString = "Underflow"
     override def isNaN = true
     override def unary_- = this
   }
