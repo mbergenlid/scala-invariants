@@ -169,4 +169,15 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |true
       """.stripMargin)(List(9, 15))
   }
+
+  test("asd") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |
+        |@GreaterThan(Int.MinValue)
+        |val y = x + 1
+        |false
+      """.stripMargin)(List(5))
+  }
 }

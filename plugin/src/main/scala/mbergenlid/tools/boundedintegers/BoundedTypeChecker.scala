@@ -1,7 +1,10 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.reflect.api.Universe
-import mbergenlid.tools.boundedintegers.annotations.{GreaterThanOrEqual => GreaterThanOrEqualAnnotation, LessThan => LessThanAnnotation, LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, Bounded, RichNumeric}
+import mbergenlid.tools.boundedintegers.annotations.{
+  GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
+  LessThan => LessThanAnnotation,
+LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, Bounded, GreaterThan => GreaterThanAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 
 trait MyUniverse extends BoundedTypeTrees with TypeContext {
@@ -36,6 +39,8 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         Equal(annotationExpression(a.scalaArgs.head, tpe))
       case a if a.tpe =:= typeOf[LessThanAnnotation] =>
         LessThan(annotationExpression(a.scalaArgs.head, tpe))
+      case a if a.tpe =:= typeOf[GreaterThanAnnotation] =>
+        GreaterThan(annotationExpression(a.scalaArgs.head, tpe))
     }
 
     private def annotationExpression(tree: Tree, resultType: TypeType): Expression = {
@@ -44,7 +49,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     }
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
-      case Literal(Constant(x: Int)) if x != Int.MinValue && x != Int.MaxValue =>
+      case Literal(Constant(x: Int)) =>
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Long)) =>
         expressionForType(tpe).convertConstant(x)

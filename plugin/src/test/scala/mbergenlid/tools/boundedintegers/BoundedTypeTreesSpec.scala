@@ -69,6 +69,7 @@ class BoundedTypeTreesSpec extends FunSuite
 
   assertConstraint("x < -2147483648 <:< x <= 10")
   assertConstraint("x < 10 <:< x <= 2147483647")
+  assertConstraint("x >= 10 <:< x > 0")
 
   class ExprParser extends JavaTokenParsers {
 
@@ -114,7 +115,7 @@ class BoundedTypeTreesSpec extends FunSuite
 
   def assertConstraint(expr: String) {
     val result = parser.parseConstraint(expr).get
-    val (e1, e2, f) = result
+    val (e1, _, f) = result
 
     test(expr) {
       assert(f(), e1)
