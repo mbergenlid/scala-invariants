@@ -64,4 +64,23 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |testMethod(y)
       """.stripMargin)(Nil)
   }
+
+  test("Safe array test") {
+    compile(
+      """
+        |class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
+        |
+        |  val backingArray: Array[Int] = new Array(length)
+        |  def apply( @GreaterThanOrEqual(0)
+        |             @LessThan(length) index: Int): Int = backingArray(index)
+        |}
+        |
+        |new SafeArray(-2) //Not ok
+        |val sa1 = new SafeArray(10) //Ok
+        |if(sa1.length > 10)
+        |  sa1(4)
+        |
+        |true
+      """.stripMargin)(List(9))
+  }
 }

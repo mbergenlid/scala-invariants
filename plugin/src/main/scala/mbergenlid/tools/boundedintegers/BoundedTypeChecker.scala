@@ -12,7 +12,6 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   import global._
 
   type SymbolType = global.Symbol
-
   trait BoundedTypeError {
     def pos: Position
     def message: String
@@ -61,27 +60,32 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         expressionForType(tpe).fromSymbol(x.symbol)
     }
 
-    def apply(symbol: Symbol, tpe: TypeType): Constraint = {
-      val annotadedConstraints = (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+    def apply(symbol: SymbolType, tpe: TypeType): Constraint = {
+      val annotatedConstraints = (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
       }) (_ && _)
-      if(annotadedConstraints == NoConstraints) {
-        annotadedConstraints
+
+      if(annotatedConstraints == NoConstraints) {
+        annotatedConstraints
       } else {
         val f = expressionForType(tpe)
+        val lowerBound = annotatedConstraints.lowerBound
+        val upperBound = annotatedConstraints.upperBound
         (
-          if(annotadedConstraints.lowerBound != NoConstraints &&
-              !annotadedConstraints.lowerBound.isInstanceOf[Equal])
-            annotadedConstraints && LessThanOrEqual(f.MaxValue)
+          if(lowerBound != NoConstraints &&
+              !lowerBound.isInstanceOf[Equal] &&
+              !upperBound.exists(_.v.isConstant))
+            annotatedConstraints && LessThanOrEqual(f.MaxValue)
           else
-            annotadedConstraints
-          ) && (
-          if(annotadedConstraints.upperBound != NoConstraints &&
-              !annotadedConstraints.upperBound.isInstanceOf[Equal])
-            annotadedConstraints && GreaterThanOrEqual(f.MinValue)
+            annotatedConstraints
+        ) && (
+          if(upperBound != NoConstraints &&
+              !upperBound.isInstanceOf[Equal] &&
+              !lowerBound.exists(_.v.isConstant))
+            annotatedConstraints && GreaterThanOrEqual(f.MinValue)
           else
-            annotadedConstraints
+            annotatedConstraints
           )
       }
     }
@@ -128,9 +132,6 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
       new ExpressionFactory[Int](IntType)
   }
 
-//  case class Scope(expr: Tree) extends Tree {
-//
-//  }
 }
 
 

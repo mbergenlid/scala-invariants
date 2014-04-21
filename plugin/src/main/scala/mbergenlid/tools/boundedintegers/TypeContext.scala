@@ -70,6 +70,35 @@ trait TypeContext { self: BoundedTypeTrees =>
         NoConstraints
     }
 
+    def substituteConstants(fromConstraint: Constraint, resultType: TypeType, context: Context): Constraint = {
+      val f = expressionForType(resultType)
+      for {
+        fromSc <- fromConstraint
+        expr <- fromSc.v.terms.find(_.variables.isEmpty)
+      } yield fromConstant(expr.coeff, context, f)
+
+
+    }
+
+    private def fromConstant(constant: ConstantValue, context: Context, f: ExpressionFactory[_]) = {
+      val seq = for {
+        (symbol, constraint) <- context.symbols
+        sc: SimpleConstraint <- constraint
+      } yield constraintFromConstant(sc, symbol, constant, f)
+      (NoConstraints.asInstanceOf[Constraint] /: seq) (_&&_)
+    }
+
+
+    private def constraintFromConstant(sc: SimpleConstraint,
+                                       boundSymbol: SymbolType,
+                                       constant: ConstantValue,
+                                       f: ExpressionFactory[_]): Constraint = sc match {
+      case GreaterThan(v) if v.isConstant =>
+        if(v.asConstant > constant) LessThan(f.fromSymbol(boundSymbol))
+        else NoConstraints
+      case _ => NoConstraints
+    }
+
     private[boundedintegers]
     def substitute( constraint: Constraint,
                     symbols: List[SymbolType],

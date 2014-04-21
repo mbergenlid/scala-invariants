@@ -12,13 +12,16 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     def tryAssign(expr: Tree)(implicit context: Context): BoundedType = {
       if(expressionForType.isDefinedAt(symbol.typeSignature)) {
         val target = BoundsFactory.apply(symbol, symbol.typeSignature)
+
         val boundExpr = checkBounds(context)(expr)
-        val assignee = Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+        val exprConstraints = Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+        val assignee =
+          exprConstraints && Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
         if(!(assignee obviouslySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
       } else {
-        BoundedType.noBounds
+        checkBounds(context)(expr)
       }
     }
 

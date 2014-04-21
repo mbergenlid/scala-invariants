@@ -13,7 +13,7 @@ trait Expressions {
   trait Expression {
     def isConstant: Boolean =
       terms.size <= 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true)
-
+    def asConstant: ConstantValue = terms.headOption.map(_.coeff).getOrElse(throw new IllegalStateException())
     def terms: Set[Term]
     def >(that: Expression): Boolean
     def >=(that: Expression): Boolean
@@ -200,7 +200,7 @@ trait Expressions {
     }
 
     def isAllVals =
-      variables.forall(_._1.asTerm.isVal)
+      variables.forall(v => v._1.asTerm.isVal || (v._1.asTerm.isGetter && v._1.asTerm.accessed.asTerm.isVal))
 
     def *(that: Term ): Term  = {
       val newCoeff = coeff*that.coeff

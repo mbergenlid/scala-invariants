@@ -10,7 +10,7 @@ trait MethodDefinition extends AbstractBoundsValidator {
   abstract override def checkBounds(context: Context)(tree: Tree) =
     validate(context).applyOrElse(tree, super.checkBounds(context))
 
-  def validate(implicit context: Context): Validator = {
+  private def validate(implicit context: Context): Validator = {
     case d @ DefDef(mods, name, _, _, tpt, rhs) =>
       d.symbol tryAssign rhs
   }
