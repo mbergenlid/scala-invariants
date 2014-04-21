@@ -180,4 +180,15 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |false
       """.stripMargin)(List(5))
   }
+
+  ignore("Constrained by expression") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |
+        |@Equal(x+1)
+        |val y = x + 1
+        |false
+      """.stripMargin)(Nil)
+  }
 }
