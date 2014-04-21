@@ -58,8 +58,18 @@ trait Expressions {
     def convertExpression(expr: Expression): Expression =
       Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
+    def fromParameter(param: String): Expression =
+      throw new UnsupportedOperationException("Not a method")
+
     lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
     lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
+  }
+
+  class MethodExpressionFactory[T: RichNumeric: TypeTag](resultType: TypeType, params: List[SymbolType]) extends
+    ExpressionFactory[T](resultType) {
+
+    override def fromParameter(s: String) =
+      Polynomial.fromSymbol(params.find(_.name == newTermName(s)).get)
   }
 
   object Polynomial {

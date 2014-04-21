@@ -50,6 +50,8 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Double)) =>
         expressionForType(tpe).convertConstant(x)
+      case Literal(Constant(s: String)) =>
+        expressionForType(tpe).fromParameter(s)
       case x if x.symbol != NoSymbol =>
         expressionForType(tpe).fromSymbol(x.symbol)
     }
@@ -59,18 +61,24 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
       }) (_ && _)
-      val f = expressionForType(tpe)
-      (
-        if(annotadedConstraints.lowerBound != NoConstraints)
-          annotadedConstraints && LessThanOrEqual(f.MaxValue)
-        else
-          annotadedConstraints
-      ) && (
-        if(annotadedConstraints.upperBound != NoConstraints)
-          annotadedConstraints && GreaterThanOrEqual(f.MinValue)
-        else
-          annotadedConstraints
-      )
+      if(annotadedConstraints == NoConstraints) {
+        annotadedConstraints
+      } else {
+        val f = expressionForType(tpe)
+        (
+          if(annotadedConstraints.lowerBound != NoConstraints &&
+              !annotadedConstraints.lowerBound.isInstanceOf[Equal])
+            annotadedConstraints && LessThanOrEqual(f.MaxValue)
+          else
+            annotadedConstraints
+          ) && (
+          if(annotadedConstraints.upperBound != NoConstraints &&
+              !annotadedConstraints.upperBound.isInstanceOf[Equal])
+            annotadedConstraints && GreaterThanOrEqual(f.MinValue)
+          else
+            annotadedConstraints
+          )
+      }
     }
 
     def apply(tree: Tree): BoundedType = {
@@ -106,6 +114,10 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
     case NullaryMethodType(IntType) =>
       new ExpressionFactory[Int](IntType)
+    case MethodType(params, IntType) =>
+      new MethodExpressionFactory[Int](IntType, params)
+    case MethodType(params, DoubleType) =>
+      new MethodExpressionFactory[Double](DoubleType, params)
 
     case s@SingleType(_, _) if s <:< IntType.asInstanceOf[Type] =>
       new ExpressionFactory[Int](IntType)
