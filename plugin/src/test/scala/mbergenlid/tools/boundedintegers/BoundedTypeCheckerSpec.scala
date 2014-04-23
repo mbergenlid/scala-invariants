@@ -157,8 +157,8 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |
         |val sa2 = new SafeArray(10) //Ok
         |if(sa1.length > 10)
-        |  sa2(4) //Not Ok
+        |  sa2(4) //not Ok
         |true
-      """.stripMargin)(List(9))
+      """.stripMargin)(List(9, 16))
   }
 }

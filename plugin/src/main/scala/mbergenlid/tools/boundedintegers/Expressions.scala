@@ -27,8 +27,11 @@ trait Expressions {
 
   trait Expression {
     def isConstant: Boolean =
-      terms.size <= 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true)
-    def asConstant: ConstantValue = terms.headOption.map(_.coeff).getOrElse(throw new IllegalStateException())
+      terms.size == 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true)
+    def asConstant: ConstantValue = {
+      assert(isConstant)
+      terms.headOption.map(_.coeff).getOrElse(ConstantValue.apply(0L))
+    }
     def terms: Set[Term]
     def >(that: Expression): Boolean
     def >=(that: Expression): Boolean
@@ -67,8 +70,11 @@ trait Expressions {
   class ExpressionFactory[T: RichNumeric: TypeTag](val convertedType: TypeType) {
     def fromConstant(constant: T) = Polynomial.fromConstant(constant)
     def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
-    def convertConstant[U: RichNumeric](constant: U) =
+    def convertConstant[U: RichNumeric](constant: U): Expression =
       Polynomial.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
+
+    def convertConstant(constant: ConstantValue): Expression =
+      new Polynomial(Set(Term(constant.convertTo[T], Map.empty)))
 
     def convertExpression(expr: Expression): Expression =
       Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
