@@ -9,15 +9,15 @@ import scala.reflect.runtime.universe._
 class BoundedTypeTreesSpec extends FunSuite 
     with BoundedTypeTrees {
 
-  type SymbolType = Symbol
+  type RealSymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
   val x = 0
   val y = 0
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def stringToSymbol(s: String): SymbolType =
-    typeOf[this.type].termSymbol.
-      newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL )
+    SymbolChain(List(typeOf[this.type].termSymbol.
+      newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL )))
 
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))

@@ -10,12 +10,18 @@ trait MethodApplication extends AbstractBoundsValidator {
     validate(context).applyOrElse(tree, super.checkBounds(context) _)
 
   private def validate(implicit context: Context): Validator = {
-      case Apply(method, args) if method.symbol.isMethod =>
-        for {
-          (argSymbol, paramValue) <- extractMethodParams(method, args)
-        } {
-          argSymbol.tryAssign(paramValue)
-        }; BoundsFactory(method)
+    case Apply(s@Select(_this, method), args) if s.symbol.isMethod =>
+      for {
+        (argSymbol, paramValue) <- extractMethodParams(s, args)
+      } {
+        argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue)
+      }; BoundsFactory(s)
+    case Apply(method, args) if method.symbol.isMethod =>
+      for {
+        (argSymbol, paramValue) <- extractMethodParams(method, args)
+      } {
+        argSymbol.tryAssign(paramValue)
+      }; BoundsFactory(method)
   }
 
   protected[boundedintegers] 

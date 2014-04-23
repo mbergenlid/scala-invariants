@@ -7,15 +7,15 @@ import scala.reflect.runtime.universe._
 class ExpressionsSpec extends FunSuite 
     with Expressions {
 
-  type SymbolType = Symbol
+  type RealSymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
 
   var symbolCache = Map[String, SymbolType]()
 
   implicit def sym(s: String): SymbolType = {
     if(!symbolCache.contains(s)) {
-      symbolCache += (s -> typeOf[this.type].termSymbol.
-        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))
+      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
     }
     symbolCache(s)
   }

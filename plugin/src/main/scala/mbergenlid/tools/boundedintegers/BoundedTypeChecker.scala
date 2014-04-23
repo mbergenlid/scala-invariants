@@ -11,7 +11,10 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   val global: Universe
   import global._
 
-  type SymbolType = global.Symbol
+  type RealSymbolType = global.Symbol
+
+//
+
   trait BoundedTypeError {
     def pos: Position
     def message: String
@@ -57,10 +60,10 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
       case Literal(Constant(s: String)) =>
         expressionForType(tpe).fromParameter(s)
       case x if x.symbol != NoSymbol =>
-        expressionForType(tpe).fromSymbol(x.symbol)
+        expressionForType(tpe).fromSymbol(symbolChainFromTree(x))
     }
 
-    def apply(symbol: SymbolType, tpe: TypeType): Constraint = {
+    def apply(symbol: RealSymbolType, tpe: TypeType): Constraint = {
       val annotatedConstraints = (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
@@ -107,7 +110,7 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
   }
 
-  def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol, symbol.typeSignature)
+  def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol.head, symbol.head.typeSignature)
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
     case ConstantType(Constant(x: Int)) =>
@@ -130,6 +133,14 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
 
     case s@SingleType(_, _) if s <:< IntType.asInstanceOf[Type] =>
       new ExpressionFactory[Int](IntType)
+  }
+
+  def symbolChainFromTree(tree: Tree): SymbolChain = {
+    def symbolList(tree: Tree): List[RealSymbolType] = tree match {
+      case Select(t, n) => tree.symbol :: symbolList(t)
+      case _ => List(tree.symbol)
+    }
+    SymbolChain(symbolList(tree))
   }
 
 }
@@ -177,9 +188,9 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   def updateContext(context: Context, tree: Tree, constraint: Constraint): Context = tree match {
-    case Assign(_, _) => context.removeSymbolConstraints(tree.symbol)
+    case Assign(_, _) => context.removeSymbolConstraints(symbolChainFromTree(tree))
     case _ if constraint != NoConstraints =>
-      context && new Context(Map(tree.symbol -> constraint))
+      context && new Context(Map(symbolChainFromTree(tree) -> constraint))
     case _ => context      
   }
 

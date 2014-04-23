@@ -7,7 +7,7 @@ import scala.language.implicitConversions
 class ContextSpec extends FunSuite
     with TypeContext with BoundedTypeTrees with Expressions {
 
-  type SymbolType = Symbol
+  type RealSymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
   val IntSymbol = typeOf[Int].typeSymbol
   def createConstraintFromSymbol(symbol: SymbolType) =
@@ -22,8 +22,8 @@ class ContextSpec extends FunSuite
 
   implicit def sym(s: String): SymbolType = {
     if(!symbolCache.contains(s)) {
-      symbolCache += (s -> typeOf[this.type].termSymbol.
-        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))
+      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
     }
     symbolCache(s)
   }

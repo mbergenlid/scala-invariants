@@ -5,8 +5,23 @@ import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
 
 trait Expressions {
-  type SymbolType <: scala.reflect.api.Symbols#SymbolApi
+  type RealSymbolType <:scala.reflect.api.Symbols#SymbolApi
   type TypeType = scala.reflect.api.Types#TypeApi
+
+  case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {
+    def head = symbols.head
+    def isStable = head.asTerm.isVal ||
+      (head.asTerm.isGetter && head.asTerm.accessed.asTerm.isVal)
+
+    def map(f: RealSymbolType => RealSymbolType) = SymbolChain(symbols.map(f))
+  }
+
+  trait SymbolType {
+    def head: RealSymbolType
+    def isStable: Boolean
+
+    def map(f: RealSymbolType => RealSymbolType): SymbolType
+  }
 
   val TypeNothing: TypeType
 
@@ -65,11 +80,11 @@ trait Expressions {
     lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
   }
 
-  class MethodExpressionFactory[T: RichNumeric: TypeTag](resultType: TypeType, params: List[SymbolType]) extends
+  class MethodExpressionFactory[T: RichNumeric: TypeTag](resultType: TypeType, params: List[RealSymbolType]) extends
     ExpressionFactory[T](resultType) {
 
     override def fromParameter(s: String) =
-      Polynomial.fromSymbol(params.find(_.name == newTermName(s)).get)
+      Polynomial.fromSymbol(SymbolChain(List(params.find(_.name == newTermName(s)).get)))
   }
 
   object Polynomial {
@@ -200,7 +215,7 @@ trait Expressions {
     }
 
     def isAllVals =
-      variables.forall(v => v._1.asTerm.isVal || (v._1.asTerm.isGetter && v._1.asTerm.accessed.asTerm.isVal))
+      variables.forall(v => v._1.isStable)
 
     def *(that: Term ): Term  = {
       val newCoeff = coeff*that.coeff

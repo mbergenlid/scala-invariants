@@ -80,7 +80,10 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |if(sa1.length > 10)
         |  sa1(4)
         |
+        |val sa2 = new SafeArray(10) //Ok
+        |if(sa1.length > 10)
+        |  sa2(4) //Not Ok
         |true
-      """.stripMargin)(List(9))
+      """.stripMargin)(List(9, 16))
   }
 }

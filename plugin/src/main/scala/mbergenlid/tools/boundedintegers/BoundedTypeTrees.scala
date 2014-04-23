@@ -6,7 +6,7 @@ import scala.annotation.implicitNotFound
 trait BoundedTypeTrees extends Expressions {
 
   @implicitNotFound(msg = "Can not create Constraint from ${From}")
-  trait ConstraintBuilder[From] {
+  trait ConstraintBuilder[-From] {
     def apply(from: From, previous: SimpleConstraint): Constraint
   }
   class DefaultConstraintBuilder extends ConstraintBuilder[Constraint] {
