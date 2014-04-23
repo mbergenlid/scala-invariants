@@ -94,7 +94,18 @@ trait TypeContext { self: BoundedTypeTrees =>
                                        constant: ConstantValue,
                                        f: ExpressionFactory[_]): Constraint = sc match {
       case GreaterThan(v) if v.isConstant =>
-        if(v.asConstant > constant) LessThan(f.fromSymbol(boundSymbol))
+        if(v.asConstant >= constant) LessThan(f.fromSymbol(boundSymbol))
+        else if(v.asConstant.increment == constant) LessThanOrEqual(f.fromSymbol(boundSymbol))
+        else NoConstraints
+      case LessThan(v) if v.isConstant =>
+        if(v.asConstant <= constant) GreaterThan(f.fromSymbol(boundSymbol))
+        else if(v.asConstant.decrement == constant) GreaterThanOrEqual(f.fromSymbol(boundSymbol))
+        else NoConstraints
+      case GreaterThanOrEqual(v) if v.isConstant =>
+        if(v.asConstant >= constant) LessThan(f.fromSymbol(boundSymbol))
+        else NoConstraints
+      case LessThanOrEqual(v) if v.isConstant =>
+        if(v.asConstant <= constant) GreaterThan(f.fromSymbol(boundSymbol))
         else NoConstraints
       case _ => NoConstraints
     }

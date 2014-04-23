@@ -65,6 +65,81 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(Nil)
   }
 
+  test("Bound constant to symbol") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |def upperBound(@LessThan(x)a: Int) = true
+        |def upperBoundInclusive(@LessThanOrEqual(x)a: Int) = true
+        |def lowerBound(@GreaterThan(x)a: Int) = true
+        |def lowerBoundInclusive(@GreaterThanOrEqual(x)a: Int) = true
+        |def equal(@Equal(x)a: Int) = true
+        |
+        |if(x > 3) upperBound(2)
+        |if(x < 3) upperBound(2) //Fail
+        |if(x > 1) upperBound(2) //Fail
+        |if(x > 2) upperBound(2)
+        |if(x < 2) upperBound(2) //Fail
+        |
+        |if(x < 1) lowerBound(2)
+        |if(x > 1) lowerBound(2) //Fail
+        |if(x < 3) lowerBound(2) //Fail
+        |if(x < 2) lowerBound(2)
+        |if(x > 2) lowerBound(2) //Fail
+        |
+        |if(x > 3) upperBoundInclusive(2)
+        |if(x < 3) upperBoundInclusive(2) //Fail
+        |if(x > 1) upperBoundInclusive(2)
+        |if(x > 2) upperBoundInclusive(2)
+        |if(x < 2) upperBoundInclusive(2) //Fail
+        |
+        |if(x < 1) lowerBoundInclusive(2)
+        |if(x > 1) lowerBoundInclusive(2) //Fail
+        |if(x < 3) lowerBoundInclusive(2)
+        |if(x < 2) lowerBoundInclusive(2)
+        |if(x > 2) lowerBoundInclusive(2) //Fail
+        |true
+      """.stripMargin)(List(10, 11, 13, 16, 17, 19, 22, 25, 28, 31))
+  }
+
+  test("Bound constant to symbol with inclusive constraints") {
+    compile(
+      """
+        |val x = anotherRandomInteger
+        |def upperBound(@LessThan(x)a: Int) = true
+        |def upperBoundInclusive(@LessThanOrEqual(x)a: Int) = true
+        |def lowerBound(@GreaterThan(x)a: Int) = true
+        |def lowerBoundInclusive(@GreaterThanOrEqual(x)a: Int) = true
+        |def equal(@Equal(x)a: Int) = true
+        |
+        |if(x >= 3) upperBound(2)
+        |if(x <= 3) upperBound(2) //Fail
+        |if(x >= 1) upperBound(2) //Fail
+        |if(x >= 2) upperBound(2)
+        |if(x <= 2) upperBound(2) //Fail
+        |
+        |if(x <= 1) lowerBound(2)
+        |if(x >= 1) lowerBound(2) //Fail
+        |if(x <= 3) lowerBound(2) //Fail
+        |if(x <= 2) lowerBound(2)
+        |if(x >= 2) lowerBound(2) //Fail
+        |
+        |if(x >= 3) upperBoundInclusive(2)
+        |if(x <= 3) upperBoundInclusive(2) //Fail
+        |if(x >= 1) upperBoundInclusive(2) //Fail
+        |if(x >= 2) upperBoundInclusive(2)
+        |if(x <= 2) upperBoundInclusive(2) //Fail
+        |
+        |if(x <= 1) lowerBoundInclusive(2)
+        |if(x >= 1) lowerBoundInclusive(2) //Fail
+        |if(x <= 3) lowerBoundInclusive(2) //Fail
+        |if(x <= 2) lowerBoundInclusive(2)
+        |if(x >= 2) lowerBoundInclusive(2) //Fail
+        |
+        |true
+      """.stripMargin)(List(10, 11, 13, 16, 17, 19, 22, 23, 25, 28, 29, 31))
+  }
+
   test("Safe array test") {
     compile(
       """
@@ -84,6 +159,6 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |if(sa1.length > 10)
         |  sa2(4) //Not Ok
         |true
-      """.stripMargin)(List(9, 16))
+      """.stripMargin)(List(9))
   }
 }
