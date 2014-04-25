@@ -28,6 +28,12 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
       } else {
+        val target = BoundsFactory.apply(symbol)
+        val boundExpr = Context.getPropertyConstraints(expr.symbol, context)
+
+        if(!(boundExpr obviouslySubsetOf target))
+          reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, boundExpr)(context)))
+
         checkBounds(context)(expr)
       }
     }

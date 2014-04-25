@@ -4,7 +4,11 @@ import scala.reflect.api.Universe
 import mbergenlid.tools.boundedintegers.annotations.{
   GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
   LessThan => LessThanAnnotation,
-LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, Bounded, GreaterThan => GreaterThanAnnotation}
+  LessThanOrEqual => LessThanOrEqualAnnotation,
+  Equal => EqualAnnotation,
+  Bounded,
+  GreaterThan => GreaterThanAnnotation,
+  Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 
 trait MyUniverse extends BoundedTypeTrees with TypeContext {
@@ -29,26 +33,43 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   lazy val IntSymbol = IntType.typeSymbol
   lazy val LongSymbol = LongType.typeSymbol
   lazy val DoubleSymbol = DoubleType.typeSymbol
+  lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
+
+  object GreaterThanOrEqualExtractor {
+    def unapply(tpe: Type): Boolean = {
+      tpe =:= GreaterThanOrEqualType
+    }
+  }
 
   object BoundsFactory {
 
-    private def constraint(bounds: Annotation, tpe: TypeType): Constraint = bounds match {
-      case a if a.tpe =:= typeOf[GreaterThanOrEqualAnnotation] =>
-        GreaterThanOrEqual(annotationExpression(a.scalaArgs.head, tpe))
-      case a if a.tpe =:= typeOf[LessThanOrEqualAnnotation] =>
-        LessThanOrEqual(annotationExpression(a.scalaArgs.head, tpe))
-      case a if a.tpe =:= typeOf[EqualAnnotation] =>
-        Equal(annotationExpression(a.scalaArgs.head, tpe))
-      case a if a.tpe =:= typeOf[LessThanAnnotation] =>
-        LessThan(annotationExpression(a.scalaArgs.head, tpe))
-      case a if a.tpe =:= typeOf[GreaterThanAnnotation] =>
-        GreaterThan(annotationExpression(a.scalaArgs.head, tpe))
+    private def constraint(bounds: Annotation, tpe: TypeType): Constraint =
+      constraint(bounds.tpe, bounds.scalaArgs, tpe)
+
+    private def constraint(boundType: Type, args: List[Tree], resultType: TypeType): Constraint = boundType match {
+      case GreaterThanOrEqualExtractor() =>
+        GreaterThanOrEqual(annotationExpression(args.head, resultType))
+      case a if a == typeOf[GreaterThanOrEqualAnnotation] =>
+        GreaterThanOrEqual(annotationExpression(args.head, resultType))
+      case a if a =:= typeOf[LessThanOrEqualAnnotation] =>
+        LessThanOrEqual(annotationExpression(args.head, resultType))
+      case a if a =:= typeOf[EqualAnnotation] =>
+        Equal(annotationExpression(args.head, resultType))
+      case a if a =:= typeOf[LessThanAnnotation] =>
+        LessThan(annotationExpression(args.head, resultType))
+      case a if a <:< typeOf[GreaterThanAnnotation] =>
+        GreaterThan(annotationExpression(args.head, resultType))
     }
 
     private def annotationExpression(tree: Tree, resultType: TypeType): Expression = {
       val Apply(_, List(value)) = tree
       expression(value, resultType)
     }
+
+    private def propertyAnnotationExpression(tree: Tree) = {
+
+    }
+
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
       case Literal(Constant(x: Int)) =>
@@ -93,6 +114,17 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
       }
     }
 
+    def apply(symbol: RealSymbolType): Constraint = {
+      (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+        case a if a.tpe <:< typeOf[PropertyAnnotation] =>
+          val List(Literal(Constant(prop: String)), method @ Apply(_, param)) = a.scalaArgs
+          val memberSymbol = symbol.typeSignature.member(newTermName(prop))
+
+          PropertyConstraint(memberSymbol,
+            constraint(method.tpe, param, memberSymbol.typeSignature))
+      }) (_ && _)
+    }
+
     def apply(tree: Tree): BoundedType = {
       if(expressionForType.isDefinedAt(tree.tpe)) {
         val f = expressionForType(tree.tpe)
@@ -103,11 +135,10 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
           BoundedType(exp, Equal(exp))
         }
       } else {
+//        BoundedType(None, BoundsFactory(tree.symbol))
         BoundedType.noBounds
       }
     }
-
-
   }
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol.head, symbol.head.typeSignature)

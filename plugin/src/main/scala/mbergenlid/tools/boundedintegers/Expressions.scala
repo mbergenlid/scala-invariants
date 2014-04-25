@@ -19,7 +19,7 @@ trait Expressions {
   trait SymbolType {
     def head: RealSymbolType
     def isStable: Boolean
-
+    def symbols: List[RealSymbolType]
     def map(f: RealSymbolType => RealSymbolType): SymbolType
   }
 

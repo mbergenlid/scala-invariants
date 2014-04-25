@@ -161,4 +161,28 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |true
       """.stripMargin)(List(9, 16))
   }
+
+  test("Property constraints") {
+    compile(
+      """
+        |class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
+        |
+        |  val backingArray: Array[Int] = new Array(length)
+        |  def apply( @GreaterThanOrEqual(0)
+        |             @LessThan(length) index: Int): Int = backingArray(index)
+        |}
+        |
+        |val source = new SafeArray(randomInteger)
+        |
+        |if(source.length > 10) {
+        |  @Property("length", GreaterThan(5))
+        |  val sa1 = source
+        |}
+        |
+        |@Property("length", GreaterThan(5))
+        |val sa2 = source
+        |
+        |true
+      """.stripMargin)(List(17))
+  }
 }

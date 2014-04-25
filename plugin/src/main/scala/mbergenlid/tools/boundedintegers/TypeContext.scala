@@ -47,6 +47,14 @@ trait TypeContext { self: BoundedTypeTrees =>
   def createConstraintFromSymbol(symbol: SymbolType): Constraint
   object Context {
 
+    def getPropertyConstraints(symbol: RealSymbolType, context: Context) = {
+      val constraints: Iterable[Constraint] = context.symbols.collect {
+        case (sym, constraint) if sym.symbols.last == symbol =>
+          PropertyConstraint(sym.symbols.head, constraint)
+      }
+      if(constraints.isEmpty) NoConstraints
+      else constraints.reduce(_ && _)
+    }
 
     def getConstraint(symbol: SymbolType, resultType: TypeType, context: Context): Constraint = {
       val f = expressionForType(resultType)

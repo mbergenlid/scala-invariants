@@ -62,6 +62,7 @@ trait BoundedTypeTrees extends Expressions {
         case NoConstraints =>
         case s: SimpleConstraint => f(s)
         case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
+        case PropertyConstraint(_, constraint) => foreach(f, constraint)
       }
       foreach(f, c)
     }
@@ -306,5 +307,27 @@ trait BoundedTypeTrees extends Expressions {
       if(c1 obviouslySubsetOf c2) c2
       else if(c2 obviouslySubsetOf c1) c1
       else Or(c1, c2)
+  }
+
+  case class PropertyConstraint(symbol: RealSymbolType, constraint: Constraint) extends Constraint {
+
+    override def obviouslySubsetOf(that: Constraint) = that match {
+      case PropertyConstraint(otherSymbol, otherConstraint) =>
+        otherSymbol == symbol && constraint.obviouslySubsetOf(otherConstraint)
+      case _ => super.obviouslySubsetOf(that)
+    }
+
+
+    def flatMap(f: SimpleConstraint => Constraint) =
+      copy(constraint = constraint.flatMap(f))
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+      copy(constraint = constraint.map(f))
+
+    def isSymbolConstraint = constraint.isSymbolConstraint
+    def lowerBoundInclusive = PropertyConstraint(symbol, constraint.lowerBoundInclusive)
+    def upperBoundInclusive = PropertyConstraint(symbol, constraint.upperBoundInclusive)
+    def lowerBound = PropertyConstraint(symbol, constraint.lowerBound)
+    def upperBound = PropertyConstraint(symbol, constraint.upperBound)
+    def unary_! = PropertyConstraint(symbol, !constraint)
   }
 }
