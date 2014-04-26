@@ -233,6 +233,28 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(List(13))
   }
 
+  test("Return property constrained object") {
+    compile(
+      """
+        |@Property("length", LessThan(10))
+        |val s = fiveCharacterString
+        |
+        |true
+      """.stripMargin)(Nil)
+  }
+
+  test("Property constraint should apply to property alone too") {
+    compile(
+      """
+        |@Property("length", LessThan(10))
+        |val s = fiveCharacterString
+        |
+        |@LessThan(10)
+        |val l = s.length
+        |true
+      """.stripMargin)(Nil)
+  }
+
   test("Invalid property constraints") {
     compile(
       """

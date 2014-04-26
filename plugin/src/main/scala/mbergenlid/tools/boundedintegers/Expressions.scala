@@ -10,6 +10,7 @@ trait Expressions {
 
   case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {
     def head = symbols.head
+    def tail = SymbolChain(symbols.tail)
     def isStable = head.asTerm.isVal ||
       (head.asTerm.isGetter && head.asTerm.accessed.asTerm.isVal)
 
@@ -21,6 +22,7 @@ trait Expressions {
 
   trait SymbolType {
     def head: RealSymbolType
+    def tail: SymbolType
     def isStable: Boolean
     def symbols: List[RealSymbolType]
     def map(f: RealSymbolType => RealSymbolType): SymbolType

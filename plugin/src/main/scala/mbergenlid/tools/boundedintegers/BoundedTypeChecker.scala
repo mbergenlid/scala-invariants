@@ -147,6 +147,8 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         } else {
           BoundedType(exp, Equal(exp), f)
         }
+      } else if(tree.symbol != null) {
+        BoundedType(None, BoundsFactory(tree.symbol))
       } else {
         BoundedType.noBounds
       }

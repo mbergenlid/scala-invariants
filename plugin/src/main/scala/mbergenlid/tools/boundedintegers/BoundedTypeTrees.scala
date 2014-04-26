@@ -40,6 +40,8 @@ trait BoundedTypeTrees extends Expressions {
 
     def &&(other: Constraint) = And.combine(this, other)
     def ||(other: Constraint) = Or.combine(this, other)
+
+    lazy val propertyConstraints = new PropertyConstraintTraversable(this)
   }
 
   implicit val fromConstraint = new DefaultConstraintBuilder
@@ -56,7 +58,7 @@ trait BoundedTypeTrees extends Expressions {
     }
 
 
-  implicit class Constraint2Traversable(c: Constraint) extends Traversable[SimpleConstraint] {
+  implicit class Constraint2SimpleTraversable(c: Constraint) extends Traversable[SimpleConstraint] {
     def foreach[U](f: SimpleConstraint => U): Unit = {
       def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
         case NoConstraints =>
@@ -67,6 +69,19 @@ trait BoundedTypeTrees extends Expressions {
       foreach(f, c)
     }
   }
+
+  class PropertyConstraintTraversable(c: Constraint) extends Traversable[PropertyConstraint] {
+    def foreach[U](f: PropertyConstraint => U): Unit = {
+      def foreach(f: PropertyConstraint => U, c: Constraint): Unit = c match {
+        case NoConstraints =>
+        case s: SimpleConstraint =>
+        case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
+        case p @ PropertyConstraint(_, constraint) => f(p); foreach(f, constraint)
+      }
+      foreach(f, c)
+    }
+  }
+
 
   implicit def option2Constraint(c: Option[Constraint]): Constraint = c match {
     case Some(x) => x

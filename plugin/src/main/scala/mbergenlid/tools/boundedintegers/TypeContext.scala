@@ -146,13 +146,24 @@ trait TypeContext { self: BoundedTypeTrees =>
       }
 
     private def getConstraintWitUpperLowerBounds(symbol: SymbolType, resultType: TypeType, context: Context) = {
-      val c = getConstraint(symbol, resultType, context)
+      val c = getConstraint(symbol, resultType, context) &&
+        translatePropertyConstraints(symbol, resultType, context)
       val f = expressionForType(resultType)
       if(!c.lowerBound.exists(_.v.isConstant))
         c && GreaterThanOrEqual(f.MinValue)
       else
         c
     }
+    private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
+      val c = context.get(symbol.tail)
+      (for {
+        prop <- c.propertyConstraints
+        if prop.symbol == symbol.head
+      } yield {
+        prop.constraint
+      }).reduce(_&&_)
+    }
+
     protected[boundedintegers] def trySubstitute(
           symbol: SymbolType, base: SimpleConstraint, boundedBy: SimpleConstraint) = {
 

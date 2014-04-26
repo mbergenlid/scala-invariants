@@ -1,7 +1,10 @@
 package mbergenlid.tools.boundedintegers.testclasspath
 
-import mbergenlid.tools.boundedintegers.annotations.{ConstantNumber, LessThanOrEqual, LessThan, GreaterThanOrEqual}
+import mbergenlid.tools.boundedintegers.annotations._
 import mbergenlid.tools.boundedintegers.annotations.ConstantNumber._
+import mbergenlid.tools.boundedintegers.annotations.GreaterThanOrEqual
+import mbergenlid.tools.boundedintegers.annotations.LessThanOrEqual
+import mbergenlid.tools.boundedintegers.annotations.LessThan
 
 object TestMethods {
 
@@ -27,6 +30,9 @@ object TestMethods {
   def intBetween5And10 = 6
 
   def anotherRandomInteger = 20
+
+  @Property("length", Equal(5))
+  def fiveCharacterString = "12345"
 
   class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
 
