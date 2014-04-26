@@ -14,6 +14,9 @@ trait Expressions {
       (head.asTerm.isGetter && head.asTerm.accessed.asTerm.isVal)
 
     def map(f: RealSymbolType => RealSymbolType) = SymbolChain(symbols.map(f))
+
+    def prettyPrint =
+      symbols.reverse.map(_.name.toString).mkString(".")
   }
 
   trait SymbolType {
@@ -21,6 +24,8 @@ trait Expressions {
     def isStable: Boolean
     def symbols: List[RealSymbolType]
     def map(f: RealSymbolType => RealSymbolType): SymbolType
+
+    def prettyPrint: String
   }
 
   val TypeNothing: TypeType
@@ -235,8 +240,9 @@ trait Expressions {
 
     override def toString = {
       if(variables.isEmpty) coeff.toString
-      else if(coeff.isOne) ("" /: variables) ((s, t) => s + t._1)
-      else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1)
+      else if(coeff.isOne) ("" /: variables) ((s, t) => s + t._1.prettyPrint)
+      else if(coeff == -coeff.one) ("-" /: variables) ((s, t) => s + t._1.prettyPrint)
+      else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1.prettyPrint)
     }
 
     def increment =
@@ -267,6 +273,7 @@ trait Expressions {
       ConstantValue(implicitly[RichNumeric[U]].fromType[T](value))
 
     def zero = TypedConstantValue(num.zero)
+    def one = TypedConstantValue(num.one)
     def isOne = value == num.one
     def isZero = value == num.zero
     def isGreaterThanZero = num.gt(value, num.zero)
