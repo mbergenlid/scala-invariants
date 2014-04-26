@@ -191,4 +191,22 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(List(4, 7))
   }
 
+  test("Symbol chains") {
+    compile(
+      """
+        |object T1 {
+        |  @Equal(1)
+        |  val x = 1
+        |}
+        |object T2 {
+        |  val x = 2
+        |}
+        |
+        |@Equal(11)
+        |val y = T1.x + 10
+        |@Equal(1)
+        |val z = T2.x
+        |true
+      """.stripMargin)(List(13))
+  }
 }

@@ -29,7 +29,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
    * Int + Int + Double
    */
   private def validate(implicit context: Context): Validator = {
-    case a @ Apply(Select(op1, method), List(op2)) if operators.contains(method) =>
+    case a @ Apply(Select(op1, method), List(op2)) if definedForOperator(method, a.tpe) =>
       val lhs = checkBounds(context)(op1).convertTo(a.tpe)
       val rhs = checkBounds(context)(op2).convertTo(a.tpe)
 
@@ -59,4 +59,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
       } yield operators(method).apply(exp1, exp2)
       BoundedType(expression, newConstraint)
   }
+
+  private def definedForOperator(op: Name, tpe: TypeType) =
+    operators.contains(op) && expressionForType.lift(tpe).isDefined
 }
