@@ -176,6 +176,63 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(List(10))
   }
 
+  test("Property constraints2") {
+    compile(
+      """
+        |class ArrayContainer(val sa: SafeArray)
+        |val source1 = new ArrayContainer(new SafeArray(randomInteger))
+        |val source2 = new ArrayContainer(new SafeArray(randomInteger))
+        |
+        |if(source1.sa.length > 10) {
+        |  @Property("length", GreaterThan(5))
+        |  val sa1 = source1.sa
+        |}
+        |
+        |@Property("length", GreaterThan(5))
+        |val sa2 = source1.sa
+        |
+        |if(source1.sa.length > 10) {
+        |  @Property("length", GreaterThan(5))
+        |  val sa3 = source2.sa
+        |}
+        |
+        |if(source1.sa.length > 5 && source1.sa.length < 10) {
+        |  @Property("length", GreaterThan(5), LessThan(10))
+        |  val sa4 = source1.sa
+        |}
+        |
+        |if(source1.sa.length > 5 && source1.sa.length < 10) {
+        |  @Property("length", GreaterThan(5), LessThan(10))
+        |  val sa5 = source2.sa
+        |}
+        |true
+      """.stripMargin)(List(12, 16, 26))
+  }
+
+  test("Property constraints on Strings") {
+    compile(
+      """
+        |object Test {
+        |  val source = "asdasd"
+        |}
+        |
+        |import Test._
+        |if(source.length > 10) {
+        |  @Property("length", GreaterThan(5))
+        |  val sa1 = source
+        |}
+        |
+        |@Property("length", GreaterThan(5))
+        |val sa2 = source
+        |
+        |if(source.length > 5 && source.length < 10) {
+        |  @Property("length", GreaterThan(5), LessThan(10))
+        |  val sa3 = source
+        |}
+        |true
+      """.stripMargin)(List(13))
+  }
+
   test("Invalid property constraints") {
     compile(
       """
