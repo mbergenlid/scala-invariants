@@ -269,14 +269,10 @@ trait TypeContext { self: BoundedTypeTrees =>
   }
 
   object BoundedType {
-    def apply(expression: Expression, constraint: Constraint) = {
-      expressionForType.lift(expression.tpe) match {
-        case Some(expressionFactory) =>
-          new BoundedType(Some(expression), constraint.map { sc =>
-            expressionFactory.convertExpression(sc.v)
-          })
-        case None => BoundedType.noBounds
-      }
+    def apply(expression: Expression, constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
+      new BoundedType(Some(expression), constraint.map { sc =>
+        expressionFactory.convertExpression(sc.v)
+      })
     }
 
     def apply(expression: Option[Expression], constraint: Constraint) = {

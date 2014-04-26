@@ -143,13 +143,6 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
   test("Safe array test") {
     compile(
       """
-        |class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
-        |
-        |  val backingArray: Array[Int] = new Array(length)
-        |  def apply( @GreaterThanOrEqual(0)
-        |             @LessThan(length) index: Int): Int = backingArray(index)
-        |}
-        |
         |new SafeArray(-2) //Not ok
         |val sa1 = new SafeArray(10) //Ok
         |if(sa1.length > 10)
@@ -159,19 +152,12 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |if(sa1.length > 10)
         |  sa2(4) //not Ok
         |true
-      """.stripMargin)(List(9, 16))
+      """.stripMargin)(List(2, 9))
   }
 
   test("Property constraints") {
     compile(
       """
-        |class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
-        |
-        |  val backingArray: Array[Int] = new Array(length)
-        |  def apply( @GreaterThanOrEqual(0)
-        |             @LessThan(length) index: Int): Int = backingArray(index)
-        |}
-        |
         |val source = new SafeArray(randomInteger)
         |
         |if(source.length > 10) {
@@ -182,7 +168,27 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |@Property("length", GreaterThan(5))
         |val sa2 = source
         |
+        |if(source.length > 5 && source.length < 10) {
+        |  @Property("length", GreaterThan(5), LessThan(10))
+        |  val sa3 = source
+        |}
         |true
-      """.stripMargin)(List(17))
+      """.stripMargin)(List(10))
   }
+
+  test("Invalid property constraints") {
+    compile(
+      """
+        |val source = new SafeArray(randomInteger)
+        |
+        |@Property("nonExistingProperty", GreaterThan(1))
+        |val sa = source
+        |
+        |@Property("length")
+        |val sa1 = source
+        |
+        |false
+      """.stripMargin)(List(4, 7))
+  }
+
 }

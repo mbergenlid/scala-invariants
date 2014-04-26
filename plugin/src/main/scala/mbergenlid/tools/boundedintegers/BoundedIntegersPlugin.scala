@@ -29,9 +29,11 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
 
     class BoundedIntegersPhase(prev: Phase) extends StdPhase(prev) {
       override def name = BoundedIntegersPlugin.this.name
-      val typeChecker = new BoundedTypeChecker(global) with TypeConstraintValidator 
+      val typeChecker = new BoundedTypeChecker(global)  with MethodApplication
                                                         with IfExpression
                                                         with Assignment
+                                                        with ArithmeticExpression
+                                                        with MethodDefinition
 
       def apply(unit: CompilationUnit) {
         val errors = typeChecker.checkBoundedTypes(
@@ -42,23 +44,4 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
       }
     }
   }
-  /*
-  private object Component extends PluginComponent with Transform with TypingTransformers {
-    import global._
-    import global.definitions._
-
-    val global = BoundedIntegersPlugin.this.global
-    override val runsAfter = List("typer")
-
-    val phaseName = "bounded-integers"
-
-    def newTransformer(unit: CompilationUnit) = new Transformer(unit)
-
-    class Transformer(unit: CompilationUnit) extends TypingTransformer(unit) {
-
-      val typeChecker = new BoundedTypeChecker(global)
-
-      override def transform(tree: Tree): Tree = 
-    }
-  }*/
 }

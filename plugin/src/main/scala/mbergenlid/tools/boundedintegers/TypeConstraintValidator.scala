@@ -16,6 +16,16 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbol, withThisSymbol)
     
     def tryAssign(expr: Tree)(implicit context: Context): BoundedType = {
+      try {
+        assign(expr)
+      } catch {
+        case CompilationError(error) =>
+          reportError(error)
+          BoundedType.noBounds
+      }
+    }
+
+    private def assign(expr: Tree)(implicit context: Context) = {
       if(expressionForType.isDefinedAt(symbol.typeSignature)) {
         val target =
           for(sc <- BoundsFactory.apply(symbol, symbol.typeSignature)) yield replaceThisSymbols(sc)
@@ -37,6 +47,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         checkBounds(context)(expr)
       }
     }
+
 
     private def replaceThisSymbols(simpleConstraint: SimpleConstraint): Constraint =
       simpleConstraint.map { sc =>

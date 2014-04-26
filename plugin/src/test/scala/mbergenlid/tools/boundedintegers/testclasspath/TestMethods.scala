@@ -28,4 +28,11 @@ object TestMethods {
 
   def anotherRandomInteger = 20
 
+  class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
+
+    val backingArray: Array[Int] = new Array(length)
+    def apply( @GreaterThanOrEqual(0)
+               @LessThan(length) index: Int): Int = backingArray(index)
+  }
+
 }

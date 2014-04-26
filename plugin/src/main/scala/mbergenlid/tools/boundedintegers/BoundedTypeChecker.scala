@@ -25,6 +25,8 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
   }
   case class Error(pos: Position, message: String) extends BoundedTypeError
   case class Warning(pos: Position, message: String) extends BoundedTypeError
+  case class CompilationError(what: Error) extends Exception
+
 
   lazy val TypeNothing = typeOf[Nothing]
   lazy val IntType: TypeType = typeOf[Int]
@@ -65,11 +67,6 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
       val Apply(_, List(value)) = tree
       expression(value, resultType)
     }
-
-    private def propertyAnnotationExpression(tree: Tree) = {
-
-    }
-
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
       case Literal(Constant(x: Int)) =>
@@ -117,11 +114,22 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     def apply(symbol: RealSymbolType): Constraint = {
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
-          val List(Literal(Constant(prop: String)), method @ Apply(_, param)) = a.scalaArgs
+          val (t@Literal(Constant(prop: String))) :: annotations = a.scalaArgs
           val memberSymbol = symbol.typeSignature.member(newTermName(prop))
 
+          if(memberSymbol == NoSymbol)
+            throw new CompilationError(
+              Error(t.pos, s"Can not find property ${prop} in type ${symbol.typeSignature}"))
+
+          if(annotations.isEmpty)
+            throw new CompilationError(
+              Error(t.pos, "@Property requires at least one constraint"))
+
           PropertyConstraint(memberSymbol,
-            constraint(method.tpe, param, memberSymbol.typeSignature))
+            (for {
+              method @ Apply(_, param) <- annotations
+            } yield constraint(method.tpe, param, memberSymbol.typeSignature)).reduce(_&&_)
+          )
       }) (_ && _)
     }
 
@@ -130,12 +138,11 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         val f = expressionForType(tree.tpe)
         val exp = f.convertExpression(expression(tree, tree.tpe))
         if(tree.symbol != null && tree.symbol != NoSymbol) {
-          BoundedType(exp, Equal(exp) && BoundsFactory(tree.symbol, f.convertedType))
+          BoundedType(exp, Equal(exp) && BoundsFactory(tree.symbol, f.convertedType), f)
         } else {
-          BoundedType(exp, Equal(exp))
+          BoundedType(exp, Equal(exp), f)
         }
       } else {
-//        BoundedType(None, BoundsFactory(tree.symbol))
         BoundedType.noBounds
       }
     }
