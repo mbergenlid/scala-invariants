@@ -99,6 +99,52 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
     assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.Equal(9), cut.GreaterThanOrEqual(10)))
   }
 
+  test("Multiply symbol to other symbol") {
+    val bounds = expression(
+      """
+        |val x = randomInteger
+        |val y = anotherRandomInteger
+        |
+        |x*y
+      """.stripMargin)
+
+    import cut._
+    assertThat(bounds.constraint).notSubsetOf(And(GreaterThanOrEqual(0), LessThanOrEqual(Int.MaxValue)))
+  }
+
+  test("Multiply symbol to same symbol") {
+    val bounds = expression(
+      """
+        |val x = anotherRandomInteger
+        |val y = anotherRandomInteger
+        |
+        |x*x*y
+      """.stripMargin)
+
+    import cut._
+    val equal = bounds.constraint.find(_.isInstanceOf[Equal])
+    assert(equal.isDefined)
+    val expr = equal.get.v
+    assert(expr.terms.size == 1)
+    assert(expr.terms.head.variables.head._2 == 2)
+
+    assert(expr.toString == "x^2*y")
+  }
+
+  test("Multiply bounded symbols") {
+    val bounds = expression(
+      """
+        |val x = intBetween0And5
+        |val y = intBetween0And5
+        |
+        |x*y
+      """.stripMargin)
+
+    import cut._
+    assertThat(bounds.constraint).definiteSubsetOf(GreaterThanOrEqual(0))
+    assertThat(bounds.constraint).definiteSubsetOf(LessThanOrEqual(25))
+  }
+
   /*
    *   == x + 1
    *   <= Overflow
@@ -168,6 +214,19 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |val c = x1 - y1 + 1
         |true
       """.stripMargin)(List(9, 15))
+  }
+
+  test("Multiply symbols could overflow") {
+    compile(
+      """
+        |val x = randomInteger
+        |val y = anotherRandomInteger
+        |
+        |@GreaterThanOrEqual(0)
+        |val a = x*y
+        |
+        |false
+      """.stripMargin)(List(6))
   }
 
   test("asd") {

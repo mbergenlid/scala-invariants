@@ -239,10 +239,19 @@ trait Expressions {
     }
 
     override def toString = {
+      def printVariables = {
+        def printVariable(v: SymbolType, mult: Int) =
+          v.prettyPrint + (
+            if(mult == 1) ""
+            else "^" + mult
+          )
+        variables.map(t => printVariable(t._1, t._2)).mkString("*")
+      }
+
       if(variables.isEmpty) coeff.toString
-      else if(coeff.isOne) ("" /: variables) ((s, t) => s + t._1.prettyPrint)
-      else if(coeff == -coeff.one) ("-" /: variables) ((s, t) => s + t._1.prettyPrint)
-      else ((coeff.toString + "*") /: variables) ((s, t) => s + t._1.prettyPrint)
+      else if(coeff.isOne) printVariables
+      else if(coeff == -coeff.one) "-" + printVariables
+      else (coeff.toString + "*") + printVariables
     }
 
     def increment =
