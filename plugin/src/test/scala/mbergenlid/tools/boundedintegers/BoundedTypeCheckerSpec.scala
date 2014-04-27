@@ -255,6 +255,27 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(Nil)
   }
 
+  test("Property constraints with transitive constraints") {
+    compile(
+      """
+        |val source = new SafeArray(randomInteger)
+        |val x = anotherRandomInteger
+        |val y = intBetween5And10
+        |
+        |if(source.length < x) {
+        |  @Property("length", LessThan(x))
+        |  val sa1 = source
+        |}
+        |
+        |if(source.length == y) {
+        |  @Property("length", LessThan(11), GreaterThan(4))
+        |  val sa2 = source
+        |}
+        |
+        |true
+      """.stripMargin)(Nil)
+  }
+
   test("Invalid property constraints") {
     compile(
       """

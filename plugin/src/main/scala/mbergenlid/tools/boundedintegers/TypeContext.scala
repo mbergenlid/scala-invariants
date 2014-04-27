@@ -48,10 +48,19 @@ trait TypeContext { self: BoundedTypeTrees =>
   object Context {
 
     def getPropertyConstraints(symbol: SymbolType, context: Context) = {
-      val constraints: Iterable[Constraint] = context.symbols.collect {
+      val propConstraints = context.symbols.collect {
         case (sym, constraint) if sym.symbols.endsWith(symbol.symbols) =>
           PropertyConstraint(sym.symbols.head, constraint)
       }
+      val constraints: Iterable[Constraint] = for {
+        prop <- propConstraints
+        if expressionForType.lift(prop.symbol.typeSignature).isDefined
+      } yield prop.copy(constraint =
+          prop.constraint.map { sc =>
+            substitute(sc, sc.v.extractSymbols.toList, prop.symbol.typeSignature, context)
+          }
+        )
+
       if(constraints.isEmpty) NoConstraints
       else constraints.reduce(_ && _)
     }
@@ -156,12 +165,14 @@ trait TypeContext { self: BoundedTypeTrees =>
     }
     private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
       val c = context.get(symbol.tail)
-      (for {
+      val cList = for {
         prop <- c.propertyConstraints
         if prop.symbol == symbol.head
       } yield {
         prop.constraint
-      }).reduce(_&&_)
+      }
+      if(cList.isEmpty) NoConstraints
+      else cList.reduce(_&&_)
     }
 
     protected[boundedintegers] def trySubstitute(
