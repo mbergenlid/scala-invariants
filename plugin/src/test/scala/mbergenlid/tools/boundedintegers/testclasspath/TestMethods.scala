@@ -14,6 +14,7 @@ object TestMethods {
                   @LessThanOrEqual(10) a: Int) = a == 3
 
   def upperBoundMethod(@LessThanOrEqual(10)a: Int) = a == 1
+  def lowerBoundMethod(@GreaterThanOrEqual(0)a: Int) = a == 1
   
   @GreaterThanOrEqual(0)
   def randomInteger = 4
@@ -34,11 +35,13 @@ object TestMethods {
   @Property("length", Equal(5))
   def fiveCharacterString = "12345"
 
+  @Property("length", Equal(5))
+  def arrayOfLength5 = new SafeArray(5)
+
   class SafeArray(@GreaterThanOrEqual(0) val length: Int) {
 
     val backingArray: Array[Int] = new Array(length)
     def apply( @GreaterThanOrEqual(0)
                @LessThan(length) index: Int): Int = backingArray(index)
   }
-
 }

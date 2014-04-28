@@ -31,7 +31,9 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           for(sc <- BoundsFactory.apply(symbol, symbol.typeSignature)) yield replaceThisSymbols(sc)
 
         val boundExpr = checkBounds(context)(expr)
-        val exprConstraints = Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+        val exprConstraints =
+          Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+
         val assignee =
           exprConstraints && Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
         if(!(assignee obviouslySubsetOf target))

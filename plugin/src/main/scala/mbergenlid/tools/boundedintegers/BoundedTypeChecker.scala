@@ -117,6 +117,9 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
     }
 
     def apply(symbol: RealSymbolType): Constraint = {
+      def isStable(symbol: RealSymbolType) = symbol.asTerm.isVal ||
+          (symbol.asTerm.isGetter && symbol.asTerm.accessed.asTerm.isVal)
+
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
           val (t@Literal(Constant(prop: String))) :: annotations = a.scalaArgs
@@ -125,6 +128,13 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
           if(memberSymbol == NoSymbol)
             throw new CompilationError(
               Error(t.pos, s"Can not find property ${prop} in type ${symbol.typeSignature}"))
+
+//
+//          if(!isStable(memberSymbol) &&
+//             memberSymbol != typeOf[String].member(newTermName("length")))
+//            throw new CompilationError(
+//              Error(t.pos, s"Can not be bound to property ${prop} in type ${symbol.typeSignature} as " +
+//                s"it is not stable."))
 
           if(annotations.isEmpty)
             throw new CompilationError(

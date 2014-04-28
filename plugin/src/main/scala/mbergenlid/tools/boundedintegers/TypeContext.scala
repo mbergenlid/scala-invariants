@@ -68,7 +68,8 @@ trait TypeContext { self: BoundedTypeTrees =>
     def getConstraint(symbol: SymbolType, resultType: TypeType, context: Context): Constraint = {
       val f = expressionForType(resultType)
       val constraint =
-        And.combine(createConstraintFromSymbol(symbol), context.get(symbol)).map { sc =>
+        (if(symbol.isStable) createConstraintFromSymbol(symbol) && context.get(symbol)
+         else createConstraintFromSymbol(symbol)).map { sc =>
           f.convertExpression(sc.v)
         }
       for {
@@ -158,11 +159,19 @@ trait TypeContext { self: BoundedTypeTrees =>
       val c = getConstraint(symbol, resultType, context) &&
         translatePropertyConstraints(symbol, resultType, context)
       val f = expressionForType(resultType)
-      if(!c.lowerBound.exists(_.v.isConstant))
-        c && GreaterThanOrEqual(f.MinValue)
-      else
-        c
+      (
+        if(!c.lowerBound.exists(_.v.isConstant))
+          c && GreaterThanOrEqual(f.MinValue)
+        else
+          c
+      ) && (
+        if(!c.upperBound.exists(_.v.isConstant))
+          c && LessThanOrEqual(f.MaxValue)
+        else
+          c
+      )
     }
+
     private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
       val c = context.get(symbol.tail)
       val cList = for {

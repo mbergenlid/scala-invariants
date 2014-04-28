@@ -306,7 +306,11 @@ trait Expressions {
 
 
     def *(that: ConstantValue): ConstantValue = withConcreteType(that) { thatValue =>
-      ConstantValue(num.times(value, thatValue))
+      try {
+        ConstantValue(num.tryTimes(value, thatValue))
+      } catch {
+        case a: ArithmeticException => ConstantValue.overflow[T]
+      }
     }
 
     def increment =

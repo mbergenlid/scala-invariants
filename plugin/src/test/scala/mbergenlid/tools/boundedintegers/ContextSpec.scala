@@ -13,6 +13,8 @@ class ContextSpec extends FunSuite
   def createConstraintFromSymbol(symbol: SymbolType) =
     NoConstraints
 
+  val OverflowConstant = Polynomial(Set(Term(ConstantValue.overflow[Int], Map.empty)))
+
   def expressionForType = {
     case TypeRef(_, IntSymbol, Nil) =>
       new ExpressionFactory[Int](typeOf[Int])
@@ -52,7 +54,7 @@ class ContextSpec extends FunSuite
     ))
 
     val xBounds = Context.getConstraint("x", typeOf[Int], c)
-    assert(xBounds === originalXBound)
+    assert(xBounds.asInstanceOf[And].left === originalXBound)
   }
 
   contextTest(
