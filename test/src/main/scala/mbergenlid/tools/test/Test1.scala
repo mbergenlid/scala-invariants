@@ -1,6 +1,6 @@
 package mbergenlid.tools.test
 
-import mbergenlid.tools.boundedintegers.annotations.{LessThan, GreaterThanOrEqual}
+import mbergenlid.tools.boundedintegers.annotations.{Equal, LessThan, GreaterThanOrEqual}
 
 object Test1 {
 
@@ -10,5 +10,6 @@ object Test1 {
               @LessThan(length) index: Int) = backingArray(index)
   }
 
-  new SafeArray(-2)
+  @GreaterThanOrEqual(0)
+  def testMethod(n: Int) = math.abs(n)
 }

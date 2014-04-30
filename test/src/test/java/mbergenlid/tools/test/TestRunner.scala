@@ -1,6 +1,8 @@
 package mbergenlid.tools.test
 
 import org.scalatest.FunSuite
+import mbergenlid.tools.test.utils.PropertyRunner
+
 
 class TestRunner extends FunSuite {
 
@@ -8,18 +10,19 @@ class TestRunner extends FunSuite {
   val Plugin = "../tmp/plugin.jar"
 
   test("First test") {
-    println(System.getenv("SCALA_HOME"))
-    println(System.getProperty("java.class.path"))
-    compile("src/main/scala/mbergenlid/tools/test/Test1.scala")
+    val result = compile("src/main/resources/test/Test2.scala")
+
+    assert(result == 0, "Expected source to compile")
+    PropertyRunner.execute("test.Test2")
   }
 
-  def compile(file: String) {
+  def compile(file: String) = {
     import scala.sys.process._
 
-    val cwd = Seq(Scalac,
+    Seq(Scalac,
       "-cp",
       System.getProperty("java.class.path"),
-      s"-Xplugin:$Plugin", file).!
-    println(cwd)
+      s"-Xplugin:$Plugin",
+      "-d", "/home/marcus/work/plugin/test/target/scala-2.10/classes/", file).!
   }
 }
