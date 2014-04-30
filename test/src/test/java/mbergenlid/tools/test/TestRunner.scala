@@ -11,12 +11,6 @@ class TestRunner extends FunSuite {
   val Plugin = "../tmp/plugin.jar"
 
   registerTests()
-//  test("First test") {
-//    val result = compile("src/main/resources/test/Test2.scala")
-//
-//    assert(result == 0, "Expected source to compile")
-//    PropertyRunner.execute("test.Test2")
-//  }
 
   private def registerTests() {
     val testDir = this.getClass.getClassLoader.getResource("test")
