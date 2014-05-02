@@ -13,7 +13,7 @@ class ContextSpec extends FunSuite
   def createConstraintFromSymbol(symbol: SymbolType) =
     NoConstraints
 
-  val OverflowConstant = Polynomial(Set(Term(ConstantValue.overflow[Int], Map.empty)))
+  val OverflowConstant = Polynomial(Set(Term(TypedConstantValue[Int](BigDecimal(Int.MaxValue+1)), Map.empty)))
 
   def expressionForType = {
     case TypeRef(_, IntSymbol, Nil) =>

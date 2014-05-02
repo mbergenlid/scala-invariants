@@ -275,99 +275,71 @@ trait Expressions {
     type T
     implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
-    protected def value: T
+    protected def value: BigDecimal
     def tpe: TypeType = typeInfo.tpe
 
-    def isNaN = false
 
     def convertTo[U: RichNumeric: TypeTag] =
-      ConstantValue(implicitly[RichNumeric[U]].fromType[T](value))
+      TypedConstantValue[U](value)
 
-    def zero = TypedConstantValue(num.zero)
-    def one = TypedConstantValue(num.one)
-    def isOne = value == num.one
-    def isZero = value == num.zero
-    def isGreaterThanZero = num.gt(value, num.zero)
-    def isLessThanZero = num.lt(value, num.zero)
+    def zero = ConstantValue(num.zero)
+    def one = ConstantValue(num.one)
+    def isOne = value == BigDecimal(1)
+    def isZero = value == BigDecimal(0)
+    def isGreaterThanZero = value > 0
+    def isLessThanZero = value < 0
 
-    def unary_- = ConstantValue(
-      if(value == num.minValue) num.maxValue
-      else if(value == num.maxValue) num.negate(value)
-      else num.negate(value)
-    )
+    def unary_- : ConstantValue = TypedConstantValue(-value)
 
-    def +(that: ConstantValue) = withConcreteType(that) { thatValue =>
-      if(num.gt(thatValue, num.zero) && num.gt(value, num.minus(num.maxValue, thatValue)))
-        ConstantValue.overflow[T]
-      else if(num.lt(thatValue, num.zero) && num.lt(value, num.minus(num.minValue, thatValue)))
-        ConstantValue.underflow[T]
-      else ConstantValue(num.plus(value, thatValue))
+    lazy val MinValue = num.toBigDecimal(num.minValue)
+    lazy val MaxValue = num.toBigDecimal(num.maxValue)
+
+    def +(that: ConstantValue) = {
+        assertSameType(that)
+        val newValue = value + that.value
+        TypedConstantValue(newValue)
     }
 
-
-    def *(that: ConstantValue): ConstantValue = withConcreteType(that) { thatValue =>
-      try {
-        ConstantValue(num.tryTimes(value, thatValue))
-      } catch {
-        case a: ArithmeticException => ConstantValue.overflow[T]
-      }
+    def *(that: ConstantValue): ConstantValue = {
+        assertSameType(that)
+        val newValue = value*that.value
+        TypedConstantValue(newValue)
     }
 
     def increment =
-      if(num.isInstanceOf[Integral[_]] && num.lt(value, num.maxValue))
-        ConstantValue(num.plus(value, num.one))
+      if(num.isInstanceOf[Integral[_]] && value < MaxValue)
+        TypedConstantValue(value + 1)
       else
         this
 
     def decrement =
-      if(num.isInstanceOf[Integral[_]] && num.gt(value, num.minValue))
-        ConstantValue(num.minus(value, num.one))
+      if(num.isInstanceOf[Integral[_]] && value > MinValue)
+        TypedConstantValue(value - 1)
       else
         this
 
-    override def compare(other: ConstantValue) = withConcreteType(other) { v =>
-      num.compare(value, v)
-    }
-    override def toString = value.toString
+    override def compare(other: ConstantValue) =
+        value.compare(other.value)
+
+    override def toString = value.toString()
     def substitute(symbol: SymbolType, expr: Expression) = this
 
-    private def withConcreteType[U](const: ConstantValue)(f: T => U): U = {
+    def isNaN =
+        value > MaxValue || value < MinValue
+
+    private def assertSameType(const: ConstantValue): Unit = {
         assert(const.typeInfo == typeInfo, s"Type Mismatch in Expression: ${const.typeInfo} vs $typeInfo")
-      val thatValue = const.value.asInstanceOf[T]
-      f(thatValue)
     }
   }
 
   object ConstantValue {
     def apply[U: RichNumeric : TypeTag](value: U): ConstantValue =
-      TypedConstantValue[U](value)
+      TypedConstantValue[U](implicitly[RichNumeric[U]].toBigDecimal(value))
 
-    def overflow[U: RichNumeric : TypeTag] =
-      new OverflowConstant[U]
-
-    def underflow[U: RichNumeric : TypeTag] =
-      new UnderflowConstant[U]
   }
 
-  class OverflowConstant[U](implicit val num: RichNumeric[U],
-                            protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
-    override protected val value = implicitly[RichNumeric[T]].maxValue
-    override type T = U
-    override def toString = "Overflow"
-    override def isNaN = true
-    override def unary_- = this
-  }
 
-  class UnderflowConstant[U](implicit val num: RichNumeric[U],
-                            protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
-    override protected val value = implicitly[RichNumeric[T]].minValue
-    override type T = U
-    override def toString = "Underflow"
-    override def isNaN = true
-    override def unary_- = this
-  }
-
-  case class TypedConstantValue[U](protected val value: U)
+  case class TypedConstantValue[U]( protected val value: BigDecimal)
                                   (implicit ev1: RichNumeric[U],
                                    protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
     type T = U
@@ -376,5 +348,6 @@ trait Expressions {
 
   implicit object ConstantValueOrdering extends Ordering[ConstantValue] {
     override def compare(x: ConstantValue, y: ConstantValue): Int = x.compare(y)
+
   }
 }
