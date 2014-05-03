@@ -193,4 +193,16 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |}
       """.stripMargin)(List(3, 14))
   }
+
+  test("Random test") {
+    val bounds = expression(
+      """
+        |@LessThan(0)
+        |val n = anotherRandomInteger
+        |
+        |0-n
+      """.stripMargin)
+
+    println(bounds.constraint.prettyPrint())
+  }
 }

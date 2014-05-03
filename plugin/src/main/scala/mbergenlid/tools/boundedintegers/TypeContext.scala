@@ -245,13 +245,13 @@ trait TypeContext { self: BoundedTypeTrees =>
       case (LessThan(_), GreaterThanOrEqual(_)) =>
         Some(LessThan.apply)
       case (LessThan(_), Equal(_)) =>
-        Some(LessThan.apply)
+        Some(GreaterThan.apply)
       case (GreaterThan(_), LessThan(_)) =>
         Some(GreaterThan.apply)
       case (GreaterThan(_), LessThanOrEqual(_)) =>
         Some(GreaterThan.apply)
       case (GreaterThan(_), Equal(_)) =>
-        Some(GreaterThan.apply)
+        Some(LessThan.apply)
 
       case (GreaterThanOrEqual(_), LessThan(_)) =>
         Some(GreaterThan.apply)

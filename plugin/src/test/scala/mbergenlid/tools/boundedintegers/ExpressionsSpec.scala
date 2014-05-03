@@ -90,4 +90,32 @@ class ExpressionsSpec extends FunSuite
     assert(e1+e2 === Polynomial(Set(t(2, "x"), t(4, "y"))))
   }
 
+  test("Substitute 0-n => 0-Int.MinValue") {
+    val e1 = Polynomial(Set(t(-1, "n")))
+    val e2 = Polynomial.fromConstant(Int.MinValue)
+
+    val result = e1.substitute("n", e2)
+    assert(result.isNaN)
+  }
+
+  test("Constant comparison") {
+    assert(Polynomial.fromConstant(Int.MinValue) < Polynomial.fromConstant(0))
+    assert(Polynomial.fromConstant(0) > Polynomial.fromConstant(Int.MinValue+1))
+    assert(!(Polynomial.fromConstant(0) < Polynomial.fromConstant(Int.MinValue)))
+    assert(Polynomial.fromConstant(0) > Polynomial.fromConstant(Int.MinValue))
+  }
+
+  test("Comparison with Int.MinValue") {
+    val diff1 = Polynomial(Set(t(1, "x"))) -
+      Polynomial(Set(t(1, "x"), t(Int.MinValue)))
+
+    //x - (-10 + x) = 10
+    //x - (x - 10) = 10
+    val diff2 = Polynomial(Set(t(1, "x"))) -
+      Polynomial(Set(t(Int.MinValue), t(1, "x")))
+
+    assert(diff1.isNaN)
+    assert(diff2.isNaN)
+//    assert()
+  }
 }

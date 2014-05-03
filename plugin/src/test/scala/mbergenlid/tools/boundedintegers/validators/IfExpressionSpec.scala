@@ -145,6 +145,7 @@ class IfExpressionSpec extends PluginTestRunner {
     assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
   }
 
+
   test("Result of if expression with Block") {
     val bounds = expression(
       """
@@ -156,6 +157,31 @@ class IfExpressionSpec extends PluginTestRunner {
         |} else -1
       """.stripMargin)
 
+    println(bounds.constraint.prettyPrint())
     assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
+  }
+
+  /**
+   * (
+   *  (
+   *    (If == 0 + -n) && ((If <= 2147483647) && (If >= -2147483647))
+   *  ) && (If < 0)
+   *
+   *  ||
+   *
+   *  (
+   *    (If == n) && ((If >= -2147483648) && (If <= 2147483647))
+   *  ) && ( (If >= 0) && (If <= 2147483647) )
+   *
+   * )
+   */
+  test("Return if expression from method") {
+    compile(
+      """
+        |@GreaterThanOrEqual(0)
+        |def abs(n: Int) = if(n < 0) 0-n else n
+        |
+        |true
+      """.stripMargin)(Nil)
   }
 }

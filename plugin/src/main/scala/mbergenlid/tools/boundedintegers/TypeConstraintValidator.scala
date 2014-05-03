@@ -77,8 +77,8 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
                                  (context: Context): String = {
       val targetName = targetSymbol.name
       val assigneeName = assignee.symbol match {
-        case NoSymbol => assignee.toString()
-        case null => assignee.toString()
+        case NoSymbol => assignee.getClass.getSimpleName
+        case null => assignee.getClass.getSimpleName
         case _ => assignee.symbol.name.toString
       }
       s"""

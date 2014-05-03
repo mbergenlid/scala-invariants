@@ -22,8 +22,11 @@ trait BoundedTypeTrees extends Expressions {
         (this obviouslySubsetOf left) &&
         (this obviouslySubsetOf right)
       case NoConstraints => true
+      case ImpossibleConstraint => false
       case _ => false
     }
+    def definitelyNotSubsetOf(that: Constraint): Boolean = false
+
     def unary_! : Constraint
     def prettyPrint(variable: String = "_"): String = this.toString
 
@@ -38,8 +41,20 @@ trait BoundedTypeTrees extends Expressions {
 
     def flatMap(f: SimpleConstraint => Constraint): Constraint
 
-    def &&(other: Constraint) = And.combine(this, other)
-    def ||(other: Constraint) = Or.combine(this, other)
+    def &&(other: Constraint) =
+      if(this obviouslySubsetOf other) this
+      else if(other obviouslySubsetOf this) other
+      else if(this definitelyNotSubsetOf other)
+        ImpossibleConstraint
+      else And(this, other)
+
+    def ||(other: Constraint) =
+      if(this obviouslySubsetOf other) other
+      else if(other obviouslySubsetOf this) this
+      else if(other == ImpossibleConstraint) this
+      else Or(this, other)
+
+    def tryAnd(other: Constraint): Option[Constraint] = None
 
     lazy val propertyConstraints = new PropertyConstraintTraversable(this)
   }
@@ -62,6 +77,7 @@ trait BoundedTypeTrees extends Expressions {
     def foreach[U](f: SimpleConstraint => U): Unit = {
       def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
         case NoConstraints =>
+        case ImpossibleConstraint =>
         case s: SimpleConstraint => f(s)
         case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
         case PropertyConstraint(_, constraint) => foreach(f, constraint)
@@ -74,6 +90,7 @@ trait BoundedTypeTrees extends Expressions {
     def foreach[U](f: PropertyConstraint => U): Unit = {
       def foreach(f: PropertyConstraint => U, c: Constraint): Unit = c match {
         case NoConstraints =>
+        case ImpossibleConstraint =>
         case s: SimpleConstraint =>
         case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
         case p @ PropertyConstraint(_, constraint) => f(p); foreach(f, constraint)
@@ -105,6 +122,20 @@ trait BoundedTypeTrees extends Expressions {
     def flatMap(f: SimpleConstraint => Constraint) = this
   }
 
+  case object ImpossibleConstraint extends Constraint {
+    override def obviouslySubsetOf(that: Constraint) = false
+
+    def flatMap(f: SimpleConstraint => Constraint) = this
+    def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
+
+    def isSymbolConstraint = false
+    def lowerBoundInclusive = this
+    def upperBoundInclusive = this
+    def lowerBound = this
+    def upperBound = this
+    def unary_! = this
+  }
+
   trait SimpleConstraint extends Constraint {
     def v: Expression
     def foreach[U](f: Constraint => U): Unit = {
@@ -117,6 +148,11 @@ trait BoundedTypeTrees extends Expressions {
       bf(f(this), this)
 
     def flatMap(f: SimpleConstraint => Constraint) = f(this)
+
+    override def tryAnd(other: Constraint) =
+      if(this obviouslySubsetOf other) Some(this)
+      else if(other obviouslySubsetOf this) Some(other)
+      else None
   }
 
   object SimpleConstraint {
@@ -138,6 +174,13 @@ trait BoundedTypeTrees extends Expressions {
         v.decrement <= v2
       case _ => super.obviouslySubsetOf(that)
     }
+
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case GreaterThan(v2) => v2 >= v
+      case GreaterThanOrEqual(v2) =>
+        v.decrement < v2
+      case _ => super.obviouslySubsetOf(that)
+    }
     
     def unary_! = GreaterThanOrEqual(v)
 
@@ -151,7 +194,6 @@ trait BoundedTypeTrees extends Expressions {
 
     def map(f: SimpleConstraint => Expression) =
       LessThan(f(this))
-
   }
   /**
    * <= x
@@ -190,6 +232,12 @@ trait BoundedTypeTrees extends Expressions {
     override def obviouslySubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 <= v
       case GreaterThanOrEqual(v2) => v2.decrement <= v
+      case _ => super.obviouslySubsetOf(that)
+    }
+
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case LessThan(v2) => v2 <= v
+      case LessThanOrEqual(v2) => v2 <= v
       case _ => super.obviouslySubsetOf(that)
     }
 
@@ -287,22 +335,31 @@ trait BoundedTypeTrees extends Expressions {
     //!a || !b
     def unary_! = Or(!left, !right)
 
-    def combine(c1: Constraint, c2: Constraint) = And.combine(c1, c2)
+    def combine(c1: Constraint, c2: Constraint) = c1 && c2
 
     override def prettyPrint(variable: String = "_") =
-      s"${prettyPrint(left, variable)} && ${prettyPrint(right, variable)}"
+      s"(${prettyPrint(left, variable)}) && (${prettyPrint(right, variable)})"
 
     def prettyPrint(child: Constraint, variable: String) = child match {
       case Or(_, _) => s"(${child.prettyPrint(variable)})"
       case _ => child.prettyPrint(variable)
     }
+
+    override def &&(constraint: Constraint): Constraint = {
+      left.tryAnd(constraint).map { c =>
+        And(c, right)
+      }.orElse(right.tryAnd(constraint).map {c =>
+        And(left, c)
+      }).getOrElse(And(this, constraint))
+    }
+
+    override def tryAnd(other: Constraint) =
+      left.tryAnd(other).orElse(right.tryAnd(other))
   }
 
   object And {
     def combine(c1: Constraint, c2: Constraint) =
-      if(c1 obviouslySubsetOf c2) c1
-      else if(c2 obviouslySubsetOf c1) c2
-      else And(c1, c2)
+      c1 && c2
   }
 
   case class Or(left: Constraint, right: Constraint) extends ComplexConstraint {
@@ -315,13 +372,14 @@ trait BoundedTypeTrees extends Expressions {
 
     override def prettyPrint(variable: String = "_") =
       s"${left.prettyPrint(variable)} || ${right.prettyPrint(variable)}"
+
+    override def &&(other: Constraint) =
+      Or.combine(left && other, right && other)
   }
 
   object Or {
     def combine(c1: Constraint, c2: Constraint) =
-      if(c1 obviouslySubsetOf c2) c2
-      else if(c2 obviouslySubsetOf c1) c1
-      else Or(c1, c2)
+      c1 || c2
   }
 
   case class PropertyConstraint(symbol: RealSymbolType, constraint: Constraint) extends Constraint {

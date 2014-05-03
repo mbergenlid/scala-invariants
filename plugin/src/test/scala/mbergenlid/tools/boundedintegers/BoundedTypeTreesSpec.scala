@@ -15,12 +15,16 @@ class BoundedTypeTreesSpec extends FunSuite
   val y = 0
 
   implicit def intToConstant(v: Int) = ConstantValue(v)
+  implicit def intToExpresion(v: Int): Expression = Polynomial.fromConstant(v)
   implicit def stringToSymbol(s: String): SymbolType =
     SymbolChain(List(typeOf[this.type].termSymbol.
       newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL )))
 
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))
+
+  implicit def c(s: String): Constraint =
+    parser.parseExpression(s).get
 
   val parser = new ExprParser
 
@@ -44,6 +48,55 @@ class BoundedTypeTreesSpec extends FunSuite
     assert(!(x < x), s"!($x < $x)")
     assert(x <= x, s"!($x <= $x)")
     assert(!(x <= y), s"!($x <= $y)")
+  }
+
+  /**
+   * < 10 && ( > 0 && < y ) && < -5
+   */
+  test("Test simplification") {
+    val and = c("x < 10 && (x > 0 && x < y)")
+
+    val res = and && LessThan(15)
+    assert(!res.exists(_ == LessThan(15)), res.prettyPrint())
+
+    val res2 = and && LessThan(5)
+    assert(res2.exists(_ == LessThan(5)), res2.prettyPrint())
+    assert(!res2.exists(_ == LessThan(10)), res2.prettyPrint())
+
+    val res3 = and && GreaterThan(-5)
+    assert(!res3.exists(_ == GreaterThan(-5)), res3.prettyPrint())
+
+    val res4 = and && GreaterThan(5)
+    assert(!res4.exists(_ == GreaterThan(0)), res4.prettyPrint())
+    assert(res4.exists(_ == GreaterThan(5)), res4.prettyPrint())
+  }
+
+  test("Simplification 2") {
+
+  }
+
+
+  /**
+   * ((<10 && >0) || >20) && <15
+   * ((<10 && >0) || >20) && >25
+   */
+  test("Simplification with Or") {
+    val or = Or(
+      And(LessThan(Polynomial.fromConstant(10)),
+      GreaterThan(Polynomial.fromConstant(0))),
+      GreaterThan(20))
+
+    val res = or && LessThan(15)
+    assert(!res.exists(_ == LessThan(15)), res.prettyPrint())
+    assert(res.exists(_ == LessThan(10)), res.prettyPrint())
+
+    val res2 = or && GreaterThan(25)
+    assert(res2.exists(_ == GreaterThan(25)), res2.prettyPrint())
+    assert(!res2.exists(_ == LessThan(10)), res2.prettyPrint())
+
+    val res3 = or && LessThan(25)
+    assert(res3 === c("(x < 10 && x > 0) || (x > 20 && x < 25)"))
+
   }
 
   assertConstraint("x > 0 <!< x <= 10")
