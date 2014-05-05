@@ -13,6 +13,58 @@ class IfExpressionSpec extends PluginTestRunner {
           """.stripMargin)(Nil)
   }
 
+  /**
+   *
+   *And(
+   *  Equal(x),
+   *  Or(
+   *    And(
+   *      And(
+   *        And(
+   *          And(
+   *            GreaterThanOrEqual(11),
+   *            And(
+   *              GreaterThanOrEqual(-2147483648),
+   *              LessThanOrEqual(-1)
+   *            )
+   *          ),
+   *          And(
+   *            Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger),
+   *            And(
+   *              GreaterThanOrEqual(-2147483648),
+   *              LessThanOrEqual(2147483647)
+   *            )
+   *          )
+   *        ),
+   *        Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger)
+   *      ),
+   *      Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger)
+   *    ),
+   *    And(
+   *      And(
+   *        And(
+   *          And(
+   *            GreaterThanOrEqual(11),
+   *            And(
+   *              GreaterThanOrEqual(-2147483648),
+   *              LessThanOrEqual(-1)
+   *            )
+   *          ),
+   *          And(
+   *            Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger),
+   *            And(
+   *              GreaterThanOrEqual(11),
+   *              LessThanOrEqual(2147483647)
+   *            )
+   *          )
+   *        ),
+   *        Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger)
+   *      ),
+   *      Equal(mbergenlid.tools.boundedintegers.testclasspath.TestMethods.anotherRandomInteger)
+   *    )
+   *  )
+   *)
+   */
   test("Test more complicated if expression") {
     compile("""
           |val x = anotherRandomInteger
@@ -129,7 +181,7 @@ class IfExpressionSpec extends PluginTestRunner {
         |  testMethod(x)  //error
         |
         |if(x + intBetween0And5 == 10)
-        |  testMethod(x)
+        |  testMethod(x)cut
       """.stripMargin)(List(6))
   }
 
@@ -145,6 +197,20 @@ class IfExpressionSpec extends PluginTestRunner {
     assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
   }
 
+  test("Result of negative if expression") {
+    val bounds = expression(
+      """
+        |val x = anotherRandomInteger
+        |val y = randomInteger
+        |
+        |if(x == 0) y - x
+        |else -1
+      """.stripMargin)
+
+    import cut._
+    assertThat(bounds.constraint).definiteSubsetOf(Or(GreaterThanOrEqual(0), Equal(-1)))
+  }
+
 
   test("Result of if expression with Block") {
     val bounds = expression(
@@ -152,12 +218,9 @@ class IfExpressionSpec extends PluginTestRunner {
         |val x = anotherRandomInteger
         |
         |if(x > 0) {
-        |  val y = x
-        |  y + 10
         |} else -1
       """.stripMargin)
 
-    println(bounds.constraint.prettyPrint())
     assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.GreaterThan(10), cut.Equal(-1)))
   }
 
@@ -179,9 +242,11 @@ class IfExpressionSpec extends PluginTestRunner {
     compile(
       """
         |@GreaterThanOrEqual(0)
-        |def abs(n: Int) = if(n < 0) 0-n else n
+        |def abs1(n: Int) = if(n < 0) 0-n else n
         |
+        |@GreaterThanOrEqual(0)
+        |def abs2(@GreaterThan(Int.MinValue)n: Int) = if(n < 0) 0-n else n
         |true
-      """.stripMargin)(Nil)
+      """.stripMargin)(List(3))
   }
 }

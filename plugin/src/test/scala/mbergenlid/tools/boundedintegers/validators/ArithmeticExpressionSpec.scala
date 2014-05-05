@@ -19,7 +19,7 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
             """.stripMargin)(List(10))
   }
 
-  test("Subtract constant to symbol") {
+  test("Subtract constant from symbol") {
     compile("""
               |@GreaterThanOrEqual(0)
               |@LessThanOrEqual(5)

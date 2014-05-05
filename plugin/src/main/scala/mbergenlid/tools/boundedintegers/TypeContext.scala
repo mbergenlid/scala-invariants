@@ -245,32 +245,38 @@ trait TypeContext { self: BoundedTypeTrees =>
       case (LessThan(_), GreaterThanOrEqual(_)) =>
         Some(LessThan.apply)
       case (LessThan(_), Equal(_)) =>
-        Some(GreaterThan.apply)
+        Some(LessThan.apply)
       case (GreaterThan(_), LessThan(_)) =>
         Some(GreaterThan.apply)
       case (GreaterThan(_), LessThanOrEqual(_)) =>
         Some(GreaterThan.apply)
       case (GreaterThan(_), Equal(_)) =>
-        Some(LessThan.apply)
+        Some(GreaterThan.apply)
 
       case (GreaterThanOrEqual(_), LessThan(_)) =>
         Some(GreaterThan.apply)
       case (GreaterThanOrEqual(_), LessThanOrEqual(_)) =>
         Some(GreaterThanOrEqual.apply)
       case (GreaterThanOrEqual(_), Equal(_)) =>
-        Some(LessThanOrEqual.apply)
+        Some(GreaterThanOrEqual.apply)
       case (LessThanOrEqual(_), GreaterThan(_)) =>
         Some(LessThan.apply)
       case (LessThanOrEqual(_), GreaterThanOrEqual(_)) =>
         Some(LessThanOrEqual.apply)
       case (LessThanOrEqual(_), Equal(_)) =>
-        Some(GreaterThanOrEqual.apply)
+        Some(LessThanOrEqual.apply)
 
-      case (Equal(_), _) =>
-        if(boundedBy.isInstanceOf[Equal])
-          Some(Equal.apply)
-        else
-          createNegativeBoundConstraint(boundedBy, base)
+      case (Equal(_), Equal(_)) =>
+        Some(Equal.apply)
+      case (Equal(_), LessThan(_)) =>
+        Some(GreaterThan.apply)
+      case (Equal(_), LessThanOrEqual(_)) =>
+        Some(GreaterThanOrEqual.apply)
+      case (Equal(_), GreaterThan(_)) =>
+        Some(LessThan.apply)
+      case (Equal(_), GreaterThanOrEqual(_)) =>
+        Some(LessThanOrEqual.apply)
+
       case _ => None
     }
   }

@@ -14,11 +14,20 @@ class BoundedTypeTreesSpec extends FunSuite
   val x = 0
   val y = 0
 
+  var symbolCache = Map[String, SymbolType]()
+
+  implicit def stringToSymbol(s: String): SymbolType = {
+    if(!symbolCache.contains(s)) {
+      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
+    }
+    symbolCache(s)
+  }
+
+  implicit def bigIntToExpression(v: BigDecimal): Expression =
+    Polynomial(Set(Term(TypedConstantValue[Int](v), Map.empty)))
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def intToExpresion(v: Int): Expression = Polynomial.fromConstant(v)
-  implicit def stringToSymbol(s: String): SymbolType =
-    SymbolChain(List(typeOf[this.type].termSymbol.
-      newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL )))
 
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))
@@ -72,7 +81,26 @@ class BoundedTypeTreesSpec extends FunSuite
   }
 
   test("Simplification 2") {
+    val and = c("x < 10 && x > 0")
 
+    val res = and && c("x < 15 && x > 1")
+    assert(res == c("x < 10 && x > 1"), res.prettyPrint())
+
+    val res2 = c("x < 15 && x > 1") && and
+    assert(res2 == c("x < 10 && x > 1"), res2.prettyPrint())
+
+    val res3 = c("x < 10 && (x > 0 && x > y)") && c("x < 15 && x > 1")
+    assert(res3 == c("x < 10 && (x > 1 && x > y)"), res3.prettyPrint())
+
+    val res4 = c("(x < 10 && x > y) && x > 0") && c("x < 15 && x > 1")
+    assert(res4 == c("(x < 10 && x > y) && x > 1"), res4.prettyPrint())
+
+    val res5 = c("x > y && (x < 10 && x > 0)") && c("x < 15 && x > 1")
+    assert(res5 == c("x > y && (x < 10 && x > 1)"), res5.prettyPrint())
+
+//    assert("x < 2147483648".obviouslySubsetOf("x < 2147483648"))
+//    val res6 = c("x == n && (x < 2147483648 && x > 0)") && c("x < 2147483648 && x >= -2147483647")
+//    assert(res6 == c("x == n && (x < 2147483648 && x > 0)"), res6.prettyPrint())
   }
 
 
@@ -96,7 +124,15 @@ class BoundedTypeTreesSpec extends FunSuite
 
     val res3 = or && LessThan(25)
     assert(res3 === c("(x < 10 && x > 0) || (x > 20 && x < 25)"))
+  }
 
+  test("ASDsad") {
+
+     val and = And(
+           GreaterThanOrEqual(11),
+           LessThanOrEqual(-1)
+        )
+     assert(!and.obviouslySubsetOf("x <= 10 && x >= 0"))
   }
 
   assertConstraint("x > 0 <!< x <= 10")
@@ -162,7 +198,7 @@ class BoundedTypeTreesSpec extends FunSuite
 
 
     def value: Parser[Expression] =
-      (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => Polynomial.fromConstant(x.toInt)} )
+      (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => bigIntToExpression(BigDecimal(x))} )
 
   }
 

@@ -37,7 +37,10 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
       val newConstraint = for {
         sc1 <- lhs.constraint
         sc2 <- rhs.constraint
-        f <- Context.createBoundConstraint(sc1, sc2)
+        f <-  if(method == n("$minus"))
+                Context.createNegativeBoundConstraint(sc1, sc2)
+              else
+                Context.createBoundConstraint(sc1, sc2)
       } yield {
          val c = f(operators(method).apply(sc1.v, sc2.v))
          c
@@ -59,6 +62,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
         exp2 <- rhs.expression
       } yield operators(method).apply(exp1, exp2)
       BoundedType(expression, newConstraint)
+
   }
 
   private def definedForOperator(op: Name, tpe: TypeType) =

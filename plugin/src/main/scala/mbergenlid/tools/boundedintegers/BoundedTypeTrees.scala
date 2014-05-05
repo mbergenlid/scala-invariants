@@ -54,7 +54,7 @@ trait BoundedTypeTrees extends Expressions {
       else if(other == ImpossibleConstraint) this
       else Or(this, other)
 
-    def tryAnd(other: Constraint): Option[Constraint] = None
+    def tryAnd(other: Constraint): Option[(Constraint, Constraint)] = None
 
     lazy val propertyConstraints = new PropertyConstraintTraversable(this)
   }
@@ -149,10 +149,19 @@ trait BoundedTypeTrees extends Expressions {
 
     def flatMap(f: SimpleConstraint => Constraint) = f(this)
 
-    override def tryAnd(other: Constraint) =
-      if(this obviouslySubsetOf other) Some(this)
-      else if(other obviouslySubsetOf this) Some(other)
-      else None
+    override def tryAnd(other: Constraint) = other match {
+      case cc:ComplexConstraint =>
+        cc.left.tryAnd(this).map { case (c, rest) =>
+          (c, cc.right)
+        }.orElse(cc.right.tryAnd(this).map { case (c, rest) =>
+          (c, cc.left)
+        })
+      case _ =>
+        if(this obviouslySubsetOf other) Some(this, NoConstraints)
+        else if(other obviouslySubsetOf this) Some(other, NoConstraints)
+        else None
+    }
+
   }
 
   object SimpleConstraint {
@@ -208,6 +217,8 @@ trait BoundedTypeTrees extends Expressions {
       case LessThanOrEqual(v2) => v2 >= v
       case _ => super.obviouslySubsetOf(that)
     }
+
+//    override def definitelyNotSubsetOf(that: Constraint)
 
     def unary_! = GreaterThan(v)
 
@@ -335,7 +346,7 @@ trait BoundedTypeTrees extends Expressions {
     //!a || !b
     def unary_! = Or(!left, !right)
 
-    def combine(c1: Constraint, c2: Constraint) = c1 && c2
+    def combine(c1: Constraint, c2: Constraint) = And.combine(c1, c2)
 
     override def prettyPrint(variable: String = "_") =
       s"(${prettyPrint(left, variable)}) && (${prettyPrint(right, variable)})"
@@ -346,15 +357,20 @@ trait BoundedTypeTrees extends Expressions {
     }
 
     override def &&(constraint: Constraint): Constraint = {
-      left.tryAnd(constraint).map { c =>
-        And(c, right)
-      }.orElse(right.tryAnd(constraint).map {c =>
-        And(left, c)
-      }).getOrElse(And(this, constraint))
+      tryAnd(constraint).map { case (c, rest) =>
+        if(rest != NoConstraints) And(c, rest)
+        else c
+      }.getOrElse(And(this, constraint))
     }
 
     override def tryAnd(other: Constraint) =
-      left.tryAnd(other).orElse(right.tryAnd(other))
+      left.tryAnd(other).map { case (c, rest) =>
+        right.tryAnd(rest).map { case (c1, rest1) =>
+          (And(c, c1), rest1)
+        }.getOrElse((And(c, right), rest))
+      }.orElse(right.tryAnd(other).map { case (c, rest) =>
+        (And(left, c), rest)
+      })
   }
 
   object And {

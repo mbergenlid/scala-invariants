@@ -203,6 +203,7 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |0-n
       """.stripMargin)
 
-    println(bounds.constraint.prettyPrint())
+//    println(bounds.constraint.prettyPrint())
   }
+
 }
