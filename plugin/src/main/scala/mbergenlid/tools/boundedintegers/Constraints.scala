@@ -22,6 +22,7 @@ trait Constraints extends Expressions {
       case NoConstraints => true
       case _ => false
     }
+
     def unary_! : Constraint
     def prettyPrint(variable: String = "_"): String = this.toString
 
@@ -99,6 +100,7 @@ trait Constraints extends Expressions {
       f(this)
     }
 
+    def definitelyNotSubsetOf(that: Constraint): Boolean
     def isSymbolConstraint = v.containsSymbols
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) =
@@ -108,7 +110,7 @@ trait Constraints extends Expressions {
 
     def &&(other: Constraint) = other match {
       case o:SimpleConstraint =>
-        tryAnd(o).getOrElse(And(Seq(this, o)))
+        tryAnd(o).getOrElse(And(List(this, o)))
       case _ => other && this
     }
 
@@ -118,7 +120,7 @@ trait Constraints extends Expressions {
       else None
 
     def ||(other: Constraint) = other match {
-      case o:SimpleConstraint => Or(Seq(And(Seq(this)), And(Seq(o))))
+      case o:SimpleConstraint => Or(Seq(And(List(this)), And(List(o))))
       case _ => other || this
     }
   }
@@ -142,7 +144,14 @@ trait Constraints extends Expressions {
         v.decrement <= v2
       case _ => super.definitelySubsetOf(that)
     }
-    
+
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case GreaterThan(v2) => v2 >= v
+      case GreaterThanOrEqual(v2) =>
+        v.decrement <= v2
+      case _ => false
+    }
+
     def unary_! = GreaterThanOrEqual(v)
 
     override def prettyPrint(variable: String = "_") =
@@ -171,6 +180,11 @@ trait Constraints extends Expressions {
       case _ => super.definitelySubsetOf(that)
     }
 
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case GreaterThan(v2) => v2 > v
+      case GreaterThanOrEqual(v2) => v2 >= v
+      case _ => false
+    }
     def unary_! = GreaterThan(v)
 
     override def prettyPrint(variable: String = "_") =
@@ -197,6 +211,12 @@ trait Constraints extends Expressions {
       case _ => super.definitelySubsetOf(that)
     }
 
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case LessThan(v2) => v2 <= v
+      case LessThanOrEqual(v2) => v2.decrement <= v
+      case _ => false
+    }
+
     def unary_! = LessThanOrEqual(v)
     override def prettyPrint(variable: String = "_") =
       s"$variable > $v"
@@ -216,6 +236,12 @@ trait Constraints extends Expressions {
       case GreaterThan(v2) => v2 < v
       case GreaterThanOrEqual(v2) => v2 <= v
       case _ => super.definitelySubsetOf(that)
+    }
+
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case LessThan(v2) => v2 < v
+      case LessThanOrEqual(v2) => v2 <= v
+      case _ => false
     }
 
     def unary_! = LessThan(v)
@@ -239,6 +265,15 @@ trait Constraints extends Expressions {
       case LessThanOrEqual(v2) => v2 >= v
       case Equal(v2) => v2 == v
       case _ => super.definitelySubsetOf(that)
+    }
+
+    override def definitelyNotSubsetOf(that: Constraint) = that match {
+      case LessThan(v2) => v2 < v
+      case LessThanOrEqual(v2) => v2 <= v
+      case GreaterThan(v2) => v2 > v
+      case GreaterThanOrEqual(v2) => v2 >= v
+      case Equal(v2) => v2 != v
+      case _ => false
     }
 
     def unary_! = LessThan(v) || GreaterThan(v)
@@ -273,10 +308,11 @@ trait Constraints extends Expressions {
     def flatMap(f: SimpleConstraint => Constraint) = this
   }
 
-  case class And(constraints: Seq[SimpleConstraint]) extends ComplexConstraint {
+  case class And(constraints: List[SimpleConstraint]) extends ComplexConstraint {
     type C = SimpleConstraint
     override def definitelySubsetOf(that: Constraint) = that match {
-      case _:SimpleConstraint => false
+      case _:SimpleConstraint =>
+        constraints.exists(_.definitelySubsetOf(that))
       case And(_) => false
       case _ =>
         constraints.exists(_.definitelySubsetOf(that))
@@ -286,7 +322,36 @@ trait Constraints extends Expressions {
     //!a || !b
     def unary_! = this
 
-    override def &&(other: Constraint) = ???
+    override def &&(other: Constraint): Constraint = other match {
+      case o:SimpleConstraint =>
+        And(this && o)
+      case And(cs) => And(
+        constraints ++ cs
+      ).simplify()
+    }
+
+    private def &&(other: SimpleConstraint) =
+      if(constraints.exists(_.tryAnd(other).isDefined)) {
+        constraints.map{ sc =>
+          sc.tryAnd(other).getOrElse(sc)
+        }
+      } else {
+        other :: constraints
+      }
+
+
+    def simplify(): Constraint = And(
+      (List[SimpleConstraint]() /: constraints) {
+        (acc: List[SimpleConstraint], toAdd: SimpleConstraint) =>
+          if(acc.exists(_.tryAnd(toAdd).isDefined)) {
+            acc.map{ sc =>
+              sc.tryAnd(toAdd).getOrElse(sc)
+            }
+          } else {
+            toAdd :: constraints
+          }
+      })
+
     override def ||(other: Constraint): Constraint = ???
 
     override def prettyPrint(variable: String = "_") =
@@ -298,7 +363,7 @@ trait Constraints extends Expressions {
     def combine(c1: SimpleConstraint, c2: SimpleConstraint) =
       if(c1 definitelySubsetOf c2) c1
       else if(c2 definitelySubsetOf c1) c2
-      else And(Seq(c1, c2))
+      else And(List(c1, c2))
   }
 
   case class Or(constraints: Seq[And]) extends ComplexConstraint {
