@@ -275,7 +275,7 @@ trait Expressions {
     type T
     implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
-    protected def value: BigDecimal
+    protected[boundedintegers] def value: BigDecimal
     def tpe: TypeType = typeInfo.tpe
 
 
@@ -339,7 +339,7 @@ trait Expressions {
   }
 
 
-  case class TypedConstantValue[U]( protected val value: BigDecimal)
+  case class TypedConstantValue[U]( protected[boundedintegers] val value: BigDecimal)
                                   (implicit ev1: RichNumeric[U],
                                    protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
     type T = U

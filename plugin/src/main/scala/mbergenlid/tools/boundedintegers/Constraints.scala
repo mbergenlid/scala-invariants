@@ -56,16 +56,17 @@ trait Constraints extends Expressions {
     }
 
 
-//  implicit class Constraint2SimpleTraversable(c: Constraint) extends Traversable[SimpleConstraint] {
-//    def foreach[U](f: SimpleConstraint => U): Unit = {
-//      def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
-//        case NoConstraints =>
-//        case s: SimpleConstraint => f(s)
-//        case cplx: ComplexConstraint => foreach(f, cplx.left); foreach(f, cplx.right)
-//      }
-//      foreach(f, c)
-//    }
-//  }
+  implicit class Constraint2SimpleTraversable(c: Constraint) extends Traversable[SimpleConstraint] {
+    def foreach[U](f: SimpleConstraint => U): Unit = {
+      def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
+        case NoConstraints =>
+        case s: SimpleConstraint => f(s)
+        case And(constraints) => constraints.foreach(f)
+        case Or(constraints) => constraints.foreach(_.constraints.foreach(f))
+      }
+      foreach(f, c)
+    }
+  }
 
 
 
@@ -91,14 +92,31 @@ trait Constraints extends Expressions {
     def flatMap(f: SimpleConstraint => Constraint) = this
 
     def &&(other: Constraint) = other
-    def ||(other: Constraint) = other
+    def ||(other: Constraint) = this
+  }
+
+  case object ImpossibleConstraint extends SimpleConstraint {
+    override def definitelySubsetOf(that: Constraint) = false
+    def definitelyNotSubsetOf(that: Constraint) = true
+
+    override def flatMap(f: SimpleConstraint => Constraint) = this
+    override def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
+
+    override def isSymbolConstraint = false
+    def lowerBoundInclusive = this
+    def upperBoundInclusive = this
+    def lowerBound = this
+    def upperBound = this
+    def unary_! = this
+
+    override def ||(other: Constraint) = other
+    override def &&(other: Constraint) = this
+
+    def v = throw new NoSuchElementException
   }
 
   trait SimpleConstraint extends Constraint {
     def v: Expression
-    def foreach[U](f: Constraint => U): Unit = {
-      f(this)
-    }
 
     def definitelyNotSubsetOf(that: Constraint): Boolean
     def isSymbolConstraint = v.containsSymbols
@@ -117,12 +135,19 @@ trait Constraints extends Expressions {
     def tryAnd(other: SimpleConstraint): Option[SimpleConstraint] =
       if(this.definitelySubsetOf(other)) Some(this)
       else if(other.definitelySubsetOf(this)) Some(other)
+      else if(this.definitelyNotSubsetOf(other)) Some(ImpossibleConstraint)
       else None
 
     def ||(other: Constraint) = other match {
-      case o:SimpleConstraint => Or(Seq(And(List(this)), And(List(o))))
+      case o:SimpleConstraint =>
+        tryOr(other).getOrElse(Or(List(And(List(this)), And(List(o)))))
       case _ => other || this
     }
+
+    def tryOr(other: Constraint) =
+      if(this.definitelySubsetOf(other)) Some(other)
+      else if(other.definitelySubsetOf(this)) Some(this)
+      else None
   }
 
   object SimpleConstraint {
@@ -312,10 +337,10 @@ trait Constraints extends Expressions {
     type C = SimpleConstraint
     override def definitelySubsetOf(that: Constraint) = that match {
       case _:SimpleConstraint =>
-        constraints.exists(_.definitelySubsetOf(that))
-      case And(_) => false
+        constraints.exists(_.definitelySubsetOf(that)) &&
+          constraints.forall(sc => sc.definitelyNotSubsetOf(that) || !sc.definitelyNotSubsetOf(that))
       case _ =>
-        constraints.exists(_.definitelySubsetOf(that))
+        super.definitelySubsetOf(that)
     }
 
     //!(a && b)
@@ -324,39 +349,52 @@ trait Constraints extends Expressions {
 
     override def &&(other: Constraint): Constraint = other match {
       case o:SimpleConstraint =>
-        And(this && o)
+        And(o :: constraints).simplify()
       case And(cs) => And(
         constraints ++ cs
       ).simplify()
+      case _ => other && this
     }
 
-    private def &&(other: SimpleConstraint) =
-      if(constraints.exists(_.tryAnd(other).isDefined)) {
-        constraints.map{ sc =>
-          sc.tryAnd(other).getOrElse(sc)
-        }
-      } else {
-        other :: constraints
+    private def tryAnd(cs: List[SimpleConstraint], sc: SimpleConstraint) = {
+      var applied = false
+      val mapped = cs.mapConserve { sc2 =>
+        sc2.tryAnd(sc).map {x =>
+          applied = true; x
+        }.getOrElse(sc2)
       }
+      if(applied)
+        if(mapped.exists(_ == ImpossibleConstraint)) List(ImpossibleConstraint)
+        else mapped
+      else sc :: cs
+    }
 
-
-    def simplify(): Constraint = And(
+    def simplify(): And = And(
       (List[SimpleConstraint]() /: constraints) {
-        (acc: List[SimpleConstraint], toAdd: SimpleConstraint) =>
-          if(acc.exists(_.tryAnd(toAdd).isDefined)) {
-            acc.map{ sc =>
-              sc.tryAnd(toAdd).getOrElse(sc)
-            }
-          } else {
-            toAdd :: constraints
-          }
-      })
+        (acc, toAdd) =>
+          tryAnd(acc, toAdd)
+      }.reverse)
 
-    override def ||(other: Constraint): Constraint = ???
+    override def ||(other: Constraint): Constraint = other match {
+      case ImpossibleConstraint => this
+      case o:SimpleConstraint => Or(List(this, And(o)))
+      case a:And =>
+        tryOr(a).getOrElse(Or(List(this, a)))
+      case _ => other || this
+    }
+
+    def tryOr(other: And): Option[And] =
+      if(this.definitelySubsetOf(other)) Some(other)
+      else if(other.definitelySubsetOf(this)) Some(this)
+      else None
 
     override def prettyPrint(variable: String = "_") =
         constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
+    override def upperBoundInclusive = And(
+      constraints.map(_.upperBoundInclusive).collect { case s:SimpleConstraint => s}
+    ).simplify()
+    override def lowerBoundInclusive = this
   }
 
   object And {
@@ -364,9 +402,11 @@ trait Constraints extends Expressions {
       if(c1 definitelySubsetOf c2) c1
       else if(c2 definitelySubsetOf c1) c2
       else And(List(c1, c2))
+
+    def apply(cs: SimpleConstraint*): And = And(cs.toList)
   }
 
-  case class Or(constraints: Seq[And]) extends ComplexConstraint {
+  case class Or(constraints: List[And]) extends ComplexConstraint {
     type C = And
     override def definitelySubsetOf(that: Constraint) = false
 
@@ -375,7 +415,52 @@ trait Constraints extends Expressions {
     override def prettyPrint(variable: String = "_") =
       constraints.map(_.prettyPrint(variable)).mkString(" || ")
 
-    override def ||(other: Constraint): Constraint = this
-    override def &&(other: Constraint): Constraint = this
+    override def ||(other: Constraint): Constraint = other match {
+      case ImpossibleConstraint => this
+      case sc:SimpleConstraint => Or(tryOr(constraints, And(sc)))
+      case a:And => Or(tryOr(constraints, a))
+      case Or(cs) => Or(constraints ++ cs).simplify()
+      case _ => other || this
+    }
+    override def &&(other: Constraint): Constraint = {
+      val newConstraints = other match {
+        case Or(cs) => for {
+          sc1 <- constraints
+          sc2 <- cs
+          and = sc1 && sc2
+          if and != And(ImpossibleConstraint)
+        } yield and.asInstanceOf[And]
+        case _ =>
+          constraints.map(a => (a && other).asInstanceOf[And]).filterNot(_ == And(ImpossibleConstraint))
+      }
+      newConstraints match {
+        case head :: Nil => head
+        case Nil => ImpossibleConstraint
+        case _ =>
+          Or(newConstraints)
+      }
+    }
+
+    private def tryOr(cs: List[And], and: And) = {
+      var applied = false
+      val mapped = cs.mapConserve { sc =>
+        sc.tryOr(and).map {x =>
+          applied = true; x
+        }.getOrElse(sc)
+      }
+      if(applied) mapped
+      else and :: cs
+    }
+
+    def simplify(): Or = {
+      Or(
+        (constraints :\ List[And]()) {
+          (toAdd, acc) =>
+            tryOr(acc, toAdd)
+        })
+    }
+
+
   }
+
 }
