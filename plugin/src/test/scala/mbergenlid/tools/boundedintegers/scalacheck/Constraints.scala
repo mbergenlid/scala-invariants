@@ -63,14 +63,6 @@ class Constraints extends FunSuite with Checkers with CUT {
     })
   }
 
-  test("And lower/upper bound") {
-    check(forAll { a: And =>
-      val simplified = a.simplify()
-      forAll(choose(simplified)) { n =>
-        Equal(n).definitelySubsetOf(simplified) :| s"${simplified.upperBoundInclusive}"
-      }
-    })
-  }
 
   test("Single case") {
     val arg0 = And(List(Equal(1))).simplify()
@@ -107,16 +99,6 @@ class Constraints extends FunSuite with Checkers with CUT {
       case _: Throwable => false
     }
 
-  }
-
-  def choose(a: And) = {
-    val l: Int =
-      a.lowerBoundInclusive.find(_.v.isConstant).
-        map(_.v.asConstant.value.toInt).getOrElse(Int.MinValue)
-    val u = a.upperBoundInclusive.find(_.v.isConstant).
-      map(_.v.asConstant.value.toInt).getOrElse(Int.MaxValue)
-
-    Gen.choose(l, u)
   }
 
 

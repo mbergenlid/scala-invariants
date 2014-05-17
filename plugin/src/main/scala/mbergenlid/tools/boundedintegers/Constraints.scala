@@ -28,13 +28,10 @@ trait Constraints extends Expressions {
 
     def upperBound: Constraint
     def lowerBound: Constraint
-    def upperBoundInclusive: Constraint
-    def lowerBoundInclusive: Constraint
 
     def isSymbolConstraint: Boolean
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
-
     def flatMap(f: SimpleConstraint => Constraint): Constraint
 
     def &&(other: Constraint): Constraint
@@ -84,8 +81,6 @@ trait Constraints extends Expressions {
 
     def upperBound = this
     def lowerBound = this
-    def upperBoundInclusive = this
-    def lowerBoundInclusive = this
 
     def isSymbolConstraint = false
 
@@ -104,8 +99,6 @@ trait Constraints extends Expressions {
     override def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
 
     override def isSymbolConstraint = false
-    def lowerBoundInclusive = this
-    def upperBoundInclusive = this
     def lowerBound = this
     def upperBound = this
     def unary_! = this
@@ -185,8 +178,6 @@ trait Constraints extends Expressions {
 
     def upperBound = this
     def lowerBound = NoConstraints
-    def upperBoundInclusive = this
-    def lowerBoundInclusive = NoConstraints
 
     def map(f: SimpleConstraint => Expression) =
       LessThan(f(this))
@@ -218,8 +209,6 @@ trait Constraints extends Expressions {
 
     def upperBound = LessThan(v)
     def lowerBound = NoConstraints
-    def upperBoundInclusive = this
-    def lowerBoundInclusive = NoConstraints
 
     def map(f: SimpleConstraint => Expression) =
       LessThanOrEqual(f(this))
@@ -249,8 +238,6 @@ trait Constraints extends Expressions {
 
     def upperBound = NoConstraints
     def lowerBound = this
-    def upperBoundInclusive = NoConstraints
-    def lowerBoundInclusive = this
 
     def map(f: SimpleConstraint => Expression) =
       GreaterThan(f(this))
@@ -276,8 +263,6 @@ trait Constraints extends Expressions {
 
     def upperBound = NoConstraints
     def lowerBound = GreaterThan(v)
-    def upperBoundInclusive = NoConstraints
-    def lowerBoundInclusive = this
 
     def map(f: SimpleConstraint => Expression) =
       GreaterThanOrEqual(f(this))
@@ -308,8 +293,6 @@ trait Constraints extends Expressions {
 
     def upperBound = Equal(v)
     def lowerBound = Equal(v)
-    def upperBoundInclusive = this
-    def lowerBoundInclusive = this
 
     def map(f: SimpleConstraint => Expression) =
       Equal(f(this))
@@ -323,12 +306,8 @@ trait Constraints extends Expressions {
     def isSymbolConstraint =
       constraints.exists(_.isSymbolConstraint)
 
-//    def combine(cs: Seq[C]): Constraint
-
     def upperBound = this
     def lowerBound = this
-    def upperBoundInclusive = this
-    def lowerBoundInclusive = this
 
     def map[B](f: SimpleConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
     def flatMap(f: SimpleConstraint => Constraint) = this
@@ -344,9 +323,9 @@ trait Constraints extends Expressions {
         super.definitelySubsetOf(that)
     }
 
-    //!(a && b)
-    //!a || !b
-    def unary_! = this
+    //!(a && b && c)
+    //!a || !b || !c
+    def unary_! = Or(constraints.map(sc => And((!sc).asInstanceOf[SimpleConstraint])))
 
     override def &&(other: Constraint): Constraint = other match {
       case o:SimpleConstraint =>
@@ -392,10 +371,6 @@ trait Constraints extends Expressions {
     override def prettyPrint(variable: String = "_") =
         constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
-    override def upperBoundInclusive = And(
-      constraints.map(_.upperBoundInclusive).collect { case s:SimpleConstraint => s}
-    ).simplify()
-    override def lowerBoundInclusive = this
   }
 
   object And {
@@ -411,7 +386,11 @@ trait Constraints extends Expressions {
     type C = And
     override def definitelySubsetOf(that: Constraint) = false
 
-    def unary_! = this
+    def unary_! = And(for {
+      and <- constraints
+      nAnd <- (!and).constraints
+      sc <- nAnd
+    } yield sc)
 
     override def prettyPrint(variable: String = "_") =
       constraints.map(_.prettyPrint(variable)).mkString(" || ")
@@ -460,8 +439,6 @@ trait Constraints extends Expressions {
             tryOr(acc, toAdd)
         })
     }
-
-
   }
 
 }

@@ -219,6 +219,11 @@ class ConstraintsSpec extends FunSuite
     assert(res4 === NoConstraints)
   }
 
+  test("Negate OR constraints") {
+    val res1 = !c("x < 0 || x > 10")
+    assert(res1 === c("x >= 0 && x <= 10"))
+  }
+
   class ExprParser extends JavaTokenParsers {
 
     def parseConstraint(input: String) =
