@@ -63,6 +63,7 @@ trait Constraints extends Expressions {
         case s: SimpleConstraint => f(s)
         case And(constraints) => constraints.foreach(f)
         case Or(constraints) => constraints.foreach(_.constraints.foreach(f))
+        case _ => throw new RuntimeException("Could not happen")
       }
       foreach(f, c)
     }
