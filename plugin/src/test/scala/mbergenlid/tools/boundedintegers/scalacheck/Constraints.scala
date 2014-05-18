@@ -15,13 +15,13 @@ class Constraints extends FunSuite with Checkers with CUT {
   implicit def int2Expression(v: Int): Expression = Polynomial.fromConstant(v)
 
   test("And simple constraints") {
-    check(forAll { (sc1: SimpleConstraint, sc2: SimpleConstraint) =>
+    check(forAll { (sc1: ExpressionConstraint, sc2: ExpressionConstraint) =>
       andProp(sc1, sc2)
     })
   }
 
   test("And simple constraint to And") {
-    check(forAll { (sc1: SimpleConstraint, sc2: SimpleConstraint, sc3: SimpleConstraint) =>
+    check(forAll { (sc1: ExpressionConstraint, sc2: ExpressionConstraint, sc3: ExpressionConstraint) =>
       andProp(sc1 && sc2, sc3)
     })
   }
@@ -104,7 +104,7 @@ class Constraints extends FunSuite with Checkers with CUT {
 
   implicit def arbSimpleConstraint = Arbitrary(generateSimpleConstraint)
 
-  val generateSimpleConstraint: Gen[SimpleConstraint] = for {
+  val generateSimpleConstraint: Gen[ExpressionConstraint] = for {
     v <- arbitrary[Int]
     sc <- Gen.oneOf(LessThan, LessThanOrEqual, Equal, GreaterThan, GreaterThanOrEqual)
   } yield sc(Polynomial.fromConstant(v))

@@ -122,7 +122,6 @@ class ConstraintsSpec extends FunSuite
 
     //((<10 && >0) || >20) && ((>0 && < 10) || >25)
     val res6 = or && c("(x > 0 && x < 10) || x > 25")
-    println(res6.prettyPrint())
     assert(res6 === c("(x < 10 && x > 0) || x > 25"))
   }
 
@@ -193,7 +192,7 @@ class ConstraintsSpec extends FunSuite
 
   test("AND Corner cases") {
     val res1 = c("x > 0 && x < 10") && ImpossibleConstraint
-    assert(res1 === And(ImpossibleConstraint))
+    assert(res1 === ImpossibleConstraint)
 
     val res2 = c("x > 0 && x < 10") && NoConstraints
     assert(res2 === c("x > 0 && x < 10"))
@@ -219,9 +218,15 @@ class ConstraintsSpec extends FunSuite
     assert(res4 === NoConstraints)
   }
 
-  test("Negate OR constraints") {
+  test("Negate constraints") {
     val res1 = !c("x < 0 || x > 10")
     assert(res1 === c("x >= 0 && x <= 10"))
+
+    val res2 = !c("x < 0 && x > 10")
+    assert(res2 === NoConstraints)
+
+    val res3 = !c("x == 5")
+    assert(res3 === c("x < 5 || x > 5"))
   }
 
   class ExprParser extends JavaTokenParsers {
@@ -251,7 +256,7 @@ class ConstraintsSpec extends FunSuite
         case "||" => _||_
       }
 
-    def binOp: Parser[Expression => SimpleConstraint] =
+    def binOp: Parser[Expression => ExpressionConstraint] =
       (">=" | "<=" | "<" | ">" | "==") ^^ {
         case ">" => GreaterThan
         case "<" => LessThan
