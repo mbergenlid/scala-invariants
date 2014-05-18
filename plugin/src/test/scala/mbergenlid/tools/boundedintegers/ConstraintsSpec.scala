@@ -229,6 +229,50 @@ class ConstraintsSpec extends FunSuite
     assert(res3 === c("x < 5 || x > 5"))
   }
 
+  test("Map") {
+    def inc(expr: ExpressionConstraint) =
+      expr.expression + Polynomial.fromConstant(1)
+
+    val res1 = c("x > 0 && x < 10").map(inc)
+    assert(res1 === c("x > 1 && x < 11"))
+
+    val res2 = c("x < 0 || x > 10").map(inc)
+    assert(res2 === c("x < 1 || x > 11"))
+
+    val res3 = c("(x > 0 && x < 10) || x > 20").map(inc)
+    assert(res3 === c("(x > 1 && x < 11) || x > 21"))
+  }
+
+  test("FlatMap") {
+    val res1 = for {
+      ec1 <- c("x > 0 && x < 10")
+      ec2 <- c("x > 1")
+    } yield ec1 && ec2
+
+    assert(res1 === c("x > 1 && x < 10"), res1.prettyPrint())
+
+    val res2 = for {
+      ec1 <- c("x < 0 || x > 10")
+      ec2 <- c("x > 1")
+    } yield ec1 && ec2
+
+    assert(res2 === c("x > 10"), res2.prettyPrint())
+
+    val res3 = for {
+      ec1 <- c("x < 0 || x > 10")
+      ec2 <- c("x > 1")
+    } yield ec1 || ec2
+
+    assert(res3 === c("x < 0 || x > 1"), res3.prettyPrint())
+
+    val res4 = for {
+      ec1 <- c("(x > 0 && x < 10) || x > 20")
+      ec2 <- c("x > 5 && x < 25")
+    } yield ec1 && ec2
+
+    assert(res4 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
+  }
+
   class ExprParser extends JavaTokenParsers {
 
     def parseConstraint(input: String) =

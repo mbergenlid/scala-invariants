@@ -373,10 +373,13 @@ trait Constraints extends Expressions {
     override def prettyPrint(variable: String = "_") =
         constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
-//      And(constraints.map(sc => bf(f(sc), sc)).foreach())
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+      exprConstraints.map(ec => bf(f(ec), ec)).reduce(_&&_)
 
-    def flatMap(f: ExpressionConstraint => Constraint) = this
+    def flatMap(f: ExpressionConstraint => Constraint) = map(f)
+
+    private def exprConstraints: List[ExpressionConstraint] =
+      constraints.collect{case ec:ExpressionConstraint => ec}
   }
 
   object And {
@@ -446,8 +449,10 @@ trait Constraints extends Expressions {
         })
     }
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
-    def flatMap(f: ExpressionConstraint => Constraint) = this
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+      constraints.map(_.map(f)).reduce(_||_)
+
+    def flatMap(f: ExpressionConstraint => Constraint) = map(f)
   }
 
 //  case class PropertyConstraint(
@@ -461,5 +466,5 @@ trait Constraints extends Expressions {
 //      case _ => super.definitelySubsetOf(that)
 //    }
 //  }
-  
+
 }
