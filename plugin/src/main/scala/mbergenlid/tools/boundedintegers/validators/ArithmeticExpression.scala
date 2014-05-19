@@ -42,7 +42,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
               else
                 Context.createBoundConstraint(sc1, sc2)
       } yield {
-         val c = f(operators(method).apply(sc1.v, sc2.v))
+         val c = f(operators(method).apply(sc1.expression, sc2.expression))
          c
       }
 

@@ -11,7 +11,7 @@ import mbergenlid.tools.boundedintegers.annotations.{
   Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 
-trait MyUniverse extends BoundedTypeTrees with TypeContext {
+trait MyUniverse extends Constraints with TypeContext {
   val global: Universe
   import global._
 
@@ -101,14 +101,14 @@ trait MyUniverse extends BoundedTypeTrees with TypeContext {
         (
           if(lowerBound != NoConstraints &&
               !lowerBound.isInstanceOf[Equal] &&
-              !upperBound.exists(_.v.isConstant))
+              !upperBound.exists(_.expression.isConstant))
             annotatedConstraints && LessThanOrEqual(f.MaxValue)
           else
             annotatedConstraints
         ) && (
           if(upperBound != NoConstraints &&
               !upperBound.isInstanceOf[Equal] &&
-              !lowerBound.exists(_.v.isConstant))
+              !lowerBound.exists(_.expression.isConstant))
             annotatedConstraints && GreaterThanOrEqual(f.MinValue)
           else
             annotatedConstraints

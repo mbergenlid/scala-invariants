@@ -5,7 +5,7 @@ import scala.reflect.runtime.universe._
 import scala.language.implicitConversions
 
 class ContextSpec extends FunSuite
-    with TypeContext with BoundedTypeTrees with Expressions {
+    with TypeContext with Constraints with Expressions {
 
   type RealSymbolType = Symbol
   val TypeNothing = typeOf[Nothing]
@@ -54,8 +54,20 @@ class ContextSpec extends FunSuite
     ))
 
     val xBounds = Context.getConstraint("x", typeOf[Int], c)
-    assert(xBounds.asInstanceOf[And].left === originalXBound)
+    assert(xBounds.asInstanceOf[And].constraints.head === originalXBound)
   }
+
+  test("Failed case") {
+    val res = for {
+      ec1 <- Equal(Polynomial.fromSymbol[Int](sym("x")))
+      ec2 <- GreaterThanOrEqual(Polynomial.fromConstant(0)) && LessThan(Polynomial.fromConstant(10)) &&
+        Equal(Polynomial.fromSymbol[Int](sym("x")))
+      s <- Context.trySubstitute(sym("x"), ec1, ec2)
+    } yield s
+    println(res.prettyPrint())
+  }
+
+
 
   contextTest(
     new Context(Map(
@@ -119,9 +131,9 @@ class ContextSpec extends FunSuite
 
   contextTest(
     new Context(Map(
-      sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
-      sym("y") -> Or(LessThan(Polynomial.fromConstant(0)),
-                                    GreaterThan(Polynomial.fromConstant(10)))
+      sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))),
+      sym("y") -> (LessThan(Polynomial.fromConstant(0)) ||
+                    GreaterThan(Polynomial.fromConstant(10)))
     ))) ()(LessThan(Polynomial.fromConstant(4)))
 
   /**
@@ -198,11 +210,11 @@ class ContextSpec extends FunSuite
         println(xBounds.prettyPrint("x"))
       }
       positiveAsserts foreach { x =>
-        assert(xBounds obviouslySubsetOf x,
+        assert(xBounds definitelySubsetOf x,
           s"Expected ${xBounds.prettyPrint("x")} to be a subset of ${x.prettyPrint("x")}")
       }
       negativeAsserts.foreach {x =>
-        assert(!(xBounds obviouslySubsetOf x),
+        assert(!(xBounds definitelySubsetOf x),
           s"Expected ${xBounds.prettyPrint("x")} to NOT be a subset of ${x.prettyPrint("x")}")
       }
     }

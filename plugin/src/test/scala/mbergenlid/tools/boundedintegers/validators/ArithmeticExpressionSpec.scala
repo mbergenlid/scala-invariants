@@ -74,7 +74,7 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
 
     assertThat(bounds.constraint) definiteSubsetOf cut.LessThan(11)
     assertThat(bounds.constraint).definiteSubsetOf(cut.GreaterThan(4))
-    assert(!bounds.constraint.obviouslySubsetOf(cut.LessThanOrEqual(5)))
+    assert(!bounds.constraint.definitelySubsetOf(cut.LessThanOrEqual(5)))
   }
 
   test("Multiply symbol to constant") {
@@ -96,7 +96,7 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
         |10 + (if(x < 0) -1 else x)
       """.stripMargin)
 
-    assertThat(bounds.constraint).definiteSubsetOf(cut.Or(cut.Equal(9), cut.GreaterThanOrEqual(10)))
+    assertThat(bounds.constraint).definiteSubsetOf(cut.Equal(9) || cut.GreaterThanOrEqual(10))
   }
 
   test("Multiply symbol to other symbol") {
@@ -124,7 +124,7 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
     import cut._
     val equal = bounds.constraint.find(_.isInstanceOf[Equal])
     assert(equal.isDefined)
-    val expr = equal.get.v
+    val expr = equal.get.expression
     assert(expr.terms.size == 1)
     assert(expr.terms.head.variables.head._2 == 2)
 

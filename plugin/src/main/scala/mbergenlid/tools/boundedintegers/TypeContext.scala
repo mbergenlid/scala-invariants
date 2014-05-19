@@ -2,7 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 import scala.language.implicitConversions
 
-trait TypeContext { self: BoundedTypeTrees =>
+trait TypeContext { self: Constraints =>
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]]
 
@@ -15,8 +15,8 @@ trait TypeContext { self: BoundedTypeTrees =>
       new Context(symbols map { case (k,v) => k -> _removeSymbolConstraints(symbol)(v)})
 
     private def _removeSymbolConstraints(symbol: SymbolType)(c: Constraint): Constraint = c match {
-      case a @ And(left, right) => a.map(_removeSymbolConstraints(symbol))
-      case o @ Or(left, right) => o.map(_removeSymbolConstraints(symbol))
+      case a @ And(_) => a.map(_removeSymbolConstraints(symbol))
+      case o @ Or(_) => o.map(_removeSymbolConstraints(symbol))
       case _ if c.isSymbolConstraint => NoConstraints
       case _ => c
     }
@@ -57,7 +57,7 @@ trait TypeContext { self: BoundedTypeTrees =>
         if expressionForType.lift(prop.symbol.typeSignature).isDefined
       } yield prop.copy(constraint =
           prop.constraint.map { sc =>
-            substitute(sc, sc.v.extractSymbols.toList, prop.symbol.typeSignature, context)
+            substitute(sc, sc.expression.extractSymbols.toList, prop.symbol.typeSignature, context)
           }
         )
 
@@ -70,11 +70,15 @@ trait TypeContext { self: BoundedTypeTrees =>
       val constraint =
         (if(symbol.isStable) createConstraintFromSymbol(symbol) && context.get(symbol)
          else createConstraintFromSymbol(symbol)).map { sc =>
-          f.convertExpression(sc.v)
+          f.convertExpression(sc.expression)
         }
       for {
         sc <- constraint
-      } yield substitute(sc, sc.v.extractSymbols.filterNot(_ == symbol).toList, resultType, context - symbol)
+      } yield substitute(
+        sc,
+        sc.expression.extractSymbols.filterNot(_ == symbol).toList,
+        resultType,
+        context - symbol)
 
     }
 
@@ -82,20 +86,19 @@ trait TypeContext { self: BoundedTypeTrees =>
       val f = expressionForType.lift(resultType)
       if(f.isDefined)
         for {
-          sc <- start.map(s => f.get.convertExpression(s.v))
-        } yield substitute(sc, sc.v.extractSymbols.toList, resultType, context)
+          sc <- start.map(s => f.get.convertExpression(s.expression))
+        } yield substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
       else
         NoConstraints
     }
 
     def substituteConstants(fromConstraint: Constraint, resultType: TypeType, context: Context): Constraint = {
       val f = expressionForType(resultType)
-      for {
+      val c = for {
         fromSc <- fromConstraint
-        expr <- fromSc.v.terms.find(_.variables.isEmpty)
+        expr <- fromSc.expression.terms.find(_.variables.isEmpty)
       } yield fromConstant(expr.coeff, context, f)
-
-
+      c
     }
 
     private def fromConstant(constant: ConstantValue, context: Context, f: ExpressionFactory[_]) = {
@@ -103,7 +106,8 @@ trait TypeContext { self: BoundedTypeTrees =>
         (symbol, constraint) <- context.symbols
         sc: SimpleConstraint <- constraint
       } yield constraintFromConstant(sc, symbol, constant, f)
-      (NoConstraints.asInstanceOf[Constraint] /: seq) (_&&_)
+      val res = (NoConstraints.asInstanceOf[Constraint] /: seq) (_&&_)
+      res
     }
 
 
@@ -140,14 +144,14 @@ trait TypeContext { self: BoundedTypeTrees =>
       symbols match {
         case symbol :: rest => 
           val b = getConstraintWitUpperLowerBounds(symbol, resultType, context)
+          val substituted = for {
+            sc1 <- constraint
+            sc2 <- b
+            s <- trySubstitute(symbol, sc1, sc2)
+          } yield s
+
           substitute (
-            And.combine(constraint,
-              for {
-                sc1 <- constraint
-                sc2 <- b
-                s <- trySubstitute(symbol, sc1, sc2)
-              } yield s
-            ),
+            constraint && substituted,
             rest,
             resultType,
             context - symbol
@@ -156,44 +160,44 @@ trait TypeContext { self: BoundedTypeTrees =>
       }
 
     private def getConstraintWitUpperLowerBounds(symbol: SymbolType, resultType: TypeType, context: Context) = {
-      val c = getConstraint(symbol, resultType, context) &&
-        translatePropertyConstraints(symbol, resultType, context)
+      val c = getConstraint(symbol, resultType, context)
+//        translatePropertyConstraints(symbol, resultType, context)
       val f = expressionForType(resultType)
       (
-        if(!c.lowerBound.exists(_.v.isConstant))
+        if(!c.lowerBound.exists(_.expression.isConstant))
           c && GreaterThanOrEqual(f.MinValue)
         else
           c
       ) && (
-        if(!c.upperBound.exists(_.v.isConstant))
+        if(!c.upperBound.exists(_.expression.isConstant))
           c && LessThanOrEqual(f.MaxValue)
         else
           c
       )
     }
 
-    private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
-      val c = context.get(symbol.tail)
-      val cList = for {
-        prop <- c.propertyConstraints
-        if prop.symbol == symbol.head
-      } yield {
-        prop.constraint
-      }
-      if(cList.isEmpty) NoConstraints
-      else cList.reduce(_&&_)
-    }
+//    private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
+//      val c = context.get(symbol.tail)
+//      val cList = for {
+//        prop <- c.propertyConstraints
+//        if prop.symbol == symbol.head
+//      } yield {
+//        prop.constraint
+//      }
+//      if(cList.isEmpty) NoConstraints
+//      else cList.reduce(_&&_)
+//    }
 
     protected[boundedintegers] def trySubstitute(
-          symbol: SymbolType, base: SimpleConstraint, boundedBy: SimpleConstraint) = {
+          symbol: SymbolType, base: ExpressionConstraint, boundedBy: ExpressionConstraint) = {
 
       for {
-        term <- base.v.terms.find(_.variables.contains(symbol))
+        term <- base.expression.terms.find(_.variables.contains(symbol))
         f <- if(term.coeff.isLessThanZero)
                createNegativeBoundConstraint(base, boundedBy)
              else
                createBoundConstraint(base, boundedBy)
-      } yield {f(base.v.substitute(symbol, boundedBy.v))}
+      } yield {f(base.expression.substitute(symbol, boundedBy.expression))}
 
 
     }
@@ -292,12 +296,12 @@ trait TypeContext { self: BoundedTypeTrees =>
 
     def convertTo(tpe: TypeType): BoundedType = {
       val f = expressionForType(tpe)
-      val newConstraint = constraint.map { sc => f.convertExpression(sc.v) }
+      val newConstraint = constraint.map { sc => f.convertExpression(sc.expression) }
       new BoundedType(expression.map(e => f.convertExpression(e)), newConstraint)
     }
 
     def <:<(other: BoundedType): Boolean =
-      constraint.obviouslySubsetOf(other.constraint)
+      constraint.definitelySubsetOf(other.constraint)
 
     override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
     override def equals(other: Any) = 
@@ -308,7 +312,7 @@ trait TypeContext { self: BoundedTypeTrees =>
   object BoundedType {
     def apply(expression: Expression, constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
       new BoundedType(Some(expression), constraint.map { sc =>
-        expressionFactory.convertExpression(sc.v)
+        expressionFactory.convertExpression(sc.expression)
       })
     }
 

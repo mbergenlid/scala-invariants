@@ -53,22 +53,12 @@ class Constraints extends FunSuite with Checkers with CUT {
     })
   }
 
-  test("And definitelySubsetOf And") {
-    check(forAll { (a1: And, a2: And) =>
-      val simpleA1 = a1.simplify()
-      val simpleA2 = a2.simplify()
-      val subset = simpleA1.definitelySubsetOf(simpleA2)
-      if(subset) testSubset(simpleA1, simpleA2) :| s"$simpleA1 :: $simpleA2"
-      else true :| "Asd"
-    })
-  }
-
 
   test("Single case") {
-    val arg0 = And(List(Equal(1))).simplify()
-    val arg1 = And(List(GreaterThan(-472153321))).simplify()
-    assert(arg0.definitelySubsetOf(arg1))
-    testSubset(arg0, arg1)
+    val arg0 = LessThanOrEqual(-1)
+    val arg1 = GreaterThanOrEqual(-1)
+    assert(Equal(-1).definitelySubsetOf(arg0 && arg1))
+    andProp(arg0, arg1)
   }
 
   def testSubset(c1: Constraint, c2: Constraint) = {
@@ -96,7 +86,10 @@ class Constraints extends FunSuite with Checkers with CUT {
       })
       true
     } catch {
-      case _: Throwable => false
+      case t: Throwable => {
+        println(t.getMessage)
+        false
+      }
     }
 
   }

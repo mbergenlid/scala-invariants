@@ -36,6 +36,11 @@ class ConstraintsSpec extends FunSuite
     parser.parseExpression(s).get
   val parser = new ExprParser
 
+  test("ExpressionConstraint.&&") {
+    val res1 = LessThanOrEqual(1) && GreaterThanOrEqual(1)
+    assert(res1 === Equal(1))
+  }
+
   test("Test simplification") {
     val and = LessThan(10) && (GreaterThan(0) && LessThan(stringToExpression("y")))
 
@@ -271,6 +276,14 @@ class ConstraintsSpec extends FunSuite
     } yield ec1 && ec2
 
     assert(res4 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
+
+    val res5 = for {
+      ec1 <- c("x == y")
+      ec2 <- c("(x >= 0 && x < 10) && x == z")
+    } yield ec2
+
+    println(res5.prettyPrint())
+//    assert(res5 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
   }
 
   class ExprParser extends JavaTokenParsers {

@@ -200,8 +200,13 @@ trait Constraints extends Expressions {
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 > expression
-      case GreaterThanOrEqual(v2) => v2 >= expression
+      case GreaterThanOrEqual(v2) => v2 > expression
       case _ => false
+    }
+
+    override def tryAnd(other: SimpleConstraint) = other match {
+      case GreaterThanOrEqual(v2) if expression == v2 => Some(Equal(expression))
+      case _ => super.tryAnd(other)
     }
     override def unary_! = GreaterThan(expression)
 
@@ -254,7 +259,7 @@ trait Constraints extends Expressions {
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 < expression
-      case LessThanOrEqual(v2) => v2 <= expression
+      case LessThanOrEqual(v2) => v2 < expression
       case _ => false
     }
 
@@ -284,7 +289,9 @@ trait Constraints extends Expressions {
       case LessThanOrEqual(v2) => v2 <= expression
       case GreaterThan(v2) => v2 > expression
       case GreaterThanOrEqual(v2) => v2 >= expression
-      case Equal(v2) => v2 != expression
+      case Equal(v2) =>
+        !(v2.containsSymbols || expression.containsSymbols) &&
+        v2 != expression
       case _ => false
     }
 
@@ -374,7 +381,7 @@ trait Constraints extends Expressions {
         constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
     def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
-      exprConstraints.map(ec => bf(f(ec), ec)).reduce(_&&_)
+      exprConstraints.map(ec => bf(f(ec), ec)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
 
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
 
@@ -393,7 +400,8 @@ trait Constraints extends Expressions {
 
   case class Or(constraints: List[And]) extends ComplexConstraint {
     type C = And
-    override def definitelySubsetOf(that: Constraint) = false
+    override def definitelySubsetOf(that: Constraint) =
+      constraints.forall(_.definitelySubsetOf(that))
 
     def unary_! =
       constraints.map(!_).reduceLeft(_&&_)
@@ -455,16 +463,38 @@ trait Constraints extends Expressions {
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
   }
 
-//  case class PropertyConstraint(
-//    symbol: RealSymbolType,
-//    constraint: SimpleConstraint
-//  ) extends SimpleConstraintWrapper {
-//
-//    override def definitelySubsetOf(that: Constraint) = that match {
-//      case PropertyConstraint(otherSymbol, otherConstraint) =>
-//        otherSymbol == symbol && constraint.definitelySubsetOf(otherConstraint)
-//      case _ => super.definitelySubsetOf(that)
-//    }
-//  }
+  case class PropertyConstraint(
+    symbol: RealSymbolType,
+    constraint: Constraint
+  ) extends SimpleConstraint {
 
+    override def definitelySubsetOf(that: Constraint) = that match {
+      case PropertyConstraint(otherSymbol, otherConstraint) =>
+        otherSymbol == symbol && constraint.definitelySubsetOf(otherConstraint)
+      case _ => super.definitelySubsetOf(that)
+    }
+
+    def tryAnd(constraint: SimpleConstraint) = ???
+
+    def ||(other: Constraints.this.type#Constraint) = ???
+
+    def &&(other: Constraints.this.type#Constraint) = ???
+
+    def flatMap(f: (Constraints.this.type#ExpressionConstraint) => Constraints.this.type#Constraint) = ???
+
+    def map[B](f: (Constraints.this.type#ExpressionConstraint) => B)(implicit bf: Constraints.this.type#ConstraintBuilder[B]) = ???
+
+    def isSymbolConstraint = ???
+
+    def lowerBound = ???
+
+    def upperBound = ???
+
+    def unary_! = ???
+  }
+//
+//  object PropertyConstraint {
+//    def apply(symbol: RealSymbolType, constraint: Constraint): Constraint =
+//      constraint.map(ec => PropertyConstraint(symbol, ec))
+//  }
 }

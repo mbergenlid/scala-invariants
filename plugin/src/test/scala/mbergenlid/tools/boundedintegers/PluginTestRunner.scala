@@ -57,11 +57,11 @@ trait PluginTestRunner extends FunSuite {
   }
   def assertThat[C1 <: cut.Constraint](c: C1) = new ConstraintAssert[C1] {
     def definiteSubsetOf[C2 <: cut.Constraint](other: C2) {
-      assert(c obviouslySubsetOf other,
+      assert(c definitelySubsetOf other,
         s"Expected ${c.prettyPrint("x")} to be a subset of ${other.prettyPrint("x")}")
     }
     def notSubsetOf[C2 <: cut.Constraint](other: C2) {
-      assert(!(c obviouslySubsetOf other),
+      assert(!(c definitelySubsetOf other),
         s"Expected ${c.prettyPrint("x")} to NOT be a subset of ${other.prettyPrint("x")}")
     }
   }

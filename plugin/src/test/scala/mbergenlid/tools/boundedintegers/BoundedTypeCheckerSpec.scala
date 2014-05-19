@@ -65,7 +65,7 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(Nil)
   }
 
-  test("Bound constant to symbol") {
+  ignore("Bound constant to symbol") {
     compile(
       """
         |val x = anotherRandomInteger
@@ -102,7 +102,7 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(List(10, 11, 13, 16, 17, 19, 22, 25, 28, 31))
   }
 
-  test("Bound constant to symbol with inclusive constraints") {
+  ignore("Bound constant to symbol with inclusive constraints") {
     compile(
       """
         |val x = anotherRandomInteger
@@ -140,7 +140,7 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
       """.stripMargin)(List(10, 11, 13, 16, 17, 19, 22, 23, 25, 28, 29, 31))
   }
 
-  test("Safe array test") {
+  ignore("Safe array test") {
     compile(
       """
         |new SafeArray(-2) //Not ok

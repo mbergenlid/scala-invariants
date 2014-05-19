@@ -34,9 +34,11 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         val exprConstraints =
           Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
 
+//        val fromConstants =
+//          Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
         val assignee =
-          exprConstraints && Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
-        if(!(assignee obviouslySubsetOf target))
+          exprConstraints //&& fromConstants
+        if(!(assignee definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
       } else {
@@ -45,7 +47,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         val exprConstraints = boundExpr.constraint &&
           Context.getPropertyConstraints(symbolChainFromTree(expr), context)
 
-        if(!(exprConstraints obviouslySubsetOf target))
+        if(!(exprConstraints definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, exprConstraints)(context)))
 
         boundExpr
@@ -57,7 +59,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       simpleConstraint.map { sc =>
         Polynomial(
           for {
-            term <- sc.v.terms
+            term <- sc.expression.terms
           } yield replaceThisSymbol(term)
         )
       }
