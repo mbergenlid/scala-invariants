@@ -73,7 +73,7 @@ trait Constraints extends Expressions {
     case None => NoConstraints
   }
 
-  case object NoConstraints extends Constraint {
+  case object NoConstraints extends Constraint with SimpleConstraint {
     override def definitelySubsetOf(that: Constraint) =
       this == that
 
@@ -89,6 +89,8 @@ trait Constraints extends Expressions {
 
     def &&(other: Constraint) = other
     def ||(other: Constraint) = this
+
+    def tryAnd(other: SimpleConstraint) = Some(other)
   }
 
   sealed trait SimpleConstraint extends Constraint {

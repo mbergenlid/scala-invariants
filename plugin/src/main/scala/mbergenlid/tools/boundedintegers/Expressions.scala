@@ -34,7 +34,9 @@ trait Expressions {
 
   trait Expression {
     def isConstant: Boolean =
-      terms.size == 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true)
+      terms.isEmpty ||
+        (terms.size == 1 && terms.headOption.map(_.variables.isEmpty).getOrElse(true))
+
     def asConstant: ConstantValue = {
       assert(isConstant)
       terms.headOption.map(_.coeff).getOrElse(ConstantValue.apply(0L))
@@ -58,6 +60,7 @@ trait Expressions {
 
     def unary_- : Expression
     def substitute(symbol: SymbolType, expr: Expression): Expression
+    def substituteConstant(expr: Expression): Expression
 
     def containsSymbols: Boolean
     def increment: Expression
@@ -173,6 +176,11 @@ trait Expressions {
         p + t.substitute(symbol, expr) 
       }}
 
+    def substituteConstant(expr: Expression) =
+      terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
+        p + (if(t.variables.isEmpty) expr else Polynomial(t))
+      }}
+
     def containsSymbols =
       terms.exists(_.variables != Map.empty)
 
@@ -205,6 +213,7 @@ trait Expressions {
     override def toString =
       if(terms.isEmpty) "0"
       else terms.mkString(" + ")
+
   }
 
   case class Term(coeff: ConstantValue, variables: Map[SymbolType, Int]) {

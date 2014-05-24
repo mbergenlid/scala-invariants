@@ -34,10 +34,10 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         val exprConstraints =
           Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
 
-//        val fromConstants =
-//          Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
+        val fromConstants =
+          Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
         val assignee =
-          exprConstraints //&& fromConstants
+          exprConstraints && fromConstants
         if(!(assignee definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr

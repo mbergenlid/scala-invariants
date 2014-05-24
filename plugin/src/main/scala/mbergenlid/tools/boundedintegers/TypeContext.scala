@@ -92,29 +92,47 @@ trait TypeContext { self: Constraints =>
         NoConstraints
     }
 
-    def substituteConstants(fromConstraint: Constraint, resultType: TypeType, context: Context): Constraint = {
+    def substituteConstants(
+      from: Constraint,
+      resultType: TypeType,
+      context: Context): Constraint = {
+
       val f = expressionForType(resultType)
-      val c = for {
-        fromSc <- fromConstraint
-        expr <- fromSc.expression.terms.find(_.variables.isEmpty)
-      } yield fromConstant(expr.coeff, context, f)
-      c
+
+      def extractConstant(expr: Expression): ConstantValue =
+        expr.terms.find(_.variables.isEmpty).map(_.coeff).getOrElse(Polynomial.Zero.asConstant)
+
+      def fromConstant(ec: ExpressionConstraint) = for {
+        boundedBy <- findSymbolConstraints(extractConstant(ec.expression), context, f)
+        newConstraint <- createBoundConstraint(ec, boundedBy)
+      } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
+
+      from.map { fromSc: ExpressionConstraint =>
+        val l: Iterable[Constraint] = fromConstant(fromSc)
+        val c = l.reduceLeftOption(_&&_).getOrElse(NoConstraints)
+        c
+      }
     }
 
-    private def fromConstant(constant: ConstantValue, context: Context, f: ExpressionFactory[_]) = {
+    private def findSymbolConstraints(
+      constant: ConstantValue,
+      context: Context,
+      f: ExpressionFactory[_]): Iterable[ExpressionConstraint] = {
+
       val seq = for {
         (symbol, constraint) <- context.symbols
         sc: SimpleConstraint <- constraint
       } yield constraintFromConstant(sc, symbol, constant, f)
-      val res = (NoConstraints.asInstanceOf[Constraint] /: seq) (_&&_)
-      res
+      seq.collect {
+        case ec:ExpressionConstraint => ec
+      }
     }
 
 
     private def constraintFromConstant(sc: SimpleConstraint,
                                        boundSymbol: SymbolType,
                                        constant: ConstantValue,
-                                       f: ExpressionFactory[_]): Constraint = sc match {
+                                       f: ExpressionFactory[_]): SimpleConstraint = sc match {
       case GreaterThan(v) if v.isConstant =>
         if(f.convertExpression(v) >= f.convertConstant(constant))
           LessThan(f.fromSymbol(boundSymbol))
@@ -198,13 +216,20 @@ trait TypeContext { self: Constraints =>
              else
                createBoundConstraint(base, boundedBy)
       } yield {f(base.expression.substitute(symbol, boundedBy.expression))}
-
-
     }
+
+//    protected[boundedintegers]
+//    def trySubstituteConstant(
+//      base: ExpressionConstraint,
+//      boundedBy: ExpressionConstraint
+//    ) = for {
+//      term <- base.expression.terms.find(_.variables.isEmpty)
+//      f <- createBoundConstraint(base, boundedBy)
+//    } yield f()
 
     protected[boundedintegers] def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):
-          Option[Expression => SimpleConstraint] = (base, boundedBy) match {
+          Option[Expression => ExpressionConstraint] = (base, boundedBy) match {
 
       case (LessThan(_), LessThan(_)) =>
         Some(LessThan.apply)
