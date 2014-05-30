@@ -181,7 +181,7 @@ class IfExpressionSpec extends PluginTestRunner {
         |  testMethod(x)  //error
         |
         |if(x + intBetween0And5 == 10)
-        |  testMethod(x)cut
+        |  testMethod(x)
       """.stripMargin)(List(6))
   }
 
@@ -211,34 +211,6 @@ class IfExpressionSpec extends PluginTestRunner {
     assertThat(bounds.constraint).definiteSubsetOf(GreaterThanOrEqual(0) || Equal(-1))
   }
 
-  test("Result of negative if expression") {
-    val bounds = expression(
-      """
-        |val x = anotherRandomInteger
-        |val y = randomInteger
-        |
-        |if(x == 0) y - x
-        |else -1
-      """.stripMargin)
-
-    import cut._
-    assertThat(bounds.constraint).definiteSubsetOf(GreaterThanOrEqual(0) || Equal(-1))
-  }
-
-  test("Result of negative if expression") {
-    val bounds = expression(
-      """
-        |val x = anotherRandomInteger
-        |val y = randomInteger
-        |
-        |if(x == 0) y - x
-        |else -1
-      """.stripMargin)
-
-    import cut._
-    assertThat(bounds.constraint).definiteSubsetOf(GreaterThanOrEqual(0) || Equal(-1))
-  }
-
 
   test("Result of if expression with Block") {
     val bounds = expression(
@@ -246,6 +218,7 @@ class IfExpressionSpec extends PluginTestRunner {
         |val x = anotherRandomInteger
         |
         |if(x > 0) {
+        |  x + 10
         |} else -1
       """.stripMargin)
 

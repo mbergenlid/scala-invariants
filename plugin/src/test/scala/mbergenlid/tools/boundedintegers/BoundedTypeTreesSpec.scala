@@ -126,15 +126,6 @@ class BoundedTypeTreesSpec extends FunSuite
     assert(res3 === c("(x < 10 && x > 0) || (x > 20 && x < 25)"))
   }
 
-  test("ASDsad") {
-
-     val and = And(
-           GreaterThanOrEqual(11),
-           LessThanOrEqual(-1)
-        )
-     assert(!and.obviouslySubsetOf("x <= 10 && x >= 0"))
-  }
-
   assertConstraint("x > 0 <!< x <= 10")
   assertConstraint("x >= 1 <:< x > 0")
   assertConstraint("x < 11 <:< x <= 10")
