@@ -14,7 +14,7 @@ class Constraints extends FunSuite with Checkers with CUT {
 
   implicit def int2Expression(v: Int): Expression = Polynomial.fromConstant(v)
 
-  test("And simple constraints") {
+  test("And expression constraints") {
     check(forAll { (sc1: ExpressionConstraint, sc2: ExpressionConstraint) =>
       andProp(sc1, sc2)
     })
@@ -55,9 +55,9 @@ class Constraints extends FunSuite with Checkers with CUT {
 
 
   test("Single case") {
-    val arg0 = LessThanOrEqual(-1)
-    val arg1 = GreaterThanOrEqual(-1)
-    assert(Equal(-1).definitelySubsetOf(arg0 && arg1))
+    val arg0 = LessThan(-1)
+    val arg1 = GreaterThanOrEqual(0)
+    assert(!Equal(0).definitelySubsetOf(arg0 && arg1))
     andProp(arg0, arg1)
   }
 
@@ -65,8 +65,8 @@ class Constraints extends FunSuite with Checkers with CUT {
     try {
       check(forAll { n: Int =>
         val expr = Equal(Polynomial.fromConstant(n))
-        expr.definitelySubsetOf(c1) ==>
-          expr.definitelySubsetOf(c2)
+        (expr.definitelySubsetOf(c1) ==>
+          expr.definitelySubsetOf(c2)) :| s"E"
       })
       true
     } catch {
@@ -81,8 +81,8 @@ class Constraints extends FunSuite with Checkers with CUT {
         val expr = Equal(Polynomial.fromConstant(n))
         val in1 = expr.definitelySubsetOf(c1)
         val in2 = expr.definitelySubsetOf(c2)
-        if(in1 && in2) expr.definitelySubsetOf(and)
-        else !expr.definitelySubsetOf(and)
+        if(in1 && in2) expr.definitelySubsetOf(and) :| s"In $c1 and $c2, but not in $and"
+        else !expr.definitelySubsetOf(and) :| s"In $and"
       })
       true
     } catch {

@@ -64,7 +64,6 @@ class ContextSpec extends FunSuite
         Equal(Polynomial.fromSymbol[Int](sym("x")))
       s <- Context.trySubstitute(sym("x"), ec1, ec2)
     } yield s
-    println(res.prettyPrint())
   }
 
 

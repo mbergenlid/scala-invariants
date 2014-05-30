@@ -207,6 +207,12 @@ class ConstraintsSpec extends FunSuite
 
     val res4 = c("x > 0 && x < 10") || NoConstraints
     assert(res4 === NoConstraints)
+
+    val res5 = c("x > -1") && c("x <= 0")
+    assert(res5 === And(GreaterThan(-1), LessThanOrEqual(0)), res5.prettyPrint())
+
+    val res6 = c("x > -1") && c("x < 0")
+    assert(res6 === And(GreaterThan(-1), LessThan(0)))
   }
 
   test("OR Corner cases") {
@@ -282,7 +288,6 @@ class ConstraintsSpec extends FunSuite
       ec2 <- c("(x >= 0 && x < 10) && x == z")
     } yield ec2
 
-    println(res5.prettyPrint())
 //    assert(res5 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
   }
 

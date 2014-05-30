@@ -178,8 +178,8 @@ trait TypeContext { self: Constraints =>
       }
 
     private def getConstraintWitUpperLowerBounds(symbol: SymbolType, resultType: TypeType, context: Context) = {
-      val c = getConstraint(symbol, resultType, context)
-//        translatePropertyConstraints(symbol, resultType, context)
+      val c = getConstraint(symbol, resultType, context) &&
+        translatePropertyConstraints(symbol, resultType, context)
       val f = expressionForType(resultType)
       (
         if(!c.lowerBound.exists(_.expression.isConstant))
@@ -194,17 +194,21 @@ trait TypeContext { self: Constraints =>
       )
     }
 
-//    private def translatePropertyConstraints(symbol: SymbolType, resultType: TypeType, context: Context) = {
-//      val c = context.get(symbol.tail)
-//      val cList = for {
-//        prop <- c.propertyConstraints
-//        if prop.symbol == symbol.head
-//      } yield {
-//        prop.constraint
-//      }
-//      if(cList.isEmpty) NoConstraints
-//      else cList.reduce(_&&_)
-//    }
+    private def translatePropertyConstraints(
+        symbol: SymbolType,
+        resultType: TypeType,
+        context: Context): Constraint = {
+
+      val c = context.get(symbol.tail)
+      val cList = for {
+        prop <- c.propertyConstraints
+        if prop.symbol == symbol.head
+      } yield {
+        prop.constraint
+      }
+      if(cList.isEmpty) NoConstraints
+      else cList.reduce(_&&_)
+    }
 
     protected[boundedintegers] def trySubstitute(
           symbol: SymbolType, base: ExpressionConstraint, boundedBy: ExpressionConstraint) = {
@@ -217,15 +221,6 @@ trait TypeContext { self: Constraints =>
                createBoundConstraint(base, boundedBy)
       } yield {f(base.expression.substitute(symbol, boundedBy.expression))}
     }
-
-//    protected[boundedintegers]
-//    def trySubstituteConstant(
-//      base: ExpressionConstraint,
-//      boundedBy: ExpressionConstraint
-//    ) = for {
-//      term <- base.expression.terms.find(_.variables.isEmpty)
-//      f <- createBoundConstraint(base, boundedBy)
-//    } yield f()
 
     protected[boundedintegers] def createBoundConstraint(
           base: SimpleConstraint, boundedBy: SimpleConstraint):

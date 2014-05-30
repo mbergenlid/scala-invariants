@@ -127,14 +127,13 @@ trait MyUniverse extends Constraints with TypeContext {
 
           if(memberSymbol == NoSymbol)
             throw new CompilationError(
-              Error(t.pos, s"Can not find property ${prop} in type ${symbol.typeSignature}"))
+              Error(t.pos, s"Can not find property $prop in type ${symbol.typeSignature}"))
 
-//
-//          if(!isStable(memberSymbol) &&
-//             memberSymbol != typeOf[String].member(newTermName("length")))
-//            throw new CompilationError(
-//              Error(t.pos, s"Can not be bound to property ${prop} in type ${symbol.typeSignature} as " +
-//                s"it is not stable."))
+          if(!isStable(memberSymbol) &&
+             memberSymbol != typeOf[String].member(newTermName("length")))
+            throw new CompilationError(
+              Error(t.pos, s"Can not be bound to property $prop in type ${symbol.typeSignature} as " +
+                s"it is not stable."))
 
           if(annotations.isEmpty)
             throw new CompilationError(

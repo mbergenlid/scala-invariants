@@ -37,6 +37,8 @@ trait Constraints extends Expressions {
     def &&(other: Constraint): Constraint
     def ||(other: Constraint): Constraint
 
+    lazy val propertyConstraints = new PropertyConstraintTraversable(this)
+
   }
 
   implicit val fromConstraint = new DefaultConstraintBuilder
@@ -62,9 +64,22 @@ trait Constraints extends Expressions {
           constraints.collect{case ec:ExpressionConstraint => ec}.foreach(f)
         case Or(constraints) =>
           constraints.foreach(_.constraints.collect{case ec:ExpressionConstraint => ec}.foreach(f))
-        case _ => throw new RuntimeException("Could not happen")
+        case PropertyConstraint(sym, sc) => foreach(f, sc)
+        case _ => throw new RuntimeException(s"Could not happen: $c")
       }
       foreach(f, c)
+    }
+  }
+
+  class PropertyConstraintTraversable(c: Constraint) extends Traversable[PropertyConstraint] {
+    def foreach[U](f: PropertyConstraint => U): Unit = {
+      def foreach(f: PropertyConstraint => U)(c: Constraint): Unit = c match {
+        case p @ PropertyConstraint(_, constraint) => f(p)
+        case And(cs) => cs.foreach(foreach(f))
+        case Or(cs) => cs.foreach(foreach(f))
+        case _ =>
+      }
+      foreach(f)(c)
     }
   }
 
@@ -236,7 +251,7 @@ trait Constraints extends Expressions {
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 <= expression
-      case LessThanOrEqual(v2) => v2.decrement <= expression
+      case LessThanOrEqual(v2) => v2 <= expression
       case _ => false
     }
 
@@ -324,7 +339,7 @@ trait Constraints extends Expressions {
     type C = SimpleConstraint
 
     override def definitelySubsetOf(that: Constraint) = that match {
-      case _:ExpressionConstraint =>
+      case _:SimpleConstraint =>
         constraints.exists(_.definitelySubsetOf(that))
       case _ =>
         super.definitelySubsetOf(that)
@@ -473,14 +488,20 @@ trait Constraints extends Expressions {
     override def definitelySubsetOf(that: Constraint) = that match {
       case PropertyConstraint(otherSymbol, otherConstraint) =>
         otherSymbol == symbol && constraint.definitelySubsetOf(otherConstraint)
-      case _ => super.definitelySubsetOf(that)
+      case _ => false
     }
 
     def tryAnd(constraint: SimpleConstraint) = ???
 
     def ||(other: Constraints.this.type#Constraint) = ???
 
-    def &&(other: Constraints.this.type#Constraint) = ???
+    def &&(other: Constraint) = other match {
+      case PropertyConstraint(sym, c) if sym == symbol =>
+        (constraint && c).map(ec => PropertyConstraint(symbol, ec))
+      case s: SimpleConstraint => And(List(this, s))
+      case And(cs) => And(this :: cs)
+      case _ => other && this
+    }
 
     def flatMap(f: (Constraints.this.type#ExpressionConstraint) => Constraints.this.type#Constraint) = ???
 
