@@ -1,4 +1,5 @@
-name := "bounded-integers"
+
+name := "plugin"
 
 version := "0.1-SNAPSHOT"
 
@@ -17,11 +18,11 @@ resolvers ++= Seq(
   "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases"
 )
 
-
-scalacOptions in (Compile, console) <+= (packageBin in Compile) map { bin =>
-    "-Xplugin:"+bin.absolutePath
-}
+//scalacOptions in (Compile, console) <+=  (packageBin in Compile) map { bin =>
+//    "-Xplugin:"+bin.absolutePath
+//}
 
 concurrentRestrictions in Global := {
   Tags.limitAll(1) :: Nil
 }
+

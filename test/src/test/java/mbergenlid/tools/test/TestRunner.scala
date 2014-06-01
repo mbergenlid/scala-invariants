@@ -2,13 +2,13 @@ package mbergenlid.tools.test
 
 import org.scalatest.FunSuite
 import mbergenlid.tools.test.utils.PropertyRunner
-import java.io.File
+import java.io.{FilenameFilter, File}
 
 
 class TestRunner extends FunSuite {
 
   val Scalac = "/opt/scala/scala-2.10.3/bin/scalac"
-  val Plugin = "../tmp/plugin.jar"
+  val Plugin = findPluginJar()
 
   registerTests()
 
@@ -27,6 +27,17 @@ class TestRunner extends FunSuite {
         PropertyRunner.execute(s"test.${name.dropRight(6)}")
       }
     }
+  }
+
+  private def findPluginJar(): String = {
+    val pluginDir = new File(System.getProperty("PLUGIN_ROOT", "."))
+    val target = new File(pluginDir, "target/scala-2.10")
+    val jars = target.listFiles(new FilenameFilter() {
+      def accept(file: File, name: String) =
+        name.endsWith(".jar") && !(name.endsWith("-javadoc.jar") || name.endsWith("-sources.jar"))
+    })
+    assert(jars.length == 1)
+    jars(0).getAbsolutePath
   }
 
   def compile(file: String) = {

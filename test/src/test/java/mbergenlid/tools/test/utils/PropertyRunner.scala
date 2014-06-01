@@ -49,7 +49,7 @@ object PropertyRunner extends MyUniverse with Assertions {
     method.paramss match {
       case parameterSymbols :: _ =>
         if(parameterSymbols.size <= 8) {
-          val params = parameterSymbols.map(p => getPropertyParams(p.typeSignature))
+          val params = parameterSymbols.map(p => getPropertyParams(p))
 
           val propertyConstructor = params match {
             case a1::Nil => property[Int](a1) _
@@ -60,6 +60,7 @@ object PropertyRunner extends MyUniverse with Assertions {
             case a1::a2::a3::a4::a5::a6::Nil => property[Int](a1,a2,a3,a4,a5,a6) _
             case a1::a2::a3::a4::a5::a6::a7::Nil => property[Int](a1,a2,a3,a4,a5,a6,a7) _
             case a1::a2::a3::a4::a5::a6::a7::a8::Nil => property[Int](a1,a2,a3,a4,a5,a6,a7,a8) _
+            case _ => throw new RuntimeException("Should not happen")
           }
 
           propertyConstructor(instanceMirror.reflectMethod(method.asMethod), constraint)
@@ -68,20 +69,26 @@ object PropertyRunner extends MyUniverse with Assertions {
         }
       case Nil =>
         val res = instanceMirror.reflectMethod(method.asMethod).apply().asInstanceOf[Int]
-        Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+        Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }
-
 
   }
 
-  private def getPropertyParams(tpe: Type): PropertyParams = tpe match {
-    case TypeRef(_, IntSymbol, _) => PropertyParams[Int]
-    case TypeRef(_, DoubleSymbol, _) => PropertyParams[Double]
+  private def getPropertyParams(symbol: Symbol): PropertyParams = symbol.typeSignature match {
+    case TypeRef(_, IntSymbol, _) =>
+      PropertyParams[Int](new ExpressionFactory[Int](IntType), parameterConstraints(symbol))
+    case TypeRef(_, DoubleSymbol, _) =>
+      PropertyParams[Double](new ExpressionFactory[Double](DoubleType), parameterConstraints(symbol))
   }
 
   private def methodConstraints(method: MethodSymbol) = {
     val globalSymbol = method.asInstanceOf[global.MethodSymbol]
     BoundsFactory.apply(globalSymbol, globalSymbol.returnType)
+  }
+
+  private def parameterConstraints(param: Symbol) = {
+    val globalSymbol = param.asInstanceOf[global.Symbol]
+    BoundsFactory.apply(globalSymbol, globalSymbol.typeSignature)
   }
 
   import org.scalacheck.Prop
@@ -92,10 +99,10 @@ object PropertyRunner extends MyUniverse with Assertions {
     (p1: P)
     (method: MethodMirror, constraint: Constraint): Prop = {
 
-    forAll { n: Any =>
+    forAll(p1.generator) { n: Any =>
       val res = method.apply(n).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
-    }(propBoolean, p1.arbitrary, p1.shrink, prettyAny)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
+    }(propBoolean, p1.shrink, prettyAny)
   }
 
   private def property[R: RichNumeric: TypeTag]
@@ -104,7 +111,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any) =>
       val res = method.apply(n1, n2).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny, p2.arbitrary, p2.shrink, prettyAny)
   }
 
@@ -114,7 +121,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any) =>
       val res = method.apply(n1, n2, n3).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
                    p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny)
@@ -126,7 +133,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any, n4: Any) =>
       val res = method.apply(n1, n2, n3, n4).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
         p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny,
@@ -140,7 +147,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any, n4: Any, n5: Any) =>
       val res = method.apply(n1, n2, n3, n4, n5).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
         p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny,
@@ -154,7 +161,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any, n4: Any, n5: Any, n6: Any) =>
       val res = method.apply(n1, n2, n3, n4, n5, n6).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
         p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny,
@@ -169,7 +176,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any, n4: Any, n5: Any, n6: Any, n7: Any) =>
       val res = method.apply(n1, n2, n3, n4, n5, n6, n7).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
         p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny,
@@ -185,7 +192,7 @@ object PropertyRunner extends MyUniverse with Assertions {
 
     forAll { (n1: Any, n2: Any, n3: Any, n4: Any, n5: Any, n6: Any, n7: Any, n8: Any) =>
       val res = method.apply(n1, n2, n3, n4, n5, n6, n7, n8).asInstanceOf[R]
-      Equal(Polynomial.fromConstant(res)).obviouslySubsetOf(constraint)
+      Equal(Polynomial.fromConstant(res)).definitelySubsetOf(constraint)
     }(propBoolean, p1.arbitrary, p1.shrink, prettyAny,
         p2.arbitrary, p2.shrink, prettyAny,
         p3.arbitrary, p3.shrink, prettyAny,
@@ -199,12 +206,20 @@ object PropertyRunner extends MyUniverse with Assertions {
 
   class PropertyParams(
     val arbitrary: Arbitrary[Any],
-    val shrink: Shrink[Any]
-  )
+    val shrink: Shrink[Any],
+    val constraints: Constraint,
+    expressionFactory: ExpressionFactory[Any]
+  ) {
+    def generator = arbitrary.arbitrary suchThat
+      (n => Equal(expressionFactory.fromConstant(n)) definitelySubsetOf constraints)
+  }
 
   object PropertyParams {
-    def apply[T](implicit arbitrary: Arbitrary[T], shrink: Shrink[T]) =
+    def apply[T](expressionFactory: ExpressionFactory[T],
+                 constraint: Constraint = NoConstraints)
+                (implicit arbitrary: Arbitrary[T], shrink: Shrink[T]) =
       new PropertyParams(arbitrary.asInstanceOf[Arbitrary[Any]],
-        shrink.asInstanceOf[Shrink[Any]])
+        shrink.asInstanceOf[Shrink[Any]], constraint,
+        expressionFactory.asInstanceOf[ExpressionFactory[Any]])
   }
 }

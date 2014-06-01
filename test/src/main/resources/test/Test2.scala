@@ -4,7 +4,7 @@ import mbergenlid.tools.boundedintegers.annotations.{LessThan, GreaterThan, Grea
 
 object Test2 {
   @GreaterThanOrEqual(0)
-  def testMethod(n: Int) = if(n < 0) 0-n else n
+  def testMethod(@GreaterThan(Int.MinValue) n: Int) = if(n < 0) 0-n else n
 
   @GreaterThan(0)
   def m1(n: Double) = 4
