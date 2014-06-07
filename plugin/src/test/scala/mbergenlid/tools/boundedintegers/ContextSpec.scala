@@ -62,7 +62,7 @@ class ContextSpec extends FunSuite
       ec1 <- Equal(Polynomial.fromSymbol[Int](sym("x")))
       ec2 <- GreaterThanOrEqual(Polynomial.fromConstant(0)) && LessThan(Polynomial.fromConstant(10)) &&
         Equal(Polynomial.fromSymbol[Int](sym("x")))
-      s <- Context.trySubstitute(sym("x"), ec1, ec2)
+      s <- ec1.substitute(sym("x"), ec2)
     } yield s
   }
 

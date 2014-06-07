@@ -173,6 +173,13 @@ trait Constraints extends Expressions {
 
     protected[boundedintegers]
     def combineNegative(other: ExpressionConstraint): Option[Expression => ExpressionConstraint]
+
+    def substitute(symbol: SymbolType, other: ExpressionConstraint): Option[ExpressionConstraint] =
+      for {
+        term <- expression.terms.find(_.variables.contains(symbol))
+        f <-  if(term.coeff.isLessThanZero) combineNegative(other)
+              else combine(other)
+      } yield {f(expression.substitute(symbol, other.expression))}
   }
 
   object ExpressionConstraint {

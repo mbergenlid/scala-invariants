@@ -165,7 +165,7 @@ trait TypeContext { self: Constraints =>
           val substituted = for {
             sc1 <- constraint
             sc2 <- b
-            s <- trySubstitute(symbol, sc1, sc2)
+            s <- sc1.substitute(symbol, sc2)
           } yield s
 
           substitute (
@@ -208,18 +208,6 @@ trait TypeContext { self: Constraints =>
       }
       if(cList.isEmpty) NoConstraints
       else cList.reduce(_&&_)
-    }
-
-    protected[boundedintegers] def trySubstitute(
-          symbol: SymbolType, base: ExpressionConstraint, boundedBy: ExpressionConstraint) = {
-
-      for {
-        term <- base.expression.terms.find(_.variables.contains(symbol))
-        f <- if(term.coeff.isLessThanZero)
-               base.combineNegative(boundedBy)
-             else
-               base.combine(boundedBy)
-      } yield {f(base.expression.substitute(symbol, boundedBy.expression))}
     }
   }
 
