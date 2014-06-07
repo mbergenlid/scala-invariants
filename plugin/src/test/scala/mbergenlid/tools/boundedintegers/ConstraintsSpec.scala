@@ -32,6 +32,9 @@ class ConstraintsSpec extends FunSuite
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))
 
+  def ec(s: String): ExpressionConstraint =
+    c(s).asInstanceOf[ExpressionConstraint]
+
   implicit def c(s: String): Constraint =
     parser.parseExpression(s).get
   val parser = new ExprParser
@@ -289,6 +292,26 @@ class ConstraintsSpec extends FunSuite
     } yield ec2
 
 //    assert(res5 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
+  }
+
+  test("Adding expression constraints") {
+    val res1 = ec("x < 10") + ec("x < 11")
+    assert(res1 === ec("x < 21"))
+
+    val res2 = ec("x < 10") + ec("x > 10")
+    assert(res2 === NoConstraints)
+
+    val res3 = ec("x <= 10") + ec("x < 2")
+    assert(res3 === ec("x < 12"))
+
+    val res4 = ec("x > 10") + ec("x > 11")
+    assert(res4 === ec("x > 21"))
+
+    val res5 = ec("x > 10") + ec("x < 10")
+    assert(res5 === NoConstraints)
+
+    val res6 = ec("x >= 10") + ec("x > 2")
+    assert(res6 === ec("x > 12"))
   }
 
   class ExprParser extends JavaTokenParsers {

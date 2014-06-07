@@ -207,7 +207,7 @@ trait Expressions {
       }
     }
 
-    def map(f: Term  => Term ) =
+    private def map(f: Term  => Term ) =
       Polynomial(terms.map(f))
 
     override def toString =

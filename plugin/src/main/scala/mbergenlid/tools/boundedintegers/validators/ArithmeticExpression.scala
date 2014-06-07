@@ -13,7 +13,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
 
   private def n(s: String) = stringToTermName(s)
 
-  private val operators = Map[Name, (Expression, Expression) => Expression](
+  private val operators = Map[Name, (ExpressionConstraint, ExpressionConstraint) => SimpleConstraint](
     n("$plus") -> (_+_),
     n("$minus") -> (_-_),
     n("$times") -> (_*_)
@@ -37,13 +37,8 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
       val newConstraint = for {
         sc1 <- lhs.constraint
         sc2 <- rhs.constraint
-        f <-  if(method == n("$minus"))
-                Context.createNegativeBoundConstraint(sc1, sc2)
-              else
-                Context.createBoundConstraint(sc1, sc2)
       } yield {
-         val c = f(operators(method).apply(sc1.expression, sc2.expression))
-         c
+        operators(method).apply(sc1, sc2)
       }
 
       /*
@@ -57,10 +52,12 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
        * >= 4
        */
 
-      val expression = for {
+      val expression: Option[Expression] = for {
         exp1 <- lhs.expression
         exp2 <- rhs.expression
-      } yield operators(method).apply(exp1, exp2)
+      } yield {
+        operators(method).apply(Equal(exp1), Equal(exp2)).asInstanceOf[ExpressionConstraint].expression
+      }
       BoundedType(expression, newConstraint)
 
   }

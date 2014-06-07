@@ -160,6 +160,19 @@ trait Constraints extends Expressions {
       else if(other.definitelySubsetOf(this)) Some(this)
       else None
 
+
+    def +(other: ExpressionConstraint): SimpleConstraint =
+      combine(other).map(ef => ef(expression + other.expression)).getOrElse(NoConstraints)
+    def *(other: ExpressionConstraint): SimpleConstraint =
+      combine(other).map(ef => ef(expression * other.expression)).getOrElse(NoConstraints)
+    def -(other: ExpressionConstraint): SimpleConstraint =
+      combineNegative(other).map(ef => ef(expression - other.expression)).getOrElse(NoConstraints)
+
+    protected[Constraints]
+    def combine(other: ExpressionConstraint): Option[Expression => ExpressionConstraint]
+
+    protected[Constraints]
+    def combineNegative(other: ExpressionConstraint): Option[Expression => ExpressionConstraint]
   }
 
   object ExpressionConstraint {
@@ -197,9 +210,23 @@ trait Constraints extends Expressions {
     override def upperBound = this
     override def lowerBound = NoConstraints
 
+    override def combine(other: ExpressionConstraint) = other match {
+      case LessThan(v) => Some(LessThan.apply)
+      case LessThanOrEqual(v) => Some(LessThan)
+      case Equal(v) => Some(LessThan)
+      case _ => None
+    }
+
     def map(f: ExpressionConstraint => Expression) =
       LessThan(f(this))
 
+    override protected[Constraints]
+    def combineNegative(other: ExpressionConstraint) = other match {
+      case GreaterThan(_) => Some(LessThan)
+      case GreaterThanOrEqual(_) => Some(LessThan)
+      case Equal(_) => Some(LessThan)
+      case _ => None
+    }
   }
   /**
    * <= x
@@ -233,9 +260,23 @@ trait Constraints extends Expressions {
     override def upperBound = LessThan(expression)
     override def lowerBound = NoConstraints
 
+    override def combine(other: ExpressionConstraint) = other match {
+      case LessThan(v) => Some(LessThan)
+      case LessThanOrEqual(v) => Some(LessThanOrEqual)
+      case Equal(v) => Some(LessThanOrEqual)
+      case _ => None
+    }
+
     def map(f: ExpressionConstraint => Expression) =
       LessThanOrEqual(f(this))
 
+    override protected[Constraints]
+    def combineNegative(other: ExpressionConstraint) = other match {
+      case GreaterThan(_) => Some(LessThan)
+      case GreaterThanOrEqual(_) => Some(LessThanOrEqual)
+      case Equal(_) => Some(LessThanOrEqual)
+      case _ => None
+    }
   }
 
   /**
@@ -265,6 +306,20 @@ trait Constraints extends Expressions {
     def map(f: ExpressionConstraint => Expression) =
       GreaterThan(f(this))
 
+    override def combine(other: ExpressionConstraint) = other match {
+      case GreaterThan(v) => Some(GreaterThan)
+      case GreaterThanOrEqual(v) => Some(GreaterThan)
+      case Equal(v) => Some(GreaterThan)
+      case _ => None
+    }
+
+    override protected[Constraints]
+    def combineNegative(other: ExpressionConstraint) = other match {
+      case LessThan(_) => Some(GreaterThan)
+      case LessThanOrEqual(_) => Some(GreaterThan)
+      case Equal(_) => Some(GreaterThan)
+      case _ => None
+    }
   }
 
   case class GreaterThanOrEqual(expression: Expression) extends ExpressionConstraint {
@@ -289,6 +344,21 @@ trait Constraints extends Expressions {
 
     def map(f: ExpressionConstraint => Expression) =
       GreaterThanOrEqual(f(this))
+
+    override def combine(other: ExpressionConstraint) = other match {
+      case GreaterThan(v) => Some(GreaterThan)
+      case GreaterThanOrEqual(v) => Some(GreaterThanOrEqual)
+      case Equal(v) => Some(GreaterThanOrEqual)
+      case _ => None
+    }
+
+    override protected[Constraints]
+    def combineNegative(other: ExpressionConstraint) = other match {
+      case LessThan(_) => Some(GreaterThan)
+      case LessThanOrEqual(_) => Some(GreaterThanOrEqual)
+      case Equal(_) => Some(GreaterThanOrEqual)
+      case _ => None
+    }
   }
   
   case class Equal(expression: Expression) extends ExpressionConstraint {
@@ -322,6 +392,20 @@ trait Constraints extends Expressions {
     def map(f: ExpressionConstraint => Expression) =
       Equal(f(this))
 
+    override def combine(other: ExpressionConstraint) = other match {
+      case Equal(v) => Some(Equal)
+      case _ => other combine this
+    }
+
+    override protected[Constraints]
+    def combineNegative(other: ExpressionConstraint) = other match {
+      case Equal(_) => Some(Equal)
+      case LessThan(_) => Some(GreaterThan)
+      case LessThanOrEqual(_) => Some(GreaterThanOrEqual)
+      case GreaterThan(_) => Some(LessThan)
+      case GreaterThanOrEqual(_) => Some(LessThanOrEqual)
+      case _ => None
+    }
   }
 
   trait ComplexConstraint extends Constraint {
