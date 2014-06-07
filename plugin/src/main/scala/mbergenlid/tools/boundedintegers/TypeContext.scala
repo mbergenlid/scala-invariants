@@ -97,21 +97,21 @@ trait TypeContext { self: Constraints =>
       resultType: TypeType,
       context: Context): Constraint = {
 
-      val f = expressionForType(resultType)
+        val f = expressionForType(resultType)
 
-      def extractConstant(expr: Expression): ConstantValue =
-        expr.terms.find(_.variables.isEmpty).map(_.coeff).getOrElse(Polynomial.Zero.asConstant)
+        def extractConstant(expr: Expression): ConstantValue =
+          expr.terms.find(_.variables.isEmpty).map(_.coeff).getOrElse(Polynomial.Zero.asConstant)
 
-      def fromConstant(ec: ExpressionConstraint) = for {
-        boundedBy <- findSymbolConstraints(extractConstant(ec.expression), context, f)
-        newConstraint <- createBoundConstraint(ec, boundedBy)
-      } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
+        def fromConstant(ec: ExpressionConstraint) = for {
+          boundedBy <- findSymbolConstraints(extractConstant(ec.expression), context, f)
+          newConstraint <- ec.combine(boundedBy)
+        } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
 
-      from.map { fromSc: ExpressionConstraint =>
-        val l: Iterable[Constraint] = fromConstant(fromSc)
-        val c = l.reduceLeftOption(_&&_).getOrElse(NoConstraints)
-        c
-      }
+        from.map { fromSc: ExpressionConstraint =>
+          val l: Iterable[Constraint] = fromConstant(fromSc)
+          val c = l.reduceLeftOption(_&&_).getOrElse(NoConstraints)
+          c
+        }
     }
 
     private def findSymbolConstraints(
@@ -216,92 +216,10 @@ trait TypeContext { self: Constraints =>
       for {
         term <- base.expression.terms.find(_.variables.contains(symbol))
         f <- if(term.coeff.isLessThanZero)
-               createNegativeBoundConstraint(base, boundedBy)
+               base.combineNegative(boundedBy)
              else
-               createBoundConstraint(base, boundedBy)
+               base.combine(boundedBy)
       } yield {f(base.expression.substitute(symbol, boundedBy.expression))}
-    }
-
-    protected[boundedintegers] def createBoundConstraint(
-          base: SimpleConstraint, boundedBy: SimpleConstraint):
-          Option[Expression => ExpressionConstraint] = (base, boundedBy) match {
-
-      case (LessThan(_), LessThan(_)) =>
-        Some(LessThan.apply)
-      case (LessThan(_), LessThanOrEqual(_)) => 
-        Some(LessThan.apply)
-      case (LessThan(_), Equal(_)) => 
-        Some(LessThan.apply)
-      case (GreaterThan(_), GreaterThan(_)) => 
-        Some(GreaterThan.apply)
-      case (GreaterThan(_), GreaterThanOrEqual(_)) => 
-        Some(GreaterThan.apply)
-      case (GreaterThan(_), Equal(_)) => 
-        Some(GreaterThan.apply)
-
-      case (GreaterThanOrEqual(_), GreaterThan(_)) =>
-          Some(GreaterThan.apply)
-      case (GreaterThanOrEqual(_), GreaterThanOrEqual(_)) =>
-          Some(GreaterThanOrEqual.apply)
-      case (GreaterThanOrEqual(_), Equal(_)) =>
-          Some(GreaterThanOrEqual.apply)
-      case (LessThanOrEqual(_), LessThan(_)) =>
-          Some(LessThan.apply)
-      case (LessThanOrEqual(_), LessThanOrEqual(_)) =>
-          Some(LessThanOrEqual.apply)
-      case (LessThanOrEqual(_), Equal(_)) =>
-          Some(LessThanOrEqual.apply)
-
-      case (Equal(_), _) =>
-        if(boundedBy.isInstanceOf[Equal])
-          Some(Equal.apply)
-        else 
-          createBoundConstraint(boundedBy, base)
-      case _ => None
-    }
-
-    protected[boundedintegers] def createNegativeBoundConstraint(
-              base: SimpleConstraint, boundedBy: SimpleConstraint):
-              Option[Expression => SimpleConstraint] = (base, boundedBy) match {
-
-      case (LessThan(_), GreaterThan(_)) =>
-        Some(LessThan.apply)
-      case (LessThan(_), GreaterThanOrEqual(_)) =>
-        Some(LessThan.apply)
-      case (LessThan(_), Equal(_)) =>
-        Some(LessThan.apply)
-      case (GreaterThan(_), LessThan(_)) =>
-        Some(GreaterThan.apply)
-      case (GreaterThan(_), LessThanOrEqual(_)) =>
-        Some(GreaterThan.apply)
-      case (GreaterThan(_), Equal(_)) =>
-        Some(GreaterThan.apply)
-
-      case (GreaterThanOrEqual(_), LessThan(_)) =>
-        Some(GreaterThan.apply)
-      case (GreaterThanOrEqual(_), LessThanOrEqual(_)) =>
-        Some(GreaterThanOrEqual.apply)
-      case (GreaterThanOrEqual(_), Equal(_)) =>
-        Some(GreaterThanOrEqual.apply)
-      case (LessThanOrEqual(_), GreaterThan(_)) =>
-        Some(LessThan.apply)
-      case (LessThanOrEqual(_), GreaterThanOrEqual(_)) =>
-        Some(LessThanOrEqual.apply)
-      case (LessThanOrEqual(_), Equal(_)) =>
-        Some(LessThanOrEqual.apply)
-
-      case (Equal(_), Equal(_)) =>
-        Some(Equal.apply)
-      case (Equal(_), LessThan(_)) =>
-        Some(GreaterThan.apply)
-      case (Equal(_), LessThanOrEqual(_)) =>
-        Some(GreaterThanOrEqual.apply)
-      case (Equal(_), GreaterThan(_)) =>
-        Some(LessThan.apply)
-      case (Equal(_), GreaterThanOrEqual(_)) =>
-        Some(LessThanOrEqual.apply)
-
-      case _ => None
     }
   }
 
