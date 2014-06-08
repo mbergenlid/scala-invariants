@@ -40,25 +40,7 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
       } yield {
         operators(method).apply(sc1, sc2)
       }
-
-      /*
-       * x + 4
-       *
-       * == method && >= 0 && <= 5
-       * == 4
-       *
-       *        == 4 && == method + 4
-       *
-       * >= 4
-       */
-
-      val expression: Option[Expression] = for {
-        exp1 <- lhs.expression
-        exp2 <- rhs.expression
-      } yield {
-        operators(method).apply(Equal(exp1), Equal(exp2)).asInstanceOf[ExpressionConstraint].expression
-      }
-      BoundedType(expression, newConstraint)
+      BoundedType(newConstraint)
 
   }
 

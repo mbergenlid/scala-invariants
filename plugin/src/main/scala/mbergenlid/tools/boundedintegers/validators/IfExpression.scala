@@ -17,6 +17,6 @@ trait IfExpression extends BooleanExpressionEvaluator {
         checkBounds(context && newContext)(Block(Nil, _then)).constraint ||
         checkBounds(context && !newContext)(Block(Nil, _else)).constraint
 
-      BoundedType(None, newConstraint)
+      BoundedType(newConstraint)
   }
 }

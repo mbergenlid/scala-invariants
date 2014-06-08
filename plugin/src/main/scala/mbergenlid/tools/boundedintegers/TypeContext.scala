@@ -212,18 +212,13 @@ trait TypeContext { self: Constraints =>
   }
 
 
-  class BoundedType(val expression: Option[Expression], val constraint: Constraint) {
-    protected def this() = this(None, NoConstraints)
-//    def this(tpe: TypeType) = this(NoConstraints)
-
-    def tpe = expression.map(_.tpe).getOrElse(TypeNothing)
-    private def assertSameType(other: BoundedType) =
-      assert(tpe == TypeNothing || other.tpe == TypeNothing || tpe == other.tpe)
+  class BoundedType(val constraint: Constraint) {
+    protected def this() = this(NoConstraints)
 
     def convertTo(tpe: TypeType): BoundedType = {
       val f = expressionForType(tpe)
       val newConstraint = constraint.map { sc => f.convertExpression(sc.expression) }
-      new BoundedType(expression.map(e => f.convertExpression(e)), newConstraint)
+      new BoundedType(newConstraint)
     }
 
     def <:<(other: BoundedType): Boolean =
@@ -236,14 +231,14 @@ trait TypeContext { self: Constraints =>
   }
 
   object BoundedType {
-    def apply(expression: Expression, constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
-      new BoundedType(Some(expression), constraint.map { sc =>
+    def apply(constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
+      new BoundedType(constraint.map { sc =>
         expressionFactory.convertExpression(sc.expression)
       })
     }
 
-    def apply(expression: Option[Expression], constraint: Constraint) = {
-      new BoundedType(expression, constraint)
+    def apply(constraint: Constraint) = {
+      new BoundedType(constraint)
     }
 
     def noBounds = new BoundedType()

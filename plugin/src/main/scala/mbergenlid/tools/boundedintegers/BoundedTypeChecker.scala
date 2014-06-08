@@ -152,12 +152,12 @@ trait MyUniverse extends Constraints with TypeContext {
         val f = expressionForType(tree.tpe)
         val exp = f.convertExpression(expression(tree, tree.tpe))
         if(tree.symbol != null && tree.symbol != NoSymbol) {
-          BoundedType(exp, Equal(exp) && BoundsFactory(tree.symbol, f.convertedType), f)
+          BoundedType(Equal(exp) && BoundsFactory(tree.symbol, f.convertedType), f)
         } else {
-          BoundedType(exp, Equal(exp), f)
+          BoundedType(Equal(exp), f)
         }
       } else if(tree.symbol != null) {
-        BoundedType(None, BoundsFactory(tree.symbol))
+        BoundedType(BoundsFactory(tree.symbol))
       } else {
         BoundedType.noBounds
       }
@@ -234,7 +234,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
         val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
         val blockConstraint = Context.getConstraint(bounds.constraint, res.tpe, newContext)
-        BoundedType(bounds.expression, blockConstraint)
+        BoundedType(blockConstraint)
       case _ => 
         traverseChildren(tree.children)
         BoundedType.noBounds
