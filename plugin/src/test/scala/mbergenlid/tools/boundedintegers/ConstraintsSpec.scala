@@ -314,6 +314,70 @@ class ConstraintsSpec extends FunSuite
     assert(res6 === ec("x > 12"))
   }
 
+  test("<| operator") {
+    assert((ec("x > a") <| ec("x < 12")) === ec("x < 12"))
+    assert((ec("x < a") <| ec("x < 12")) === NoConstraints)
+    assert((ec("x <= a") <| ec("x < 12")) === NoConstraints)
+
+    assert((GreaterThan(stringToExpression("x") + 5) <| ec("x < 12")) === ec("x < 12"))
+
+    //a <= x1 < x2 <= 12 ==> a < 12
+    assert((ec("x >= a") <| ec("x <= 12")) === ec("x < 12"))
+    //a <= x1 < x2 == 12 ==> a < 12
+    assert((ec("x >= a") <| ec("x == 12")) === ec("x < 12"))
+
+    // a > x1 < x2 > 12 ==> NoConstraint
+    assert((ec("x < a") <| ec("x > 12")) === NoConstraints)
+    assert((ec("x <= a") <| ec("x > 12")) === NoConstraints)
+  }
+
+  test("<=| operator") {
+    //a < x1 <= x2 < 12 ==> a < 12
+    assert((ec("x > a") <=| ec("x < 12")) === ec("x < 12"))
+    assert((ec("x < a") <=| ec("x < 12")) === NoConstraints)
+    assert((ec("x <= a") <=| ec("x < 12")) === NoConstraints)
+
+    //a <= x1 <= x2 <= 12 ==> a <= 12
+    assert((ec("x >= a") <=| ec("x <= 12")) === ec("x <= 12"))
+    //a <= x1 <= x2 == 12 ==> a < 12
+    assert((ec("x >= a") <=| ec("x == 12")) === ec("x <= 12"))
+
+    // a > x1 <= x2 > 12 ==> NoConstraint
+    assert((ec("x < a") <=| ec("x > 12")) === NoConstraints)
+    assert((ec("x <= a") <=| ec("x > 12")) === NoConstraints)
+  }
+
+  test(">| operator") {
+    assert((ec("x < a") >| ec("x > 12")) === ec("x > 12"))
+    assert((ec("x > a") >| ec("x > 12")) === NoConstraints)
+    assert((ec("x >= a") >| ec("x > 12")) === NoConstraints)
+
+    //a >= x1 > x2 >= 12 ==> a > 12
+    assert((ec("x <= a") >| ec("x >= 12")) === ec("x > 12"))
+    //a >= x1 > x2 == 12 ==> a > 12
+    assert((ec("x <= a") >| ec("x == 12")) === ec("x > 12"))
+
+    // a > x1 < x2 > 12 ==> NoConstraint
+    assert((ec("x > a") >| ec("x < 12")) === NoConstraints)
+    assert((ec("x >= a") >| ec("x < 12")) === NoConstraints)
+  }
+
+  test(">=| operator") {
+    //a > x1 >= x2 > 12 ==> a > 12
+    assert((ec("x < a") >=| ec("x > 12")) === ec("x > 12"))
+    assert((ec("x > a") >=| ec("x > 12")) === NoConstraints)
+    assert((ec("x >= a") >=| ec("x > 12")) === NoConstraints)
+
+    //a >= x1 >= x2 >= 12 ==> a >= 12
+    assert((ec("x <= a") >=| ec("x >= 12")) === ec("x >= 12"))
+    //a >= x1 >= x2 == 12 ==> a > 12
+    assert((ec("x <= a") >=| ec("x == 12")) === ec("x >= 12"))
+
+    // a < x1 >= x2 < 12 ==> NoConstraint
+    assert((ec("x > a") >=| ec("x < 12")) === NoConstraints)
+    assert((ec("x >= a") >=| ec("x < 12")) === NoConstraints)
+  }
+
   class ExprParser extends JavaTokenParsers {
 
     def parseConstraint(input: String) =

@@ -180,6 +180,70 @@ trait Constraints extends Expressions {
         f <-  if(term.coeff.isLessThanZero) combineNegative(other)
               else combine(other)
       } yield {f(expression.substitute(symbol, other.expression))}
+
+    /** Returns the transitive constraint from this to {{{other}}}
+      * by going via constraint less than.
+      *
+      * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
+      * by {{{other}}} and {{{x < y}}} then this method returns the relationship
+      * between {{{this.expression}}} and {{{other.expression}}}
+      *
+      * {{{
+      *   x > a, y < 10, x < y
+      *   (this < other) ==> a < x < y < 10 ==> a < 10 = LessThan(10)
+      * }}}
+      *
+      * @param other The other constraint
+      */
+    def <|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+
+    /** Returns the transitive constraint from this to {{{other}}}
+      * by going via constraint less than or equal.
+      *
+      * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
+      * by {{{other}}} and {{{x <= y}}} then this method returns the relationship
+      * between {{{this.expression}}} and {{{other.expression}}}
+      *
+      * {{{
+      *   x > a, y < 10, x <= y
+      *   (this <= other) ==> a < x <= y < 10 ==> a < 10 = LessThan(10)
+      * }}}
+      *
+      * @param other The other constraint
+      */
+    def <=|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+
+    /** Returns the transitive constraint from {{{this}}} to {{{other}}}
+      * by going via constraint greater than.
+      *
+      * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
+      * by {{{other}}} and {{{x > y}}} then this method returns the relationship
+      * between {{{this.expression}}} and {{{other.expression}}}
+      *
+      * {{{
+      *   x < a, y > 10, x > y
+      *   (this > other) ==> a > x > y > 10 ==> a > 10 = GreaterThan(10)
+      * }}}
+      *
+      * @param other The other constraint
+      */
+    def >|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+
+    /** Returns the transitive constraint from {{{this}}} to {{{other}}}
+      * by going via constraint greater than or equal.
+      *
+      * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
+      * by {{{other}}} and {{{x >= y}}} then this method returns the relationship
+      * between {{{this.expression}}} and {{{other.expression}}}
+      *
+      * {{{
+      *   x < a, y > 10, x >= y
+      *   (this >=| other) ==> a > x >= y > 10 ==> a > 10 = GreaterThan(10)
+      * }}}
+      *
+      * @param other The other constraint
+      */
+    def >=|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
   }
 
   object ExpressionConstraint {
@@ -235,6 +299,11 @@ trait Constraints extends Expressions {
       case Equal(_) => Some(LessThan)
       case _ => None
     }
+
+    override def >|(other: ExpressionConstraint) =
+      GreaterThan(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
+
+    override def >=|(other: ExpressionConstraint) = this >| other
   }
   /**
    * <= x
@@ -286,6 +355,12 @@ trait Constraints extends Expressions {
       case Equal(_) => Some(LessThanOrEqual)
       case _ => None
     }
+
+    override def >|(other: ExpressionConstraint) =
+      GreaterThan(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
+
+    override def >=|(other: ExpressionConstraint) =
+      GreaterThanOrEqual(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
   }
 
   /**
@@ -330,6 +405,11 @@ trait Constraints extends Expressions {
       case Equal(_) => Some(GreaterThan)
       case _ => None
     }
+
+    override def <|(other: ExpressionConstraint) =
+      (LessThan(expression) combine other).map(f => f(other.expression)).getOrElse(NoConstraints)
+
+    override def <=|(other: ExpressionConstraint) = this <| other
   }
 
   case class GreaterThanOrEqual(expression: Expression) extends ExpressionConstraint {
@@ -370,6 +450,12 @@ trait Constraints extends Expressions {
       case Equal(_) => Some(GreaterThanOrEqual)
       case _ => None
     }
+
+    override def <|(other: ExpressionConstraint) =
+      LessThan(expression).combine(other).map(_.apply(other.expression)).getOrElse(NoConstraints)
+
+    override def <=|(other: ExpressionConstraint) =
+      LessThanOrEqual(expression).combine(other).map(_.apply(other.expression)).getOrElse(NoConstraints)
   }
   
   case class Equal(expression: Expression) extends ExpressionConstraint {
