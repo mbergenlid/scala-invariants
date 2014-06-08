@@ -21,7 +21,9 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   private def n(s: String) = stringToTermName(s)
 
-  type Factory = (Expression => Constraint)
+  type Factory = (Expression => ExpressionConstraint)
+  type Operator = (ExpressionConstraint, ExpressionConstraint) =>
+    Option[Expression => ExpressionConstraint]
 
   private val opToConstraints = Map[Name, (Factory, Factory)](
     n("$less") -> (LessThan, GreaterThan),
@@ -29,6 +31,15 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     n("$less$eq") -> (LessThanOrEqual, GreaterThanOrEqual),
     n("$greater$eq") -> (GreaterThanOrEqual, LessThanOrEqual),
     n("$eq$eq") -> (Equal, Equal)
+  )
+
+  type EXP = ExpressionConstraint
+  private val operators = Map[Name, (Operator, Operator)](
+    n("$less") -> ((_:EXP) <| (_: EXP), (_:EXP) >| (_:EXP)),
+    n("$greater") -> ((_:EXP) >| (_:EXP), (_:EXP) <| (_:EXP)),
+    n("$less$eq") -> ((_:EXP) <=| (_:EXP), (_:EXP) >=| (_:EXP)),
+    n("$greater$eq") -> ((_:EXP) >=| (_:EXP), (_:EXP) <=| (_:EXP)),
+    n("$eq$eq") -> ((_:EXP) ==| (_:EXP), (_:EXP) ==| (_:EXP))
   )
 
   def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
@@ -41,19 +52,28 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     val lhsBounds = checkBounds(c)(lhs)
     val rhsBounds = checkBounds(c)(rhs)
 
-    val constraints = for {
-      exp1 <- lhsBounds.expression.toList
-      exp2 <- rhsBounds.expression.toList
-      (f1, f2) <- opToConstraints.get(method).toList
-      c <- createConstraints(exp1, exp2, f1) ++ createConstraints(exp2, exp1, f2)
+    def const(lhs: Constraint, rhs: Constraint, op: Operator) = for {
+      ec1 <- lhs.toList
+      ec2 <- rhs.toList
+      f <- op.apply(ec1, ec2).toList
+      c <-  createConstraints(ec1.expression, ec2.expression, f)
     } yield { c }
 
-    new Context(constraints.toMap)
+    val (rhsOperator, lhsOperator) = operators(method)
+    val constraints = const(lhsBounds.constraint, rhsBounds.constraint, rhsOperator) ++
+      const(rhsBounds.constraint, lhsBounds.constraint, lhsOperator)
+
+    new Context((Map.empty[SymbolType, Constraint] /: constraints) {(m, t) =>
+      m + (t._1 -> (m.getOrElse(t._1, NoConstraints) && t._2))
+    })
   }
 
-  private def createConstraints(exp1: Expression, exp2: Expression, factory: Factory) = {
-    for {
-      symbol <- exp1.extractSymbols
-    } yield { symbol -> factory(exp2 + exp1.extractSymbol(symbol)) }
+  private def createConstraints(
+    exp1: Expression,
+    exp2: Expression,
+    factory: Factory): Map[SymbolType, Constraint] = {
+      (for {
+        symbol <- exp1.extractSymbols
+      } yield { symbol -> factory(exp2 + exp1.extractSymbol(symbol)) }).toMap
   }
 }

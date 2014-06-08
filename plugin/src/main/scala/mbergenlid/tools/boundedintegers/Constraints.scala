@@ -129,6 +129,7 @@ trait Constraints extends Expressions {
   trait ExpressionConstraint extends Constraint with SimpleConstraint{
     def expression: Expression
 
+    type OptionalConstraintFactory = Option[Expression => ExpressionConstraint]
     def definitelyNotSubsetOf(that: Constraint): Boolean
     override def isSymbolConstraint = expression.containsSymbols
 
@@ -181,7 +182,7 @@ trait Constraints extends Expressions {
               else combine(other)
       } yield {f(expression.substitute(symbol, other.expression))}
 
-    /** Returns the transitive constraint from this to {{{other}}}
+    /** Returns the transitive constraint factory from this to {{{other}}}
       * by going via constraint less than.
       *
       * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
@@ -190,14 +191,14 @@ trait Constraints extends Expressions {
       *
       * {{{
       *   x > a, y < 10, x < y
-      *   (this < other) ==> a < x < y < 10 ==> a < 10 = LessThan(10)
+      *   (this < other) ==> a < x < y < 10 ==> a < 10 = LessThan
       * }}}
       *
       * @param other The other constraint
       */
-    def <|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+    def <|(other: ExpressionConstraint): OptionalConstraintFactory = None
 
-    /** Returns the transitive constraint from this to {{{other}}}
+    /** Returns the transitive constraint factory from this to {{{other}}}
       * by going via constraint less than or equal.
       *
       * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
@@ -206,14 +207,14 @@ trait Constraints extends Expressions {
       *
       * {{{
       *   x > a, y < 10, x <= y
-      *   (this <= other) ==> a < x <= y < 10 ==> a < 10 = LessThan(10)
+      *   (this <= other) ==> a < x <= y < 10 ==> a < 10 = LessThan
       * }}}
       *
       * @param other The other constraint
       */
-    def <=|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+    def <=|(other: ExpressionConstraint): OptionalConstraintFactory = None
 
-    /** Returns the transitive constraint from {{{this}}} to {{{other}}}
+    /** Returns the transitive constraint factory from {{{this}}} to {{{other}}}
       * by going via constraint greater than.
       *
       * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
@@ -222,14 +223,14 @@ trait Constraints extends Expressions {
       *
       * {{{
       *   x < a, y > 10, x > y
-      *   (this > other) ==> a > x > y > 10 ==> a > 10 = GreaterThan(10)
+      *   (this > other) ==> a > x > y > 10 ==> a > 10 = GreaterThan
       * }}}
       *
       * @param other The other constraint
       */
-    def >|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+    def >|(other: ExpressionConstraint): OptionalConstraintFactory = None
 
-    /** Returns the transitive constraint from {{{this}}} to {{{other}}}
+    /** Returns the transitive constraint factory from {{{this}}} to {{{other}}}
       * by going via constraint greater than or equal.
       *
       * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
@@ -238,12 +239,28 @@ trait Constraints extends Expressions {
       *
       * {{{
       *   x < a, y > 10, x >= y
-      *   (this >=| other) ==> a > x >= y > 10 ==> a > 10 = GreaterThan(10)
+      *   (this >=| other) ==> a > x >= y > 10 ==> a > 10 = GreaterThan
       * }}}
       *
       * @param other The other constraint
       */
-    def >=|(other: ExpressionConstraint): SimpleConstraint = NoConstraints
+    def >=|(other: ExpressionConstraint): OptionalConstraintFactory = None
+
+    /** Returns the transitive constraint factory from {{{this}}} to {{{other}}}
+      * by going via constraint equal.
+      *
+      * Let's say that {{{x}}} is constrained by {{{this}}} and {{{y}}} is constrained
+      * by {{{other}}} and {{{x == y}}} then this method returns the relationship
+      * between {{{this.expression}}} and {{{other.expression}}}
+      *
+      * {{{
+      *   x < a, y < 10, x == y
+      *   (this ==| other) ==> a > x == y > 10 ==> a > 10 = GreaterThan
+      * }}}
+      *
+      * @param other The other constraint
+      */
+    def ==|(other: ExpressionConstraint): OptionalConstraintFactory
   }
 
   object ExpressionConstraint {
@@ -268,8 +285,7 @@ trait Constraints extends Expressions {
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 >= expression
-      case GreaterThanOrEqual(v2) =>
-        expression.decrement <= v2
+      case GreaterThanOrEqual(v2) => expression <= v2
       case _ => false
     }
 
@@ -301,9 +317,11 @@ trait Constraints extends Expressions {
     }
 
     override def >|(other: ExpressionConstraint) =
-      GreaterThan(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
+      GreaterThan(expression).combine(other)
 
     override def >=|(other: ExpressionConstraint) = this >| other
+
+    override def ==|(other: ExpressionConstraint) = this >| other
   }
   /**
    * <= x
@@ -357,10 +375,12 @@ trait Constraints extends Expressions {
     }
 
     override def >|(other: ExpressionConstraint) =
-      GreaterThan(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
+      GreaterThan(expression).combine(other)
 
     override def >=|(other: ExpressionConstraint) =
-      GreaterThanOrEqual(expression).combine(other).map(_(other.expression)).getOrElse(NoConstraints)
+      GreaterThanOrEqual(expression).combine(other)
+
+    override def ==|(other: ExpressionConstraint) = this >=| other
   }
 
   /**
@@ -407,9 +427,11 @@ trait Constraints extends Expressions {
     }
 
     override def <|(other: ExpressionConstraint) =
-      (LessThan(expression) combine other).map(f => f(other.expression)).getOrElse(NoConstraints)
+      LessThan(expression) combine other
 
     override def <=|(other: ExpressionConstraint) = this <| other
+
+    override def ==|(other: ExpressionConstraint) = this <| other
   }
 
   case class GreaterThanOrEqual(expression: Expression) extends ExpressionConstraint {
@@ -452,10 +474,12 @@ trait Constraints extends Expressions {
     }
 
     override def <|(other: ExpressionConstraint) =
-      LessThan(expression).combine(other).map(_.apply(other.expression)).getOrElse(NoConstraints)
+      LessThan(expression).combine(other)
 
     override def <=|(other: ExpressionConstraint) =
-      LessThanOrEqual(expression).combine(other).map(_.apply(other.expression)).getOrElse(NoConstraints)
+      LessThanOrEqual(expression).combine(other)
+
+    override def ==|(other: ExpressionConstraint) = this <=| other
   }
   
   case class Equal(expression: Expression) extends ExpressionConstraint {
@@ -504,6 +528,12 @@ trait Constraints extends Expressions {
       case GreaterThanOrEqual(_) => Some(LessThanOrEqual)
       case _ => None
     }
+
+    override def <|(other: ExpressionConstraint) = LessThan(expression).combine(other)
+    override def <=|(other: ExpressionConstraint) = LessThanOrEqual(expression).combine(other)
+    override def >|(other: ExpressionConstraint) = GreaterThan(expression).combine(other)
+    override def >=|(other: ExpressionConstraint) = GreaterThanOrEqual(expression).combine(other)
+    override def ==|(other: ExpressionConstraint) = this.combine(other)
   }
 
   trait ComplexConstraint extends Constraint {

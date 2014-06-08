@@ -130,6 +130,13 @@ class IfExpressionSpec extends PluginTestRunner {
    * x < 15 - [0,5]
    *   < 15
    *
+   * x == x &&
+   * x == anotherRandomInteger &&
+   * x < 15 - intBetween0And5 &&
+   * x > 0 &&
+   * x < 15 &&
+   * x < x &&
+   * x < anotherRandomInteger &&
    */
   test("Bound to symbol expression") {
     compile(

@@ -216,6 +216,14 @@ class ConstraintsSpec extends FunSuite
 
     val res6 = c("x > -1") && c("x < 0")
     assert(res6 === And(GreaterThan(-1), LessThan(0)))
+
+    val res7 = c("x < 1 && x >= -1") && c("x < 0")
+    assert(res7 === c("x < 0 && x >= -1"))
+
+    val res8 = c("x < 1 && x >= -1") && c("x >= 0")
+    assert(res8 === c("x >= 0 && x < 1"))
+
+    assert(c("x > 0 && x <= 1") == And(List(GreaterThan(0), LessThanOrEqual(1))))
   }
 
   test("OR Corner cases") {
@@ -314,68 +322,98 @@ class ConstraintsSpec extends FunSuite
     assert(res6 === ec("x > 12"))
   }
 
-  test("<| operator") {
-    assert((ec("x > a") <| ec("x < 12")) === ec("x < 12"))
-    assert((ec("x < a") <| ec("x < 12")) === NoConstraints)
-    assert((ec("x <= a") <| ec("x < 12")) === NoConstraints)
+  private def assertFactory(
+    actual: Option[Expression => ExpressionConstraint],
+    expected: Option[Expression => ExpressionConstraint]) {
+      if(actual.isDefined && expected.isDefined) {
+        assert(actual.get.apply(10) === expected.get.apply(10))
+      } else {
+        assert(!actual.isDefined && !expected.isDefined)
+      }
+  }
 
-    assert((GreaterThan(stringToExpression("x") + 5) <| ec("x < 12")) === ec("x < 12"))
+  test("<| operator") {
+    assertFactory(ec("x > a") <| ec("x < 12"), Some(LessThan))
+    assertFactory(ec("x < a") <| ec("x < 12"), None)
+    assertFactory(ec("x <= a") <| ec("x < 12"), None)
+
+    assertFactory(GreaterThan(stringToExpression("x") + 5) <| ec("x < 12"), Some(LessThan))
 
     //a <= x1 < x2 <= 12 ==> a < 12
-    assert((ec("x >= a") <| ec("x <= 12")) === ec("x < 12"))
+    assertFactory(ec("x >= a") <| ec("x <= 12"), Some(LessThan))
     //a <= x1 < x2 == 12 ==> a < 12
-    assert((ec("x >= a") <| ec("x == 12")) === ec("x < 12"))
+    assertFactory(ec("x >= a") <| ec("x == 12"), Some(LessThan))
 
     // a > x1 < x2 > 12 ==> NoConstraint
-    assert((ec("x < a") <| ec("x > 12")) === NoConstraints)
-    assert((ec("x <= a") <| ec("x > 12")) === NoConstraints)
+    assertFactory(ec("x < a") <| ec("x > 12"), None)
+    assertFactory(ec("x <= a") <| ec("x > 12"), None)
+
+    //a == x1 < x2 < 12 ==> a < 12
+    assertFactory(ec("x == a") <| ec("x < 12"), Some(LessThan))
+    //a == x1 < x2 == 12 ==> a < 12
+    assertFactory(ec("x == a") <| ec("x == 12"), Some(LessThan))
   }
 
   test("<=| operator") {
     //a < x1 <= x2 < 12 ==> a < 12
-    assert((ec("x > a") <=| ec("x < 12")) === ec("x < 12"))
-    assert((ec("x < a") <=| ec("x < 12")) === NoConstraints)
-    assert((ec("x <= a") <=| ec("x < 12")) === NoConstraints)
+    assertFactory(ec("x > a") <=| ec("x < 12"), Some(LessThan))
+    assertFactory(ec("x < a") <=| ec("x < 12"), None)
+    assertFactory(ec("x <= a") <=| ec("x < 12"), None)
 
     //a <= x1 <= x2 <= 12 ==> a <= 12
-    assert((ec("x >= a") <=| ec("x <= 12")) === ec("x <= 12"))
+    assertFactory(ec("x >= a") <=| ec("x <= 12"), Some(LessThanOrEqual))
     //a <= x1 <= x2 == 12 ==> a < 12
-    assert((ec("x >= a") <=| ec("x == 12")) === ec("x <= 12"))
+    assertFactory(ec("x >= a") <=| ec("x == 12"), Some(LessThanOrEqual))
 
     // a > x1 <= x2 > 12 ==> NoConstraint
-    assert((ec("x < a") <=| ec("x > 12")) === NoConstraints)
-    assert((ec("x <= a") <=| ec("x > 12")) === NoConstraints)
+    assertFactory(ec("x < a") <=| ec("x > 12"), None)
+    assertFactory(ec("x <= a") <=| ec("x > 12"), None)
+
+    //a == x1 <= x2 < 12 ==> a < 12
+    assertFactory(ec("x == a") <=| ec("x < 12"), Some(LessThan))
+    //a == x1 <= x2 == 12 ==> a < 12
+    assertFactory(ec("x == a") <=| ec("x == 12"), Some(LessThanOrEqual))
   }
 
   test(">| operator") {
-    assert((ec("x < a") >| ec("x > 12")) === ec("x > 12"))
-    assert((ec("x > a") >| ec("x > 12")) === NoConstraints)
-    assert((ec("x >= a") >| ec("x > 12")) === NoConstraints)
+    assertFactory(ec("x < a") >| ec("x > 12"), Some(GreaterThan))
+    assertFactory(ec("x > a") >| ec("x > 12"), None)
+    assertFactory(ec("x >= a") >| ec("x > 12"), None)
 
     //a >= x1 > x2 >= 12 ==> a > 12
-    assert((ec("x <= a") >| ec("x >= 12")) === ec("x > 12"))
+    assertFactory(ec("x <= a") >| ec("x >= 12"), Some(GreaterThan))
     //a >= x1 > x2 == 12 ==> a > 12
-    assert((ec("x <= a") >| ec("x == 12")) === ec("x > 12"))
+    assertFactory(ec("x <= a") >| ec("x == 12"), Some(GreaterThan))
 
     // a > x1 < x2 > 12 ==> NoConstraint
-    assert((ec("x > a") >| ec("x < 12")) === NoConstraints)
-    assert((ec("x >= a") >| ec("x < 12")) === NoConstraints)
+    assertFactory(ec("x > a") >| ec("x < 12"), None)
+    assertFactory(ec("x >= a") >| ec("x < 12"), None)
+
+    //a == x1 > x2 > 12 ==> a < 12
+    assertFactory(ec("x == a") >| ec("x > 12"), Some(GreaterThan))
+    //a == x1 > x2 == 12 ==> a > 12
+    assertFactory(ec("x == a") >| ec("x == 12"), Some(GreaterThan))
   }
 
   test(">=| operator") {
     //a > x1 >= x2 > 12 ==> a > 12
-    assert((ec("x < a") >=| ec("x > 12")) === ec("x > 12"))
-    assert((ec("x > a") >=| ec("x > 12")) === NoConstraints)
-    assert((ec("x >= a") >=| ec("x > 12")) === NoConstraints)
+    assertFactory(ec("x < a") >=| ec("x > 12"), Some(GreaterThan))
+    assertFactory(ec("x > a") >=| ec("x > 12"), None)
+    assertFactory(ec("x >= a") >=| ec("x > 12"), None)
 
     //a >= x1 >= x2 >= 12 ==> a >= 12
-    assert((ec("x <= a") >=| ec("x >= 12")) === ec("x >= 12"))
+    assertFactory(ec("x <= a") >=| ec("x >= 12"), Some(GreaterThanOrEqual))
     //a >= x1 >= x2 == 12 ==> a > 12
-    assert((ec("x <= a") >=| ec("x == 12")) === ec("x >= 12"))
+    assertFactory(ec("x <= a") >=| ec("x == 12"), Some(GreaterThanOrEqual))
 
     // a < x1 >= x2 < 12 ==> NoConstraint
-    assert((ec("x > a") >=| ec("x < 12")) === NoConstraints)
-    assert((ec("x >= a") >=| ec("x < 12")) === NoConstraints)
+    assertFactory(ec("x > a") >=| ec("x < 12"), None)
+    assertFactory(ec("x >= a") >=| ec("x < 12"), None)
+
+    //a == x1 >= x2 > 12 ==> a > 12
+    assertFactory(ec("x == a") >=| ec("x > 12"), Some(GreaterThan))
+    //a == x1 >= x2 == 12 ==> a > 12
+    assertFactory(ec("x == a") >=| ec("x == 12"), Some(GreaterThanOrEqual))
   }
 
   class ExprParser extends JavaTokenParsers {

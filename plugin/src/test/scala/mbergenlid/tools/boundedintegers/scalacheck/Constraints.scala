@@ -54,12 +54,12 @@ class Constraints extends FunSuite with Checkers with CUT {
   }
 
 
-  test("Single case") {
-    val arg0 = LessThan(-1)
-    val arg1 = GreaterThanOrEqual(0)
-    assert(!Equal(0).definitelySubsetOf(arg0 && arg1))
-    andProp(arg0, arg1)
-  }
+//  test("Single case") {
+////    val arg0 = LessThan(1)
+////    val arg1 = GreaterThanOrEqual(-1)
+////    assert(!Equal(0).definitelySubsetOf(arg0 && arg1))
+////    andProp(arg0, arg1)
+//  }
 
   def testSubset(c1: Constraint, c2: Constraint) = {
     try {

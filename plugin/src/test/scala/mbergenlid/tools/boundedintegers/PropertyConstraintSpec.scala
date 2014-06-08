@@ -1,7 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
 class PropertyConstraintSpec extends PluginTestRunner {
-
+  
   test("Property constraints") {
     compile(
       """
