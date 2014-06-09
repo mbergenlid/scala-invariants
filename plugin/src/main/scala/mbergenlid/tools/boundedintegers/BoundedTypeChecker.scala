@@ -45,22 +45,25 @@ trait MyUniverse extends Constraints with TypeContext {
 
   object BoundsFactory {
 
-    private def constraint(bounds: Annotation, tpe: TypeType): Constraint =
+    private def constraint(bounds: Annotation, tpe: TypeType): ExpressionConstraint =
       constraint(bounds.tpe, bounds.scalaArgs, tpe)
 
-    private def constraint(boundType: Type, args: List[Tree], resultType: TypeType): Constraint = boundType match {
-      case GreaterThanOrEqualExtractor() =>
-        GreaterThanOrEqual(annotationExpression(args.head, resultType))
-      case a if a == typeOf[GreaterThanOrEqualAnnotation] =>
-        GreaterThanOrEqual(annotationExpression(args.head, resultType))
-      case a if a =:= typeOf[LessThanOrEqualAnnotation] =>
-        LessThanOrEqual(annotationExpression(args.head, resultType))
-      case a if a =:= typeOf[EqualAnnotation] =>
-        Equal(annotationExpression(args.head, resultType))
-      case a if a =:= typeOf[LessThanAnnotation] =>
-        LessThan(annotationExpression(args.head, resultType))
-      case a if a <:< typeOf[GreaterThanAnnotation] =>
-        GreaterThan(annotationExpression(args.head, resultType))
+    private def constraint(
+      boundType: Type,
+      args: List[Tree],
+      resultType: TypeType): ExpressionConstraint = boundType match {
+        case GreaterThanOrEqualExtractor() =>
+          GreaterThanOrEqual(annotationExpression(args.head, resultType))
+        case a if a == typeOf[GreaterThanOrEqualAnnotation] =>
+          GreaterThanOrEqual(annotationExpression(args.head, resultType))
+        case a if a =:= typeOf[LessThanOrEqualAnnotation] =>
+          LessThanOrEqual(annotationExpression(args.head, resultType))
+        case a if a =:= typeOf[EqualAnnotation] =>
+          Equal(annotationExpression(args.head, resultType))
+        case a if a =:= typeOf[LessThanAnnotation] =>
+          LessThan(annotationExpression(args.head, resultType))
+        case a if a <:< typeOf[GreaterThanAnnotation] =>
+          GreaterThan(annotationExpression(args.head, resultType))
     }
 
     private def annotationExpression(tree: Tree, resultType: TypeType): Expression = {
@@ -92,26 +95,31 @@ trait MyUniverse extends Constraints with TypeContext {
           BoundsFactory.constraint(a, tpe)
       }) (_ && _)
 
-      if(annotatedConstraints == NoConstraints) {
-        annotatedConstraints
+      ensureLowerAndUpperBounds(annotatedConstraints, tpe)
+    }
+
+
+    private def ensureLowerAndUpperBounds(constraints: Constraint, tpe: TypeType): Constraint = {
+      if (constraints == NoConstraints) {
+        constraints
       } else {
         val f = expressionForType(tpe)
-        val lowerBound = annotatedConstraints.lowerBound
-        val upperBound = annotatedConstraints.upperBound
+        val lowerBound = constraints.lowerBound
+        val upperBound = constraints.upperBound
         (
-          if(lowerBound != NoConstraints &&
-              !lowerBound.isInstanceOf[Equal] &&
-              !upperBound.exists(_.expression.isConstant))
-            annotatedConstraints && LessThanOrEqual(f.MaxValue)
+          if (lowerBound != NoConstraints &&
+            !lowerBound.isInstanceOf[Equal] &&
+            !upperBound.exists(_.expression.isConstant))
+            constraints && LessThanOrEqual(f.MaxValue)
           else
-            annotatedConstraints
-        ) && (
-          if(upperBound != NoConstraints &&
-              !upperBound.isInstanceOf[Equal] &&
-              !lowerBound.exists(_.expression.isConstant))
-            annotatedConstraints && GreaterThanOrEqual(f.MinValue)
+            constraints
+          ) && (
+          if (upperBound != NoConstraints &&
+            !upperBound.isInstanceOf[Equal] &&
+            !lowerBound.exists(_.expression.isConstant))
+            constraints && GreaterThanOrEqual(f.MinValue)
           else
-            annotatedConstraints
+            constraints
           )
       }
     }
@@ -139,10 +147,12 @@ trait MyUniverse extends Constraints with TypeContext {
             throw new CompilationError(
               Error(t.pos, "@Property requires at least one constraint"))
 
+          val propConstraints: List[Constraint] = for {
+            method@Apply(_, param) <- annotations
+          } yield constraint(method.tpe, param, memberSymbol.typeSignature)
+
           PropertyConstraint(memberSymbol,
-            (for {
-              method @ Apply(_, param) <- annotations
-            } yield constraint(method.tpe, param, memberSymbol.typeSignature)).reduce(_&&_)
+            propConstraints.reduce(_ && _)
           )
       }) (_ && _)
     }
@@ -162,6 +172,52 @@ trait MyUniverse extends Constraints with TypeContext {
         BoundedType.noBounds
       }
     }
+
+    def fromMethod(
+      tree: Tree,
+      methodSymbol: MethodSymbol,
+      args: Map[RealSymbolType, BoundedType]): BoundedType = {
+        if(expressionForType.isDefinedAt(methodSymbol.returnType)) {
+          val annotations = methodSymbol.annotations ++ (
+            if(methodSymbol.isGetter) methodSymbol.accessed.annotations
+            else Nil
+            )
+          val annotatedConstraints: List[ExpressionConstraint] =
+            annotations.collect {
+              case a if a.tpe <:< typeOf[Bounded] =>
+                BoundsFactory.constraint(a, methodSymbol.typeSignature)
+            }
+
+          val backingFieldConstraint: Constraint =
+            if(methodSymbol.isGetter && methodSymbol.accessed.asTerm.isVal)
+              Equal(expressionForType(methodSymbol.returnType).
+                fromSymbol(symbolChainFromTree(tree)))
+            else
+              NoConstraints
+
+          val constraint: List[Constraint] =
+            if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
+              annotatedConstraints
+            } else {
+              val argSymbols = methodSymbol.paramss.head
+              for {
+                ec <- annotatedConstraints
+                parameter <- ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head))
+                paramBounds <- args.get(parameter.head).toList
+                paramConstraint <- paramBounds.constraint
+              } yield ec.substitute(parameter, paramConstraint).getOrElse(ec)
+            }
+
+          BoundedType(
+            ensureLowerAndUpperBounds(
+              (backingFieldConstraint :: constraint).reduceOption(_&&_).getOrElse(NoConstraints),
+              methodSymbol.returnType
+          ))
+
+        } else {
+          BoundedType(BoundsFactory(tree.symbol))
+        }
+      }
   }
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol.head, symbol.head.typeSignature)
@@ -229,7 +285,9 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       val b = BoundsFactory(tree)
       b
     } else tree match {
-      case Select(_,_) => BoundsFactory(tree)
+      case Select(_this,_) =>
+        if(tree.symbol.isMethod) BoundsFactory.fromMethod(tree, tree.symbol.asMethod, Map.empty)
+        else BoundsFactory(tree)
       case Block(body, res) =>
         val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
@@ -247,28 +305,4 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       context && new Context(Map(symbolChainFromTree(tree) -> constraint))
     case _ => context      
   }
-
-//  private def getBoundedIntegerFromContext(tree: Tree, context: Context): BoundedType = {
-//    if(expressionForType.isDefinedAt(tree.tpe)) {
-//      val bounds: Constraint = context(tree.symbol) match {
-//        case Some(x) => x
-//        case None =>
-//          BoundsFactory(tree).constraint
-//      }
-//      if(tree.symbol != null && tree.symbol != NoSymbol) {
-//        val constraintOption =
-//          for(e <- expressionForType.lift(tree.tpe))
-//          yield Equal(e.fromSymbol(tree.symbol))
-//
-//        BoundedType(constraintOption.getOrElse(NoConstraints) &&
-//          Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
-//      } else {
-//        BoundedType(Context.getConstraint(bounds, context - tree.symbol), tree.tpe)
-//      }
-//    } else {
-//      BoundedType.noBounds
-//    }
-
-//  }
-
 }

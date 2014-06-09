@@ -41,7 +41,6 @@ trait ArithmeticExpression extends AbstractBoundsValidator {
         operators(method).apply(sc1, sc2)
       }
       BoundedType(newConstraint)
-
   }
 
   private def definedForOperator(op: Name, tpe: TypeType) =

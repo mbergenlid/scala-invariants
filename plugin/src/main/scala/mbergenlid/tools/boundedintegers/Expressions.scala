@@ -5,7 +5,7 @@ import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
 
 trait Expressions {
-  type RealSymbolType <:scala.reflect.api.Symbols#SymbolApi
+  type RealSymbolType <: scala.reflect.api.Symbols#SymbolApi
   type TypeType = scala.reflect.api.Types#TypeApi
 
   case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {

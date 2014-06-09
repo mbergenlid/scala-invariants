@@ -33,6 +33,7 @@ trait Constraints extends Expressions {
 
     def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
     def flatMap(f: ExpressionConstraint => Constraint): Constraint
+//    def flatMap(f: ExpressionConstraint => Traversable[Constraint]): Constraint
 
     def &&(other: Constraint): Constraint
     def ||(other: Constraint): Constraint
@@ -58,8 +59,9 @@ trait Constraints extends Expressions {
   implicit class Constraint2SimpleTraversable(c: Constraint) extends Traversable[ExpressionConstraint] {
     def foreach[U](f: ExpressionConstraint => U): Unit = {
       def foreach(f: ExpressionConstraint => U, c: Constraint): Unit = c match {
-        case NoConstraints =>
         case s: ExpressionConstraint => f(s)
+        case NoConstraints =>
+        case ImpossibleConstraint =>
         case And(constraints) =>
           constraints.collect{case ec:ExpressionConstraint => ec}.foreach(f)
         case Or(constraints) =>

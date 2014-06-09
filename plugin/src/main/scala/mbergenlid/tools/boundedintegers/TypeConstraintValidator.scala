@@ -14,10 +14,19 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     def this(symbol: Symbol, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
 
     def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbol, withThisSymbol)
-    
+
+    def tryAssign(expr: Tree, boundExpr: BoundedType)(implicit context: Context): BoundedType = {
+      try {
+        assign(expr, boundExpr)
+      } catch {
+        case CompilationError(error) =>
+          reportError(error)
+          BoundedType.noBounds
+      }
+    }
     def tryAssign(expr: Tree)(implicit context: Context): BoundedType = {
       try {
-        assign(expr)
+        assign(expr, checkBounds(context)(expr))
       } catch {
         case CompilationError(error) =>
           reportError(error)
@@ -25,12 +34,11 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       }
     }
 
-    private def assign(expr: Tree)(implicit context: Context) = {
+    private def assign(expr: Tree, boundExpr: BoundedType)(implicit context: Context) = {
       if(expressionForType.isDefinedAt(symbol.typeSignature)) {
         val target =
           for(sc <- BoundsFactory.apply(symbol, symbol.typeSignature)) yield replaceThisSymbols(sc)
 
-        val boundExpr = checkBounds(context)(expr)
         val exprConstraints =
           Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
 
@@ -43,7 +51,6 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         boundExpr
       } else {
         val target = BoundsFactory.apply(symbol)
-        val boundExpr = checkBounds(context)(expr)
         val exprConstraints = boundExpr.constraint &&
           Context.getPropertyConstraints(symbolChainFromTree(expr), context)
 

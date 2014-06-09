@@ -14,6 +14,43 @@ class BoundToInputSpec extends PluginTestRunner {
       """.stripMargin)(List(6))
   }
 
+  test("Method constraint") {
+    val bounds = expression(
+      """
+        |val x = randomInteger
+        |
+        |@Equal(x)
+        |def myMethod() = x
+        |
+        |myMethod()
+      """.stripMargin)
+
+    import cut._
+    assertThat(bounds.constraint).definiteSubsetOf(GreaterThanOrEqual(0))
+  }
+
+  test("Use input bound method") {
+    compile(
+      """
+        |@Equal("n")
+        |def myMethod(n: Int) = n
+        |
+        |@Equal(10)
+        |val x = myMethod(10)
+        |true
+      """.stripMargin)(Nil)
+
+    val b = expression(
+      """
+         |@Equal("n")
+         |def myMethod(n: Int) = n
+         |
+         |myMethod(10)
+       """.stripMargin)
+
+    println(b.constraint.prettyPrint())
+  }
+
   test("Bound to double input") {
     compile(
       """
