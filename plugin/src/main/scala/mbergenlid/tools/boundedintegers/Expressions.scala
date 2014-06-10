@@ -8,11 +8,17 @@ trait Expressions {
   type RealSymbolType <: scala.reflect.api.Symbols#SymbolApi
   type TypeType = scala.reflect.api.Types#TypeApi
 
+  def isStable(symbol: RealSymbolType) = {
+    val termSymbol = symbol.asTerm
+    termSymbol.isVal || termSymbol.isStable || (
+      termSymbol.isGetter && termSymbol.accessed != NoSymbol && termSymbol.accessed.asTerm.isVal
+      )
+  }
+
   case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {
     def head = symbols.head
     def tail = SymbolChain(symbols.tail)
-    def isStable = head.asTerm.isVal ||
-      (head.asTerm.isGetter && head.asTerm.accessed.asTerm.isVal)
+    def isStable = Expressions.this.isStable(head)
 
     def map(f: RealSymbolType => RealSymbolType) = SymbolChain(symbols.map(f))
 

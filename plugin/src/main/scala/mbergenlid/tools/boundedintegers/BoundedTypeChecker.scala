@@ -10,14 +10,13 @@ import mbergenlid.tools.boundedintegers.annotations.{
   GreaterThan => GreaterThanAnnotation,
   Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
+import mbergenlid.tools.boundedintegers.facades.StringFacade
 
 trait MyUniverse extends Constraints with TypeContext {
   val global: Universe
   import global._
 
   type RealSymbolType = global.Symbol
-
-//
 
   trait BoundedTypeError {
     def pos: Position
@@ -36,6 +35,10 @@ trait MyUniverse extends Constraints with TypeContext {
   lazy val LongSymbol = LongType.typeSymbol
   lazy val DoubleSymbol = DoubleType.typeSymbol
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
+
+  lazy val symbolFacades = Map[RealSymbolType, RealSymbolType] (
+    typeOf[String].typeSymbol -> typeOf[StringFacade].typeSymbol
+  )
 
   object GreaterThanOrEqualExtractor {
     def unapply(tpe: Type): Boolean = {
@@ -125,9 +128,6 @@ trait MyUniverse extends Constraints with TypeContext {
     }
 
     def apply(symbol: RealSymbolType): Constraint = {
-      def isStable(symbol: RealSymbolType) = symbol.asTerm.isVal ||
-          (symbol.asTerm.isGetter && symbol.asTerm.accessed.asTerm.isVal)
-
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
           val (t@Literal(Constant(prop: String))) :: annotations = a.scalaArgs
@@ -177,29 +177,30 @@ trait MyUniverse extends Constraints with TypeContext {
       tree: Tree,
       methodSymbol: MethodSymbol,
       args: Map[RealSymbolType, BoundedType]): BoundedType = {
-        if(expressionForType.isDefinedAt(methodSymbol.returnType)) {
-          val annotations = methodSymbol.annotations ++ (
-            if(methodSymbol.isGetter) methodSymbol.accessed.annotations
+        val symbolFacade = findFacadeForMethodSymbol(methodSymbol)
+        if(expressionForType.isDefinedAt(symbolFacade.returnType)) {
+          val annotations = symbolFacade.annotations ++ (
+            if(symbolFacade.isGetter) symbolFacade.accessed.annotations
             else Nil
             )
           val annotatedConstraints: List[ExpressionConstraint] =
             annotations.collect {
               case a if a.tpe <:< typeOf[Bounded] =>
-                BoundsFactory.constraint(a, methodSymbol.typeSignature)
+                BoundsFactory.constraint(a, symbolFacade.typeSignature)
             }
 
           val backingFieldConstraint: Constraint =
-            if(methodSymbol.isGetter && methodSymbol.accessed.asTerm.isVal)
-              Equal(expressionForType(methodSymbol.returnType).
+            if(isStable(symbolFacade))
+              Equal(expressionForType(symbolFacade.returnType).
                 fromSymbol(symbolChainFromTree(tree)))
             else
               NoConstraints
 
           val constraint: List[Constraint] =
-            if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
+            if (symbolFacade.paramss.isEmpty || symbolFacade.paramss.head.isEmpty) {
               annotatedConstraints
             } else {
-              val argSymbols = methodSymbol.paramss.head
+              val argSymbols = symbolFacade.paramss.head
               for {
                 ec <- annotatedConstraints
                 parameter <- ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head))
@@ -211,13 +212,25 @@ trait MyUniverse extends Constraints with TypeContext {
           BoundedType(
             ensureLowerAndUpperBounds(
               (backingFieldConstraint :: constraint).reduceOption(_&&_).getOrElse(NoConstraints),
-              methodSymbol.returnType
+              symbolFacade.returnType
           ))
 
         } else {
           BoundedType(BoundsFactory(tree.symbol))
         }
       }
+  }
+
+  def findFacadeForMethodSymbol(symbol: MethodSymbol): MethodSymbol = {
+    val owner = symbolFacades.getOrElse(symbol.owner, symbol.owner).typeSignature
+    val member = owner.member(symbol.name)
+    if(member.isMethod) member.asMethod
+    else symbol
+  }
+
+  def findFacadeForSymbol(symbol: Symbol): Symbol = symbol match {
+    case m: MethodSymbol => findFacadeForMethodSymbol(m)
+    case _ => symbol
   }
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory(symbol.head, symbol.head.typeSignature)
@@ -247,7 +260,9 @@ trait MyUniverse extends Constraints with TypeContext {
 
   def symbolChainFromTree(tree: Tree): SymbolChain = {
     def symbolList(tree: Tree): List[RealSymbolType] = tree match {
-      case Select(t, n) => tree.symbol :: symbolList(t)
+      case Select(t, n) =>
+        if(tree.symbol.isMethod) findFacadeForMethodSymbol(tree.symbol.asMethod) :: symbolList(t)
+        else tree.symbol :: symbolList(t)
       case _ => List(tree.symbol)
     }
     SymbolChain(symbolList(tree))
