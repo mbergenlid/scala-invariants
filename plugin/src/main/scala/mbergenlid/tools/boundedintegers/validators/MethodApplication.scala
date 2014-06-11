@@ -1,7 +1,6 @@
 package mbergenlid.tools.boundedintegers.validators
 
 import mbergenlid.tools.boundedintegers._
-import mbergenlid.tools.boundedintegers.annotations.Bounded
 
 trait MethodApplication extends AbstractBoundsValidator {
   self: MyUniverse with TypeConstraintValidator =>
@@ -17,7 +16,8 @@ trait MethodApplication extends AbstractBoundsValidator {
       } yield {
         (argSymbol, argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue))
       }).toMap
-      BoundsFactory.fromMethod(s, s.symbol.asMethod, parameterMap)
+
+      BoundsFactory.fromMethod(symbolChainFromTree(s), parameterMap)
 
     case t@Apply(method, args) if method.symbol.isMethod =>
       val parameterMap: Map[RealSymbolType, BoundedType] = (for {
@@ -26,7 +26,7 @@ trait MethodApplication extends AbstractBoundsValidator {
         (argSymbol, argSymbol.tryAssign(paramValue))
       }).toMap
 
-      BoundsFactory.fromMethod(t, method.symbol.asMethod, parameterMap)
+      BoundsFactory.fromMethod(symbolChainFromTree(t), parameterMap)
   }
 
   protected[boundedintegers] 

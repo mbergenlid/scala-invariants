@@ -8,12 +8,15 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
   import global._
 
   implicit def symbol2ConstrainedSymbol(symbol: Symbol) =
-    new ConstrainedSymbol(symbol)
+    new ConstrainedSymbol(SymbolChain(List(symbol)))
 
-  class ConstrainedSymbol(symbol: Symbol, thisSymbol: Option[Symbol] = None) {
-    def this(symbol: Symbol, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
+  implicit def tree2ConstrainedSymbol(tree: Tree) =
+    new ConstrainedSymbol(symbolChainFromTree(tree))
 
-    def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbol, withThisSymbol)
+  class ConstrainedSymbol(symbolChain: SymbolChain, thisSymbol: Option[Symbol] = None) {
+    def this(symbol: SymbolChain, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
+
+    def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbolChain, withThisSymbol)
 
     def tryAssign(expr: Tree, boundExpr: BoundedType)(implicit context: Context): BoundedType = {
       try {
@@ -35,9 +38,10 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     }
 
     private def assign(expr: Tree, boundExpr: BoundedType)(implicit context: Context) = {
+      val symbol = symbolChain.head
       if(expressionForType.isDefinedAt(symbol.typeSignature)) {
         val target =
-          for(sc <- BoundsFactory.apply(symbol, symbol.typeSignature)) yield replaceThisSymbols(sc)
+          for(sc <- BoundsFactory.fromSymbolChain(symbolChain)) yield replaceThisSymbols(sc)
 
         val exprConstraints =
           Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
@@ -50,7 +54,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
       } else {
-        val target = BoundsFactory.apply(symbol)
+        val target = BoundsFactory.propertyConstraints(symbolChain)
         val exprConstraints = boundExpr.constraint &&
           Context.getPropertyConstraints(symbolChainFromTree(expr), context)
 

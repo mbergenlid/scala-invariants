@@ -12,6 +12,6 @@ trait MethodDefinition extends AbstractBoundsValidator {
 
   private def validate(implicit context: Context): Validator = {
     case d @ DefDef(mods, name, _, _, tpt, rhs) =>
-      d.symbol tryAssign rhs
+      d tryAssign rhs
   }
 }

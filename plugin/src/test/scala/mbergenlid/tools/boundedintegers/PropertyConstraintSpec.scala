@@ -2,7 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 class PropertyConstraintSpec extends PluginTestRunner {
 
-  test("Property constraints") {
+  ignore("Property constraints") {
     compile(
       """
         |val source = new SafeArray(randomInteger)
@@ -23,7 +23,7 @@ class PropertyConstraintSpec extends PluginTestRunner {
       """.stripMargin)(List(10))
   }
 
-  test("Property constraints2") {
+  ignore("Property constraints2") {
     compile(
       """
         |class ArrayContainer(val sa: SafeArray)
@@ -61,7 +61,7 @@ class PropertyConstraintSpec extends PluginTestRunner {
     * now with intention to implement specially treated types in a consistent
     * way.
    */
-  ignore("Property constraints on Strings") {
+  test("Property constraints on Strings") {
     compile(
       """
         |object Test {
@@ -159,7 +159,7 @@ class PropertyConstraintSpec extends PluginTestRunner {
       """.stripMargin)(Nil)
   }
 
-//  ignore("Manual non constant property constraint") {
+//  test("Manual non constant property constraint") {
 //    compile(
 //      """
 //        |class Container() {

@@ -12,7 +12,7 @@ trait Assignment extends AbstractBoundsValidator {
   private def validate(implicit context: Context): Validator = {
     case v @ ValDef(_, name, tpe, expr)
       if expr != EmptyTree && v.symbol.asTerm.isVal =>
-      v.symbol tryAssign expr
-    case Assign(tree, expr) => tree.symbol tryAssign expr
+      v tryAssign expr
+    case Assign(tree, expr) => tree tryAssign expr
   }
 }
