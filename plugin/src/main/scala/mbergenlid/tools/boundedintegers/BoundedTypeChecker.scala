@@ -11,6 +11,7 @@ import mbergenlid.tools.boundedintegers.annotations.{
   Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 import mbergenlid.tools.boundedintegers.facades.StringFacade
+import scala.reflect.runtime.universe
 
 trait MyUniverse extends Constraints with TypeContext {
   val global: Universe
@@ -37,7 +38,7 @@ trait MyUniverse extends Constraints with TypeContext {
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
 
   lazy val symbolFacades = Map[RealSymbolType, RealSymbolType] (
-    typeOf[String].typeSymbol -> typeOf[StringFacade].typeSymbol
+    typeOf[String].typeSymbol -> universe.typeOf[StringFacade].asInstanceOf[global.Type].typeSymbol
   )
 
   object GreaterThanOrEqualExtractor {

@@ -218,8 +218,25 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
         |s.length
       """.stripMargin)
 
-    println(bounds.constraint.asInstanceOf[And].simplify().prettyPrint())
     assert(bounds.constraint != cut.NoConstraints)
+  }
+
+  test("Scope test") {
+    compile(
+      """
+        |val x = randomInteger
+        |
+        |val y = if(x < 10) {
+        |  val x = 5
+        |  x
+        |} else x
+        |
+        |@Equal(x)
+        |val z = y
+        |
+        |true
+      """.stripMargin)(List(10))
+
   }
 
 }
