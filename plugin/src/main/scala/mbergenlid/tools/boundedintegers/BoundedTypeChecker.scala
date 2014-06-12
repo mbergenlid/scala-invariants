@@ -91,13 +91,16 @@ trait MyUniverse extends Constraints with TypeContext {
         expressionForType(tpe).fromSymbol(symbolChainFromTree(x))
     }
 
-    private def annotatedConstraints(symbol: RealSymbolType, tpe: TypeType): Constraint = {
-      val annotatedConstraints = (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
+    private def annotatedConstraints(symbol: RealSymbolType, tpe: TypeType): List[ExpressionConstraint] = {
+      val annotations = symbol.annotations ++ (
+        if(symbol.isMethod && symbol.asMethod.isGetter) symbol.asMethod.accessed.annotations
+        else Nil
+      )
+      annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
-      }) (_ && _)
+      }
 
-      ensureLowerAndUpperBounds(annotatedConstraints, tpe)
     }
 
 
@@ -191,7 +194,11 @@ trait MyUniverse extends Constraints with TypeContext {
     }
 
     def fromSymbolChain(symbolChain: SymbolType): Constraint = {
-      annotatedConstraints(symbolChain.head, symbolChain.head.typeSignature)
+      val list =
+        annotatedConstraints(symbolChain.head, symbolChain.head.typeSignature)
+      val constraints = (NoConstraints.asInstanceOf[Constraint] /: list) (_&&_)
+
+      ensureLowerAndUpperBounds(constraints, symbolChain.head.typeSignature)
     }
 
     def fromMethod(
@@ -199,15 +206,8 @@ trait MyUniverse extends Constraints with TypeContext {
       args: Map[RealSymbolType, BoundedType]): BoundedType = {
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         if(expressionForType.isDefinedAt(methodSymbol.returnType)) {
-          val annotations = methodSymbol.annotations ++ (
-            if(methodSymbol.isGetter) methodSymbol.accessed.annotations
-            else Nil
-            )
-          val annotatedConstraints: List[ExpressionConstraint] =
-            annotations.collect {
-              case a if a.tpe <:< typeOf[Bounded] =>
-                BoundsFactory.constraint(a, methodSymbol.typeSignature)
-            }
+          val annotationConstraints: List[ExpressionConstraint] =
+            annotatedConstraints(methodSymbol, methodSymbol.typeSignature)
 
           val backingFieldConstraint: Constraint =
             if(isStable(methodSymbol))
@@ -218,11 +218,11 @@ trait MyUniverse extends Constraints with TypeContext {
 
           val constraint: List[Constraint] =
             if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
-              annotatedConstraints
+              annotationConstraints
             } else {
               val argSymbols = methodSymbol.paramss.head
               for {
-                ec <- annotatedConstraints
+                ec <- annotationConstraints
                 parameter <- ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head))
                 paramBounds <- args.get(parameter.head).toList
                 paramConstraint <- paramBounds.constraint
@@ -327,8 +327,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       b
     } else tree match {
       case Select(_this,_) =>
-        if(tree.symbol.isMethod) BoundsFactory.fromMethod(symbolChainFromTree(tree), Map.empty)
-        else BoundsFactory(tree)
+        BoundsFactory(tree)
       case Block(body, res) =>
         val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
