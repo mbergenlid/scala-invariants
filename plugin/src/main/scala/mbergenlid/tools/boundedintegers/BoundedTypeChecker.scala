@@ -10,10 +10,10 @@ import mbergenlid.tools.boundedintegers.annotations.{
   GreaterThan => GreaterThanAnnotation,
   Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
-import mbergenlid.tools.boundedintegers.facades.StringFacade
+import mbergenlid.tools.boundedintegers.facades.{TypeFacades, StringFacade}
 import scala.reflect.runtime.universe
 
-trait MyUniverse extends Constraints with TypeContext {
+trait MyUniverse extends Constraints with TypeContext with TypeFacades {
   val global: Universe
   import global._
 
@@ -36,13 +36,6 @@ trait MyUniverse extends Constraints with TypeContext {
   lazy val LongSymbol = LongType.typeSymbol
   lazy val DoubleSymbol = DoubleType.typeSymbol
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
-
-  lazy val typeFacades = Map[Type, Type] (
-    typeOf[String] -> universe.typeOf[StringFacade].asInstanceOf[global.Type]
-  )
-  lazy val symbolFacades = Map[RealSymbolType, RealSymbolType] (
-    typeOf[String].typeSymbol -> universe.typeOf[StringFacade].asInstanceOf[global.Type].typeSymbol
-  )
 
   object GreaterThanOrEqualExtractor {
     def unapply(tpe: Type): Boolean = {
@@ -138,8 +131,7 @@ trait MyUniverse extends Constraints with TypeContext {
             case m: MethodSymbol => m.returnType
             case _ => symbol.typeSignature
           }
-          val typeFacade: Type =
-            typeFacades.find(_._1 =:= symbolType).map(_._2).getOrElse(symbolType)
+          val typeFacade: Type = findFacadeForType(symbolType)
           val memberSymbol = typeFacade.member(newTermName(prop))
 
           if(memberSymbol == NoSymbol)
@@ -239,19 +231,6 @@ trait MyUniverse extends Constraints with TypeContext {
           BoundedType(BoundsFactory.propertyConstraints(symbolChain))
         }
       }
-  }
-
-  def findFacadeForMethodSymbol(symbol: MethodSymbol): MethodSymbol = {
-    val owner = symbolFacades.getOrElse(symbol.owner, symbol.owner).typeSignature
-    val member = owner.member(symbol.name)
-    if(member.isMethod) member.asMethod
-    else symbol
-  }
-
-  def findFacadeForSymbol(symbol: Symbol): Symbol = symbol match {
-    case m: MethodSymbol => findFacadeForMethodSymbol(m)
-    case t: ClassSymbol => typeFacades.find(_._1 =:= symbol.typeSignature).map(_._2.typeSymbol).getOrElse(symbol)
-    case _ => symbol
   }
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbolChain(symbol)
