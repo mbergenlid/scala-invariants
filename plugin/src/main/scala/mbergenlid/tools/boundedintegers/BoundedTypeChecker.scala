@@ -256,33 +256,32 @@ trait MyUniverse extends Constraints with TypeContext {
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbolChain(symbol)
 
-  object IntTypeExtractor {
-    def unapply(tpe: Type): Boolean = {
-      tpe <:< IntType
+  abstract class TypeExtractor(expectedType: Type) {
+    private val Symbol = expectedType.typeSymbol
+    def unapply(tpe: TypeType): Boolean = tpe match {
+      case ConstantType(c) if c.tpe <:< expectedType => true
+      case TypeRef(_, Symbol, Nil) => true
+      case NullaryMethodType(t) if t <:< expectedType => true
+      case s@SingleType(_, _) if s <:< expectedType.asInstanceOf[Type] => true
+      case _ => false
     }
   }
+  object IntTypeExtractor extends TypeExtractor(IntType)
+  object LongTypeExtractor extends TypeExtractor(LongType)
+  object DoubleTypeExtractor extends TypeExtractor(DoubleType)
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
-    case ConstantType(Constant(x: Int)) =>
+    case IntTypeExtractor() =>
       new ExpressionFactory[Int](IntType)
-    case ConstantType(Constant(x: Double)) =>
-      new ExpressionFactory[Double](DoubleType)
-    case TypeRef(_, IntSymbol, Nil) =>
-      new ExpressionFactory[Int](IntType)
-    case TypeRef(_, LongSymbol, Nil) =>
+    case LongTypeExtractor() =>
       new ExpressionFactory[Long](LongType)
-    case TypeRef(_, DoubleSymbol, Nil) =>
+    case DoubleTypeExtractor() =>
       new ExpressionFactory[Double](DoubleType)
 
-    case NullaryMethodType(t) if t <:< IntType =>
-      new ExpressionFactory[Int](IntType)
     case MethodType(params, IntType) =>
       new MethodExpressionFactory[Int](IntType, params)
     case MethodType(params, DoubleType) =>
       new MethodExpressionFactory[Double](DoubleType, params)
-
-    case s@SingleType(_, _) if s <:< IntType.asInstanceOf[Type] =>
-      new ExpressionFactory[Int](IntType)
   }
 
   def symbolChainFromTree(tree: Tree): SymbolChain = {
