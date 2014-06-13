@@ -18,7 +18,6 @@ trait PluginTestRunner extends FunSuite {
                                           with MethodDefinition
 
   import cut._
-                                         
 
   def typeCheck(program: String) =
     tb.typeCheck(tb.parse(program)).asInstanceOf[cut.global.Tree]
@@ -31,11 +30,11 @@ trait PluginTestRunner extends FunSuite {
       """.stripMargin + program
 
     val errors = cut.checkBoundedTypes(typeCheck(withImports))
-    val errorPositions = errors map (_.pos.line)
+    val errorPositions = errors map (e => if(e.pos != cut.global.NoPosition) e.pos.line else -1)
     val expectedErrorsAdjusted = expectedErrorLines map (_ + 3)
     if(errorPositions != expectedErrorsAdjusted) {
       fail(s"Expected: $expectedErrorsAdjusted\nGot: $errors")
-    } 
+    }
   }
 
   def expression(expression: String) = {

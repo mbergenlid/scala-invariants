@@ -26,3 +26,4 @@ concurrentRestrictions in Global := {
   Tags.limitAll(1) :: Nil
 }
 
+parallelExecution in Test := false
