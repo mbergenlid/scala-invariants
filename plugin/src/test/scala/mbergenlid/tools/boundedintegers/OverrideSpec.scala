@@ -14,9 +14,13 @@ class OverrideSpec extends PluginTestRunner {
             |class Concrete extends Super {
             |  def value = 10
             |}
-            |@GreaterThan(0)
-            |val x = new Concrete().value
+            |val s: Super = new Concrete
             |
+            |@GreaterThan(0)
+            |val x = new Concrete().value //Overridden method value should inherit constraints from super
+            |
+            |@GreaterThan(0)
+            |val y = s.value //Compile time type is now Super
             |true
         """.stripMargin)(Nil)
     }
