@@ -89,11 +89,11 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
         if(symbol.isMethod && symbol.asMethod.isGetter) symbol.asMethod.accessed.annotations
         else Nil
       )
-      annotations.collect {
+      val ecs = annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
       }
-
+      ecs ++ symbol.allOverriddenSymbols.flatMap(s => annotatedConstraints(s, tpe))
     }
 
 
