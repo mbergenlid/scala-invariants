@@ -80,6 +80,30 @@ class PropertyConstraintSpec extends PluginTestRunner {
       """.stripMargin)(List(13))
   }
 
+  test("Property constraints on Arrays") {
+    compile(
+      """
+        |object Test {
+        |  val source = Array(1,2,3,4,5)
+        |}
+        |
+        |import Test._
+        |if(source.length > 10) {
+        |  @Property("length", GreaterThan(5))
+        |  val sa1 = source
+        |}
+        |
+        |@Property("length", GreaterThan(5))
+        |val sa2 = source //Fail => source is unbounded
+        |
+        |if(source.length > 5 && source.length < 10) {
+        |  @Property("length", GreaterThan(5), LessThan(10))
+        |  val sa3 = source
+        |}
+        |true
+      """.stripMargin)(List(13))
+  }
+
   test("Return property constrained object") {
     compile(
       """
