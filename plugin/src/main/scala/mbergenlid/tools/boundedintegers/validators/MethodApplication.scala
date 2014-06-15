@@ -1,9 +1,10 @@
 package mbergenlid.tools.boundedintegers.validators
 
 import mbergenlid.tools.boundedintegers._
+import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
 trait MethodApplication extends AbstractBoundsValidator {
-  self: MyUniverse with TypeConstraintValidator =>
+  self: MyUniverse with TypeFacades with TypeConstraintValidator =>
   import global._
 
   abstract override def checkBounds(context: Context)(tree: Tree) = 
@@ -31,7 +32,7 @@ trait MethodApplication extends AbstractBoundsValidator {
 
   protected[boundedintegers] 
   def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(RealSymbolType, Tree)] = {
-    val symbol = methodApplication.symbol.asMethod
+    val symbol = findFacadeForSymbol(methodApplication.symbol).asMethod
     val res = symbol.paramss.headOption match {
       case Some(list) => list.zip(args)
       case None => Nil
