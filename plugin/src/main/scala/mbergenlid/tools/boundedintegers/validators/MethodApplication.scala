@@ -4,7 +4,7 @@ import mbergenlid.tools.boundedintegers._
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
 trait MethodApplication extends AbstractBoundsValidator {
-  self: MyUniverse with TypeFacades with TypeConstraintValidator =>
+  self: MyUniverse with TypeFacades with TypeContext with Expressions with TypeConstraintValidator =>
   import global._
 
   abstract override def checkBounds(context: Context)(tree: Tree) = 
@@ -17,8 +17,9 @@ trait MethodApplication extends AbstractBoundsValidator {
       } yield {
         (argSymbol, argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue))
       }).toMap
-
-      BoundsFactory.fromMethod(symbolChainFromTree(s), parameterMap)
+      val _thisBounds: BoundedType = checkBounds(context)(_this)
+      BoundsFactory.fromMethod(symbolChainFromTree(s), _thisBounds,
+        parameterMap + (MethodExpressionFactory.ThisSymbol -> _thisBounds))
 
     case t@Apply(method, args) if method.symbol.isMethod =>
       val parameterMap: Map[RealSymbolType, BoundedType] = (for {
@@ -27,7 +28,7 @@ trait MethodApplication extends AbstractBoundsValidator {
         (argSymbol, argSymbol.tryAssign(paramValue))
       }).toMap
 
-      BoundsFactory.fromMethod(symbolChainFromTree(t), parameterMap)
+      BoundsFactory.fromMethod(symbolChainFromTree(t), BoundedType.noBounds, parameterMap)
   }
 
   protected[boundedintegers] 

@@ -9,7 +9,8 @@ trait TypeFacades {
 
   lazy private val typeFacades = Map[Type, Type] (
     universe.typeOf[String].asInstanceOf[Type] -> universe.typeOf[StringFacade].asInstanceOf[global.Type],
-    universe.typeOf[Array[_]].asInstanceOf[Type] -> universe.typeOf[ArrayFacade].asInstanceOf[global.Type]
+    universe.typeOf[Array[_]].asInstanceOf[Type] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[global.Type],
+    universe.typeOf[Int].asInstanceOf[Type] -> universe.typeOf[IntFacade].asInstanceOf[Type]
   )
 
   lazy private val symbolFacades: Map[RealSymbolType, RealSymbolType] =
@@ -20,8 +21,17 @@ trait TypeFacades {
   private def findFacadeForMethodSymbol(symbol: MethodSymbol): MethodSymbol = {
     val owner = symbolFacades.getOrElse(symbol.owner, symbol.owner).typeSignature
     val member = owner.member(symbol.name)
-    if(member.isMethod) member.asMethod
-    else symbol
+    if(member.isTerm && member.asTerm.isOverloaded) {
+      assert(symbol.paramss.size == 1)
+      val expectedParameterTypes = symbol.paramss.head.map(_.typeSignature)
+      member.asTerm.alternatives.find {m =>
+        val params = m.asMethod.paramss
+        assert(m.asMethod.paramss.size == 1)
+        params.head.map(_.typeSignature) == expectedParameterTypes
+      }.getOrElse(symbol).asMethod
+    } else if(member.isMethod) {
+      member.asMethod
+    } else symbol
   }
 
   def findFacadeForSymbol(symbol: Symbol): Symbol = symbol match {

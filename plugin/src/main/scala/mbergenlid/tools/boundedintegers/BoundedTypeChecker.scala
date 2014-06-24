@@ -10,7 +10,7 @@ import mbergenlid.tools.boundedintegers.annotations.{
   GreaterThan => GreaterThanAnnotation,
   Property => PropertyAnnotation}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
-import mbergenlid.tools.boundedintegers.facades.{TypeFacades, StringFacade}
+import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import scala.reflect.runtime.universe
 
 trait MyUniverse extends Constraints with TypeContext with TypeFacades {
@@ -30,18 +30,31 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
 
   lazy val TypeNothing = typeOf[Nothing]
   lazy val IntType = typeOf[Int]
+  lazy val GlobalIntType = universe.typeOf[Int]
   lazy val LongType = typeOf[Long]
   lazy val DoubleType = typeOf[Double]
   lazy val IntSymbol = IntType.typeSymbol
   lazy val LongSymbol = LongType.typeSymbol
   lazy val DoubleSymbol = DoubleType.typeSymbol
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
+  lazy val EqualType = typeOf[EqualAnnotation]
 
-  object GreaterThanOrEqualExtractor {
-    def unapply(tpe: Type): Boolean = {
-      tpe =:= GreaterThanOrEqualType
-    }
+  abstract class AnnotationExtractor(expectedType: Type, globalType: universe.Type) {
+     def unapply(tpe: Type): Boolean = {
+       tpe =:= expectedType ||
+         tpe.asInstanceOf[universe.Type] <:< globalType
+     }
   }
+  object GreaterThanOrEqualExtractor extends
+    AnnotationExtractor(GreaterThanOrEqualType, universe.typeOf[GreaterThanOrEqualAnnotation])
+  object GreaterThanExtractor extends
+    AnnotationExtractor(typeOf[GreaterThanAnnotation], universe.typeOf[GreaterThanAnnotation])
+  object LessThanOrEqualExtractor extends
+    AnnotationExtractor(typeOf[LessThanOrEqualAnnotation], universe.typeOf[LessThanOrEqualAnnotation])
+  object LessThanExtractor extends
+    AnnotationExtractor(typeOf[LessThanAnnotation], universe.typeOf[LessThanAnnotation])
+  object EqualExtractor extends
+    AnnotationExtractor(EqualType, universe.typeOf[EqualAnnotation])
 
   object BoundsFactory {
 
@@ -54,15 +67,13 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
       resultType: TypeType): ExpressionConstraint = boundType match {
         case GreaterThanOrEqualExtractor() =>
           GreaterThanOrEqual(annotationExpression(args.head, resultType))
-        case a if a == typeOf[GreaterThanOrEqualAnnotation] =>
-          GreaterThanOrEqual(annotationExpression(args.head, resultType))
-        case a if a =:= typeOf[LessThanOrEqualAnnotation] =>
+        case LessThanOrEqualExtractor() =>
           LessThanOrEqual(annotationExpression(args.head, resultType))
-        case a if a =:= typeOf[EqualAnnotation] =>
+        case EqualExtractor() =>
           Equal(annotationExpression(args.head, resultType))
-        case a if a =:= typeOf[LessThanAnnotation] =>
+        case LessThanExtractor() =>
           LessThan(annotationExpression(args.head, resultType))
-        case a if a <:< typeOf[GreaterThanAnnotation] =>
+        case GreaterThanExtractor() =>
           GreaterThan(annotationExpression(args.head, resultType))
     }
 
@@ -91,6 +102,8 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
       )
       val ecs = annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
+          BoundsFactory.constraint(a, tpe)
+        case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
           BoundsFactory.constraint(a, tpe)
       }
       ecs ++ symbol.allOverriddenSymbols.flatMap(s => annotatedConstraints(s, tpe))
@@ -170,7 +183,12 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
         val f = expressionForType(tree.tpe)
         val exp = f.convertExpression(expression(tree, tree.tpe))
         if(tree.symbol != null && tree.symbol != NoSymbol) {
-          BoundedType(Equal(exp) && BoundsFactory.fromSymbolChain(symbolChainFromTree(tree)), f)
+          val symbolChain = symbolChainFromTree(tree)
+          //Only add -Equal(exp)- if the symbol is stable.
+          if(isStable(symbolChain.head))
+            BoundedType(Equal(exp) && BoundsFactory.fromSymbolChain(symbolChain), f)
+          else
+            BoundedType(BoundsFactory.fromSymbolChain(symbolChain))
         } else {
           BoundedType(Equal(exp), f)
         }
@@ -195,6 +213,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
 
     def fromMethod(
       symbolChain: SymbolChain,
+      thisBounds: BoundedType,
       args: Map[RealSymbolType, BoundedType]): BoundedType = {
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         if(expressionForType.isDefinedAt(methodSymbol.returnType)) {
@@ -212,13 +231,27 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
             if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
               annotationConstraints
             } else {
-              val argSymbols = methodSymbol.paramss.head
+              val argSymbols = MethodExpressionFactory.ThisSymbol :: methodSymbol.paramss.head
+
+              def substitute(
+                symbols: List[(SymbolType, Constraint)],
+                ec: ExpressionConstraint): Constraint =
+                  symbols match {
+                    case (symbol, c) :: rest =>
+                      for(sub <- c) yield substitute(rest, ec.substitute(symbol, sub).get)
+                    case Nil =>
+                      ec
+                  }
               for {
                 ec <- annotationConstraints
-                parameter <- ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head))
-                paramBounds <- args.get(parameter.head).toList
-                paramConstraint <- paramBounds.constraint
-              } yield ec.substitute(parameter, paramConstraint).getOrElse(ec)
+              } yield {
+                val params = ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head)).toList
+                val paramConstraints: List[Constraint] =
+                  params.map(p => args.get(p.head).map(b => b.constraint).getOrElse(NoConstraints))
+
+                val res = substitute((params zip paramConstraints).toList, ec)
+                res
+              }
             }
 
           BoundedType(
@@ -231,6 +264,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
           BoundedType(BoundsFactory.propertyConstraints(symbolChain))
         }
       }
+
   }
 
   def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbolChain(symbol)
@@ -257,9 +291,9 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
     case DoubleTypeExtractor() =>
       new ExpressionFactory[Double](DoubleType)
 
-    case MethodType(params, IntType) =>
+    case MethodType(params, IntTypeExtractor()) =>
       new MethodExpressionFactory[Int](IntType, params)
-    case MethodType(params, DoubleType) =>
+    case MethodType(params, DoubleTypeExtractor()) =>
       new MethodExpressionFactory[Double](DoubleType, params)
   }
 

@@ -126,9 +126,9 @@ class ArithmeticExpressionSpec extends PluginTestRunner {
     assert(equal.isDefined)
     val expr = equal.get.expression
     assert(expr.terms.size == 1)
-    assert(expr.terms.head.variables.head._2 == 2)
+    assert(expr.terms.head.variables.tail.head._2 == 2)
 
-    assert(expr.toString == "x^2*y")
+    assert(expr.toString == "y*x^2")
   }
 
   test("Multiply bounded symbols") {

@@ -87,7 +87,10 @@ trait TypeContext { self: Constraints =>
       if(f.isDefined)
         for {
           sc <- start.map(s => f.get.convertExpression(s.expression))
-        } yield substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
+        } yield {
+          val s = substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
+          s
+        }
       else
         NoConstraints
     }
@@ -104,6 +107,7 @@ trait TypeContext { self: Constraints =>
 
         def fromConstant(ec: ExpressionConstraint) = for {
           boundedBy <- findSymbolConstraints(extractConstant(ec.expression), context, f)
+          if boundedBy.expression != ec.expression
           newConstraint <- ec.combine(boundedBy)
         } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
 

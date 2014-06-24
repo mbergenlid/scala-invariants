@@ -54,6 +54,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
       } else {
+
         val target = BoundsFactory.propertyConstraints(symbolChain)
         val exprConstraints = boundExpr.constraint &&
           Context.getPropertyConstraints(symbolChainFromTree(expr), context)

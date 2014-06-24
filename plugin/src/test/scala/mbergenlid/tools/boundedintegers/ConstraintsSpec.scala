@@ -82,9 +82,9 @@ class ConstraintsSpec extends FunSuite
 
     val res6 = and && And(GreaterThan(15))
     assert(res6 === And(ImpossibleConstraint))
-    //    assert("x < 2147483648".obviouslySubsetOf("x < 2147483648"))
-//    val res6 = c("x == n && (x < 2147483648 && x > 0)") && c("x < 2147483648 && x >= -2147483647")
-//    assert(res6 == c("x == n && (x < 2147483648 && x > 0)"), res6.prettyPrint())
+
+    val res7 = c("x >= 10") && c("x == 9")
+    assert(res7 === ImpossibleConstraint)
   }
 
   /**
@@ -131,6 +131,12 @@ class ConstraintsSpec extends FunSuite
     //((<10 && >0) || >20) && ((>0 && < 10) || >25)
     val res6 = or && c("(x > 0 && x < 10) || x > 25")
     assert(res6 === c("(x < 10 && x > 0) || x > 25"))
+
+    //(A || B) && (C || D) ==> AC || AD || BC || BD
+    //(>= 10 || == 9) && (>= 10 || == 9) ==> (>= 10 || == 9)
+    val res7 = c("x >= 10 || x == 9") && c("x >= 10 || x == 9")
+    assert(res7 === c("x >= 10 || x == 9"))
+
   }
 
   test("Or SimpleConstraints") {

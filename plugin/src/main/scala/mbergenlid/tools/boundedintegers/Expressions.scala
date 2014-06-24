@@ -4,16 +4,17 @@ import scala.language.implicitConversions
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
 
-trait Expressions {
+trait Expressions extends ExpressionParser {
   type RealSymbolType <: scala.reflect.api.Symbols#SymbolApi
   type TypeType = scala.reflect.api.Types#TypeApi
 
-  def isStable(symbol: RealSymbolType) = {
-    val termSymbol = symbol.asTerm
-    termSymbol.isVal || termSymbol.isStable || (
-      termSymbol.isGetter && termSymbol.accessed != NoSymbol && termSymbol.accessed.asTerm.isVal
-      )
-  }
+  def isStable(symbol: RealSymbolType): Boolean =
+    if(symbol.isTerm) {
+      val termSymbol = symbol.asTerm
+      termSymbol.isVal || termSymbol.isStable || (
+        termSymbol.isGetter && termSymbol.accessed != NoSymbol && termSymbol.accessed.asTerm.isVal
+        )
+    } else false
 
   case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {
     def head = symbols.head
@@ -102,11 +103,18 @@ trait Expressions {
     lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
   }
 
-  class MethodExpressionFactory[T: RichNumeric: TypeTag](resultType: TypeType, params: List[RealSymbolType]) extends
-    ExpressionFactory[T](resultType) {
+  class MethodExpressionFactory[T: RichNumeric: TypeTag](
+    resultType: TypeType,
+    params: List[RealSymbolType]) extends ExpressionFactory[T](resultType) {
 
-    override def fromParameter(s: String) =
-      Polynomial.fromSymbol(SymbolChain(List(params.find(_.name == newTermName(s)).get)))
+      override def fromParameter(s: String) =
+        new ExprParser[T](params).parseExpression(s).get
+
+    }
+
+  object MethodExpressionFactory {
+    val ThisSymbol =
+      typeOf[this.type].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[RealSymbolType]
   }
 
   object Polynomial {
@@ -177,15 +185,21 @@ trait Expressions {
     } yield { thisTerm * thatTerm })
 
     def unary_- : Expression = map(_.unary_-)
-    def substitute(symbol: SymbolType, expr: Expression): Expression =
+    def substitute(symbol: SymbolType, expr: Expression): Expression = {
       terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
-        p + t.substitute(symbol, expr) 
+        p + t.substitute(symbol, expr)
+      }}
+    }
+
+    def substituteConstant(expr: Expression) = {
+      var substututed = false
+      val newExpr = terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
+        p + (if(t.variables.isEmpty) {substututed = true; expr} else Polynomial(t))
       }}
 
-    def substituteConstant(expr: Expression) =
-      terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
-        p + (if(t.variables.isEmpty) expr else Polynomial(t))
-      }}
+      if(substututed) newExpr
+      else newExpr + expr
+    }
 
     def containsSymbols =
       terms.exists(_.variables != Map.empty)
@@ -310,13 +324,13 @@ trait Expressions {
     lazy val MaxValue = num.toBigDecimal(num.maxValue)
 
     def +(that: ConstantValue) = {
-        assertSameType(that)
+//        assertSameType(that)
         val newValue = value + that.value
         TypedConstantValue(newValue)
     }
 
     def *(that: ConstantValue): ConstantValue = {
-        assertSameType(that)
+//        assertSameType(that)
         val newValue = value*that.value
         TypedConstantValue(newValue)
     }

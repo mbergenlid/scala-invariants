@@ -5,13 +5,10 @@ import nsc.Global
 import nsc.Phase
 import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
-import nsc.transform.{ Transform, TypingTransformers }
-import nsc.symtab.Flags
 import validators._
 
 
 class BoundedIntegersPlugin(val global: Global) extends Plugin {
-  import global._
 
   val name = "bounded-integers"
   val description = "allows variable interpolation in strings"
@@ -32,7 +29,6 @@ class BoundedIntegersPlugin(val global: Global) extends Plugin {
       val typeChecker = new BoundedTypeChecker(global)  with MethodApplication
                                                         with IfExpression
                                                         with Assignment
-                                                        with ArithmeticExpression
                                                         with MethodDefinition
 
       def apply(unit: CompilationUnit) {

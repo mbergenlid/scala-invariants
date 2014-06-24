@@ -288,6 +288,7 @@ trait Constraints extends Expressions {
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 >= expression
       case GreaterThanOrEqual(v2) => expression <= v2
+      case Equal(v2) => expression <= v2
       case _ => false
     }
 
@@ -342,6 +343,7 @@ trait Constraints extends Expressions {
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case GreaterThan(v2) => v2 > expression
       case GreaterThanOrEqual(v2) => v2 > expression
+      case Equal(v2) => v2 > expression
       case _ => false
     }
 
@@ -399,6 +401,7 @@ trait Constraints extends Expressions {
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 <= expression
       case LessThanOrEqual(v2) => v2 <= expression
+      case Equal(v2) => v2 <= expression
       case _ => false
     }
 
@@ -446,6 +449,7 @@ trait Constraints extends Expressions {
     override def definitelyNotSubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 < expression
       case LessThanOrEqual(v2) => v2 < expression
+      case Equal(v2) => v2 < expression
       case _ => false
     }
 
@@ -647,6 +651,7 @@ trait Constraints extends Expressions {
       case Or(cs) => Or(constraints ++ cs).simplify()
       case _ => other || this
     }
+
     override def &&(other: Constraint): Constraint = {
       val newConstraints = other match {
         case Or(cs) => for {
@@ -688,8 +693,11 @@ trait Constraints extends Expressions {
         })
     }
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
-      constraints.map(_.map(f)).reduce(_||_)
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = {
+      val l = constraints.map(_.map(f))
+      l.reduce(_||_)
+    }
+
 
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
   }
