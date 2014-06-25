@@ -1,7 +1,7 @@
 .idea/
 .idea_modules/
 
-project/
+project/target
 target/
 
 *.swp
