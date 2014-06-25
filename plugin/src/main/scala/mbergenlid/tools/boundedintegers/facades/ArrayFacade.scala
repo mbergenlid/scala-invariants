@@ -7,5 +7,5 @@ trait ArrayFacade[T] {
 
   def apply(@GreaterThanOrEqual(0) @LessThan(length) index: Int): T
 
-  def update(@GreaterThanOrEqual(0) @LessThan(length) index: Int): Unit
+  def update(@GreaterThanOrEqual(0) @LessThan(length) index: Int, x: T): Unit
 }

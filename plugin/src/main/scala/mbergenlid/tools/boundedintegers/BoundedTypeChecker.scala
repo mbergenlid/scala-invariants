@@ -276,7 +276,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
       case TypeRef(_, Symbol, Nil) => true
       case NullaryMethodType(t) if t <:< expectedType => true
       case s@SingleType(_, _) if s <:< expectedType.asInstanceOf[Type] => true
-      case _ => false
+      case _ => Symbol.fullName == tpe.typeSymbol.fullName
     }
   }
   object IntTypeExtractor extends TypeExtractor(IntType)

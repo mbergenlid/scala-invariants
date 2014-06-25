@@ -13,25 +13,25 @@ trait TypeFacades {
     universe.typeOf[Int].asInstanceOf[Type] -> universe.typeOf[IntFacade].asInstanceOf[Type]
   )
 
-  lazy private val symbolFacades: Map[RealSymbolType, RealSymbolType] =
+  lazy private val symbolFacades: Map[String, RealSymbolType] =
     typeFacades.map { t =>
-      t._1.typeSymbol -> t._2.typeSymbol
+      t._1.typeSymbol.fullName -> t._2.typeSymbol
     }
 
   private def findFacadeForMethodSymbol(symbol: MethodSymbol): MethodSymbol = {
-    val owner = symbolFacades.getOrElse(symbol.owner, symbol.owner).typeSignature
-    val member = owner.member(symbol.name)
-    if(member.isTerm && member.asTerm.isOverloaded) {
-      assert(symbol.paramss.size == 1)
-      val expectedParameterTypes = symbol.paramss.head.map(_.typeSignature)
-      member.asTerm.alternatives.find {m =>
-        val params = m.asMethod.paramss
-        assert(m.asMethod.paramss.size == 1)
-        params.head.map(_.typeSignature) == expectedParameterTypes
-      }.getOrElse(symbol).asMethod
-    } else if(member.isMethod) {
-      member.asMethod
-    } else symbol
+    val owner = symbolFacades.getOrElse(symbol.owner.fullName, symbol.owner).typeSignature
+    val members = owner.members.filter(_.name.toString == symbol.name.toString)
+    val expectedParameterTypes = symbol.paramss.headOption.getOrElse(Nil).map(_.typeSignature)
+
+    val res = members.find { m =>
+        val params = m.asMethod.paramss.headOption.getOrElse(Nil)
+        params.size == expectedParameterTypes.size &&
+          params.map(_.typeSignature).zip(expectedParameterTypes).forall {
+            case (t1, t2) => 
+              t1.erasure =:= t2.erasure
+          }
+    }.getOrElse(symbol).asMethod
+    res
   }
 
   def findFacadeForSymbol(symbol: Symbol): Symbol = symbol match {

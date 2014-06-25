@@ -24,7 +24,7 @@ class ArrayFacades extends PluginTestRunner {
         |
         |a(4) = 1
         |
-        |if(a.length > 5) a(4) = 1
+        |//if(a.length > 5) a(4) = 1
         |
         |true
       """.stripMargin)(List(4))
