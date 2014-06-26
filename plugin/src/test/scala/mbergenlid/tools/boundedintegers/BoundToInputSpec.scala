@@ -62,5 +62,16 @@ class BoundToInputSpec extends PluginTestRunner {
         |true
       """.stripMargin)(List(6))
   }
+
+  test("Bound input to other input") {
+    compile(
+      """
+        |def myMethod(from: Int, @GreaterThan("from") to: Int) = to - from
+        |
+        |myMethod(1,2)
+        |myMethod(2,1)
+        |true
+      """.stripMargin)(List(5))
+  }
 }
 

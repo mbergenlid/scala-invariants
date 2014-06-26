@@ -58,28 +58,42 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
 
   object BoundsFactory {
 
-    private def constraint(bounds: Annotation, tpe: TypeType): ExpressionConstraint =
-      constraint(bounds.tpe, bounds.scalaArgs, tpe)
+    private def constraint(bounds: Annotation, symbol: RealSymbolType): ExpressionConstraint =
+      constraint(bounds.tpe, bounds.scalaArgs, symbol)
 
     private def constraint(
       boundType: Type,
       args: List[Tree],
-      resultType: TypeType): ExpressionConstraint = boundType match {
+      symbol: RealSymbolType): ExpressionConstraint = boundType match {
         case GreaterThanOrEqualExtractor() =>
-          GreaterThanOrEqual(annotationExpression(args.head, resultType))
+          GreaterThanOrEqual(annotationExpression(args.head, symbol))
         case LessThanOrEqualExtractor() =>
-          LessThanOrEqual(annotationExpression(args.head, resultType))
+          LessThanOrEqual(annotationExpression(args.head, symbol))
         case EqualExtractor() =>
-          Equal(annotationExpression(args.head, resultType))
+          Equal(annotationExpression(args.head, symbol))
         case LessThanExtractor() =>
-          LessThan(annotationExpression(args.head, resultType))
+          LessThan(annotationExpression(args.head, symbol))
         case GreaterThanExtractor() =>
-          GreaterThan(annotationExpression(args.head, resultType))
+          GreaterThan(annotationExpression(args.head, symbol))
     }
 
-    private def annotationExpression(tree: Tree, resultType: TypeType): Expression = {
+    private def annotationExpression(tree: Tree, symbol: RealSymbolType): Expression = {
       val Apply(_, List(value)) = tree
-      expression(value, resultType)
+      expression(value, symbol)
+    }
+
+    private def expression(tree: Tree, symbol: RealSymbolType): Expression = tree match {
+      case Literal(Constant(s: String)) =>
+        val factory = expressionForType(symbol.typeSignature)
+        if(symbol.isMethod)
+          factory.fromParameter(s)
+        else if(symbol.owner.isMethod)
+          factory.withExtraContext(
+            symbol.owner.asMethod.paramss.headOption.getOrElse(Nil)).fromParameter(s)
+        else
+          throw new IllegalArgumentException(s"Symbol $symbol is neither a method nor a method parameter, can not be referred to as a string")
+      case _ =>
+        expression(tree, symbol.typeSignature)
     }
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
@@ -89,8 +103,6 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Double)) =>
         expressionForType(tpe).convertConstant(x)
-      case Literal(Constant(s: String)) =>
-        expressionForType(tpe).fromParameter(s)
       case x if x.symbol != NoSymbol =>
         expressionForType(tpe).fromSymbol(symbolChainFromTree(x))
     }
@@ -102,9 +114,9 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
       )
       val ecs = annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
-          BoundsFactory.constraint(a, tpe)
+          BoundsFactory.constraint(a, symbol)
         case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
-          BoundsFactory.constraint(a, tpe)
+          BoundsFactory.constraint(a, symbol)
       }
       ecs ++ symbol.allOverriddenSymbols.flatMap(s => annotatedConstraints(s, tpe))
     }
@@ -160,17 +172,10 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
             throw new CompilationError(
               Error(t.pos, "@Property requires at least one constraint"))
 
-          val tpe = memberSymbol match {
-            case m: MethodSymbol => m.returnType
-            case _ => memberSymbol.typeSignature
-          }
-//          if(!expressionForType.isDefinedAt(tpe))
-//            throw new CompilationError(
-//              Error(t.pos, s"Member $memberSymbol in $typeFacade is of unsupported type ${memberSymbol.typeSignature}"))
 
           val propConstraints: List[Constraint] = for {
             method@Apply(_, param) <- annotations
-          } yield constraint(method.tpe, param, tpe)
+          } yield constraint(method.tpe, param, memberSymbol)
 
           PropertyConstraint(memberSymbol,
             propConstraints.reduce(_ && _)
@@ -292,9 +297,9 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
       new ExpressionFactory[Double](DoubleType)
 
     case MethodType(params, IntTypeExtractor()) =>
-      new MethodExpressionFactory[Int](IntType, params)
+      new ExpressionFactory[Int](IntType, params)
     case MethodType(params, DoubleTypeExtractor()) =>
-      new MethodExpressionFactory[Double](DoubleType, params)
+      new ExpressionFactory[Double](DoubleType, params)
   }
 
   def symbolChainFromTree(tree: Tree): SymbolChain = {

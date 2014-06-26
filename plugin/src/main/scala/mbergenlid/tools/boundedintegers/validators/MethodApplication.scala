@@ -12,20 +12,26 @@ trait MethodApplication extends AbstractBoundsValidator {
 
   private def validate(implicit context: Context): Validator = {
     case Apply(s@Select(_this, method), args) if s.symbol.isMethod =>
+      var updatedContext = context
       val parameterMap: Map[RealSymbolType, BoundedType] = (for {
         (argSymbol, paramValue) <- extractMethodParams(s, args)
       } yield {
-        (argSymbol, argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue))
+        val paramBounds = argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue)(updatedContext)
+        updatedContext = updatedContext.add(SymbolChain(List(argSymbol)), paramBounds.constraint)
+        (argSymbol, paramBounds)
       }).toMap
       val _thisBounds: BoundedType = checkBounds(context)(_this)
       BoundsFactory.fromMethod(symbolChainFromTree(s), _thisBounds,
         parameterMap + (MethodExpressionFactory.ThisSymbol -> _thisBounds))
 
     case t@Apply(method, args) if method.symbol.isMethod =>
+      var updatedContext = context
       val parameterMap: Map[RealSymbolType, BoundedType] = (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args)
       } yield {
-        (argSymbol, argSymbol.tryAssign(paramValue))
+        val paramBounds = argSymbol.tryAssign(paramValue)(updatedContext)
+        updatedContext = updatedContext.add(SymbolChain(List(argSymbol)), paramBounds.constraint)
+        (argSymbol, paramBounds)
       }).toMap
 
       BoundsFactory.fromMethod(symbolChainFromTree(t), BoundedType.noBounds, parameterMap)

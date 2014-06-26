@@ -33,7 +33,7 @@ trait TypeContext { self: Constraints =>
       new Context(map)
     }
 
-    def &(s: SymbolType, constraint: Constraint) = {
+    def add(s: SymbolType, constraint: Constraint) = {
       val oldConstraint = symbols.getOrElse(s, NoConstraints)
       new Context(symbols + (s -> (oldConstraint && constraint)))
     }
@@ -155,6 +155,12 @@ trait TypeContext { self: Constraints =>
       case LessThanOrEqual(v) if v.isConstant =>
         if(f.convertExpression(v) <= f.convertConstant(constant)) GreaterThan(f.fromSymbol(boundSymbol))
         else NoConstraints
+      case Equal(v) if v.isConstant =>
+        val constantExpression = f.convertConstant(constant)
+        val constrainedExpression = f.convertExpression(v)
+        if(constrainedExpression == constantExpression) Equal(f.fromSymbol(boundSymbol))
+        else if(constrainedExpression < constantExpression) GreaterThan(f.fromSymbol(boundSymbol))
+        else LessThan(f.fromSymbol(boundSymbol))
       case _ => NoConstraints
     }
 

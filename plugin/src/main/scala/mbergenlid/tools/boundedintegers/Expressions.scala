@@ -84,33 +84,31 @@ trait Expressions extends ExpressionParser {
       terms.exists(_.coeff.isNaN)
   }
 
-  class ExpressionFactory[T: RichNumeric: TypeTag](val convertedType: TypeType) {
-    def fromConstant(constant: T) = Polynomial.fromConstant(constant)
-    def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
-    def convertConstant[U: RichNumeric](constant: U): Expression =
-      Polynomial.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
+  class ExpressionFactory[T: RichNumeric: TypeTag](
+    val convertedType: TypeType, 
+    extraContext: List[RealSymbolType]) {
 
-    def convertConstant(constant: ConstantValue): Expression =
-      new Polynomial(Set(Term(constant.convertTo[T], Map.empty)))
+      def this(convertedType: TypeType) = this(convertedType, Nil)
+      def fromConstant(constant: T) = Polynomial.fromConstant(constant)
+      def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
+      def convertConstant[U: RichNumeric](constant: U): Expression =
+        Polynomial.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
 
-    def convertExpression(expr: Expression): Expression =
-      Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
+      def convertConstant(constant: ConstantValue): Expression =
+        new Polynomial(Set(Term(constant.convertTo[T], Map.empty)))
 
-    def fromParameter(param: String): Expression =
-      throw new UnsupportedOperationException("Not a method")
+      def convertExpression(expr: Expression): Expression =
+        Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
-    lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
-    lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
+      def fromParameter(param: String): Expression =
+        new ExprParser[T](extraContext).parseExpression(param).get
+
+      def withExtraContext(symbols: List[RealSymbolType]) =
+        new ExpressionFactory(convertedType, extraContext ++ symbols)
+
+      lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
+      lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
   }
-
-  class MethodExpressionFactory[T: RichNumeric: TypeTag](
-    resultType: TypeType,
-    params: List[RealSymbolType]) extends ExpressionFactory[T](resultType) {
-
-      override def fromParameter(s: String) =
-        new ExprParser[T](params).parseExpression(s).get
-
-    }
 
   object MethodExpressionFactory {
     val ThisSymbol =
