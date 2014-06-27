@@ -55,6 +55,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
     def const(lhs: Constraint, rhs: Constraint, op: Operator) = for {
       ec1 <- lhs.toList
       ec2 <- rhs.toList
+      if ec1.expression != ec2.expression
       f <- op.apply(ec1, ec2).toList
       c <-  createConstraints(ec1.expression, ec2.expression, f)
     } yield { c }
