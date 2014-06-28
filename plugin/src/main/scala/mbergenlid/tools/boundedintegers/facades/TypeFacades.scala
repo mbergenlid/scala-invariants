@@ -27,8 +27,8 @@ trait TypeFacades {
         val params = m.asMethod.paramss.headOption.getOrElse(Nil)
         params.size == expectedParameterTypes.size &&
           params.map(_.typeSignature).zip(expectedParameterTypes).forall {
-            case (t1, t2) => 
-              t1.erasure =:= t2.erasure
+            case (t1, t2) =>
+              t1.erasure.typeSymbol.fullName == t2.erasure.typeSymbol.fullName
           }
     }.getOrElse(symbol).asMethod
     res
