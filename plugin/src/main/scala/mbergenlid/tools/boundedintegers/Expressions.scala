@@ -135,25 +135,20 @@ trait Expressions extends ExpressionParser {
   }
 
   class Polynomial(val terms: Set[Term]) extends Expression  {
-    def >(that: Expression ): Boolean =
-      (!isNaN && !that.isNaN) && {
+    def >(that: Expression ): Boolean = {
         val diff = (this - that).terms
-        !diff.isEmpty && diff.forall(t => t.greaterThanZero)
+        diff.nonEmpty && diff.forall(t => t.greaterThanZero)
       }
 
     def >=(that: Expression ): Boolean=
-      (!isNaN && !that.isNaN) &&
         (this - that).terms.forall(t => t.greaterThanZero || t.isZero)
 
     def <(that: Expression ): Boolean = {
-      (!isNaN && !that.isNaN) && {
-        val diff = (this - that).terms
-        !diff.isEmpty && diff.forall(t => t.lessThanZero)
-      }
+      val diff = (this - that).terms
+      diff.nonEmpty && diff.forall(t => t.lessThanZero)
     }
     def <=(that: Expression ): Boolean = {
-      (!isNaN && !that.isNaN) &&
-        (this - that).terms.forall(t => t.lessThanZero || t.isZero)
+      (this - that).terms.forall(t => t.lessThanZero || t.isZero)
     }
 
     def ==(that: Expression ): Boolean=
