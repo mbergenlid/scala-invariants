@@ -710,6 +710,7 @@ trait Constraints extends Expressions {
     override def definitelySubsetOf(that: Constraint) = that match {
       case PropertyConstraint(otherSymbol, otherConstraint) =>
         otherSymbol == symbol && constraint.definitelySubsetOf(otherConstraint)
+      case NoConstraints => true
       case _ => false
     }
 

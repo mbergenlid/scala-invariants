@@ -202,13 +202,17 @@ trait Expressions extends ExpressionParser {
     def containsSymbols =
       terms.exists(_.variables != Map.empty)
 
-    def increment =
-      if(terms.size == 1) Polynomial(terms.map(_.increment))
-      else this
+    def increment = terms.find(_.variables.isEmpty) match {
+      case Some(_) => this + Polynomial.fromConstant(1)
+      case None => this
+    }
 
-    def decrement =
-      if(terms.size == 1) Polynomial(terms.map(_.decrement))
+    def decrement = {
+      val constantTerm =
+        terms.find(_.variables.isEmpty)
+      if(constantTerm.isDefined) this - Polynomial.fromConstant(1)
       else this
+    }
 
     def extractSymbols: Set[SymbolType] = for {
       term <- terms
