@@ -14,8 +14,8 @@ trait IfExpression extends BooleanExpressionEvaluator {
     case If(cond, _then, _else) =>
       val newContext = evaluate(cond)
       val newConstraint =
-        checkBounds(context && newContext)(Block(Nil, _then)).constraint ||
-        checkBounds(context && !newContext)(Block(Nil, _else)).constraint
+        checkBounds(context && newContext.evaluate())(Block(Nil, _then)).constraint ||
+        checkBounds(context && (!newContext).evaluate())(Block(Nil, _else)).constraint
 
       BoundedType(newConstraint)
   }

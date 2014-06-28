@@ -5,67 +5,120 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   self: MyUniverse =>
   import global._
 
-  /**
-   *  x < 10
-   *  x + 1 < 10
-   *
-   */
-  def evaluate(expr: Tree)(implicit c: Context): Context = expr match {
+  trait BoolOperator {
+    def evaluate(): Context
+    def unary_! :BoolOperator
+  }
+
+  trait Operator2 extends BoolOperator {
+
+    def lhs: Constraint
+    def rhs: Constraint
+    def operator: Operator
+    def reverseOperator: Operator
+
+    override def evaluate(): Context = {
+      val constraints = const(lhs, rhs, operator) ++
+        const(rhs, lhs, reverseOperator)
+      new Context((Map.empty[SymbolType, Constraint] /: constraints) {(m, t) =>
+        m + (t._1 -> (m.getOrElse(t._1, NoConstraints) && t._2))
+      })
+    }
+
+    protected[BooleanExpressionEvaluator]
+    def const(
+      lhs: Constraint,
+      rhs: Constraint,
+      op: Operator): List[(SymbolType, Constraint)] = for {
+        ec1 <- lhs.toList
+        ec2 <- rhs.toList
+        f <- op.apply(ec1, ec2).toList
+        c <-  createConstraints(ec1.expression, ec2.expression, f)
+    } yield { c }
+  }
+
+  case object EmptyOperator extends BoolOperator {
+    override def evaluate() = new Context
+    override def unary_! = this
+  }
+  case class &&(lhs: BoolOperator, rhs: BoolOperator) extends BoolOperator {
+    override def evaluate() = lhs.evaluate() && rhs.evaluate()
+    override def unary_! = ||(!lhs, !rhs)
+  }
+  case class ||(lhs: BoolOperator, rhs: BoolOperator) extends BoolOperator {
+    override def evaluate() = lhs.evaluate() || rhs.evaluate()
+    override def unary_! = &&(!lhs, !rhs)
+  }
+  case class <|(lhs: Constraint, rhs: Constraint) extends Operator2 {
+    override val operator = (_:EXP)<|(_:EXP)
+    override val reverseOperator = (_:EXP)>|(_:EXP)
+    override def unary_! = >=|(lhs, rhs)
+  }
+  case class <=|(lhs: Constraint, rhs: Constraint) extends Operator2 {
+    override val operator = (_:EXP)<=|(_:EXP)
+    override val reverseOperator = (_:EXP)>|(_:EXP)
+    override def unary_! = >|(lhs, rhs)
+  }
+  case class >|(lhs: Constraint, rhs: Constraint) extends Operator2 {
+    override val operator = (_:EXP)>|(_:EXP)
+    override val reverseOperator = (_:EXP)<=|(_:EXP)
+    override def unary_! = <=|(lhs, rhs)
+  }
+  case class >=|(lhs: Constraint, rhs: Constraint) extends Operator2 {
+    override val operator: Operator = _ >=| _
+    override val reverseOperator: Operator = _<=|_
+    override def unary_! : BoolOperator = <|(lhs, rhs)
+  }
+  case class ==|(lhs: Constraint, rhs: Constraint) extends Operator2 {
+    override val operator = (_:EXP)==|(_:EXP)
+    override def reverseOperator = operator
+    override def unary_! = ||(<|(lhs, rhs), >|(lhs, rhs))
+  }
+
+  class DeferredBoolExpression(method: Name, expression: Name => Context) {
+    def apply(): Context = expression(method)
+    def unary_! :DeferredBoolExpression = method match {
+      case m if m == n("$less") => new DeferredBoolExpression(n("$greater$eq"), expression)
+    }
+  }
+
+  def evaluate(expr: Tree)(implicit c: Context): BoolOperator = expr match {
     case Apply(Select(boolExpr, method), List(arg)) if boolExpr.tpe <:< typeOf[Boolean] =>
       apply(evaluate(boolExpr), method, arg)
-    case Apply(Select(obj, method), List(arg)) if opToConstraints.contains(method) =>
+    case Apply(Select(obj, method), List(arg)) if operators.contains(method) =>
       apply(obj, method, arg)
     case _ =>
-      checkBounds(c)(expr); new Context
+      checkBounds(c)(expr)
+      EmptyOperator
   }
 
   private def n(s: String) = stringToTermName(s)
 
   type Factory = (Expression => ExpressionConstraint)
+  type OpFactory = (Constraint, Constraint) => Operator2
   type Operator = (ExpressionConstraint, ExpressionConstraint) =>
     Option[Expression => ExpressionConstraint]
 
-  private val opToConstraints = Map[Name, (Factory, Factory)](
-    n("$less") -> (LessThan, GreaterThan),
-    n("$greater") -> (GreaterThan, LessThan),
-    n("$less$eq") -> (LessThanOrEqual, GreaterThanOrEqual),
-    n("$greater$eq") -> (GreaterThanOrEqual, LessThanOrEqual),
-    n("$eq$eq") -> (Equal, Equal)
-  )
-
   type EXP = ExpressionConstraint
-  private val operators = Map[Name, (Operator, Operator)](
-    n("$less") -> ((_:EXP) <| (_: EXP), (_:EXP) >| (_:EXP)),
-    n("$greater") -> ((_:EXP) >| (_:EXP), (_:EXP) <| (_:EXP)),
-    n("$less$eq") -> ((_:EXP) <=| (_:EXP), (_:EXP) >=| (_:EXP)),
-    n("$greater$eq") -> ((_:EXP) >=| (_:EXP), (_:EXP) <=| (_:EXP)),
-    n("$eq$eq") -> ((_:EXP) ==| (_:EXP), (_:EXP) ==| (_:EXP))
+  private val operators = Map[Name, OpFactory](
+    n("$less") -> {(lhs, rhs) => <|(lhs, rhs)},
+    n("$greater") -> {(lhs, rhs) => >|(lhs, rhs)},
+    n("$less$eq") -> {(lhs, rhs) => <=|(lhs, rhs)},
+    n("$greater$eq") -> {(lhs, rhs) => >=|(lhs, rhs)},
+    n("$eq$eq") -> {(lhs, rhs) => ==|(lhs, rhs)}
   )
 
-  def apply(obj: Context, method: Name, arg: Tree)(implicit c: Context) = method match {
-    case a if a == stringToTermName("$amp$amp") => obj && evaluate(arg)(obj && c)
-    case a if a == stringToTermName("$bar$bar") => obj || evaluate(arg)
+  def apply(obj: BoolOperator, method: Name, arg: Tree)(implicit c: Context): BoolOperator = method match {
+    case a if a == stringToTermName("$amp$amp") => &&(obj, evaluate(arg)(obj.evaluate() && c))
+    case a if a == stringToTermName("$bar$bar") => ||(obj, evaluate(arg))
     case _ => obj
   }
 
-  private def apply(lhs: Tree, method: Name, rhs: Tree)(implicit c: Context): Context = {
+  private def apply(lhs: Tree, method: Name, rhs: Tree)(implicit c: Context): Operator2 = {
     val lhsBounds = checkBounds(c)(lhs)
     val rhsBounds = checkBounds(c)(rhs)
 
-    def const(lhs: Constraint, rhs: Constraint, op: Operator) = for {
-      ec1 <- lhs.toList
-      ec2 <- rhs.toList
-      f <- op.apply(ec1, ec2).toList
-      c <-  createConstraints(ec1.expression, ec2.expression, f)
-    } yield { c }
-
-    val (rhsOperator, lhsOperator) = operators(method)
-    val constraints = const(lhsBounds.constraint, rhsBounds.constraint, rhsOperator) ++
-      const(rhsBounds.constraint, lhsBounds.constraint, lhsOperator)
-
-    new Context((Map.empty[SymbolType, Constraint] /: constraints) {(m, t) =>
-      m + (t._1 -> (m.getOrElse(t._1, NoConstraints) && t._2))
-    })
+    operators(method)(lhsBounds.constraint, rhsBounds.constraint)
   }
 
   private def createConstraints(
