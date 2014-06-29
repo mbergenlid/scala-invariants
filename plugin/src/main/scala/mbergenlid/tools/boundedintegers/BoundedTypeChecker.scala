@@ -140,7 +140,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expr
       }
     }
 
-    def propertyConstraints(symbolChain: SymbolChain): Constraint = {
+    def propertyConstraints(symbolChain: SymbolType): Constraint = {
       val symbol = symbolChain.head
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
@@ -197,7 +197,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expr
       }
     }
 
-    def apply(symbolChain: SymbolChain): BoundedType = {
+    def apply(symbolChain: SymbolType): BoundedType = {
       BoundedType(fromSymbolChain(symbolChain))
     }
 
@@ -210,7 +210,7 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expr
     }
 
     def fromMethod(
-      symbolChain: SymbolChain,
+      symbolChain: SymbolType,
       thisBounds: BoundedType,
       args: Map[RealSymbolType, BoundedType]): BoundedType = {
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
@@ -296,13 +296,13 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expr
       new ExpressionFactory[Double](DoubleType, params)
   }
 
-  def symbolChainFromTree(tree: Tree): SymbolChain = {
+  def symbolChainFromTree(tree: Tree): SymbolType = {
     def symbolList(tree: Tree): List[RealSymbolType] = tree match {
       case Select(t, n) =>
         findFacadeForSymbol(tree.symbol) :: symbolList(t)
       case _ => List(tree.symbol)
     }
-    SymbolChain(symbolList(tree))
+    SymbolChain[RealSymbolType](symbolList(tree))
   }
 
 

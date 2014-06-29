@@ -1,7 +1,5 @@
 package mbergenlid.tools.boundedintegers
 
-import mbergenlid.tools.boundedintegers.facades.TypeFacades
-
 import scala.language.implicitConversions
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
@@ -20,26 +18,7 @@ trait Expressions {
         )
     } else false
 
-  case class SymbolChain(symbols: List[RealSymbolType]) extends SymbolType {
-    def head = symbols.head
-    def tail = SymbolChain(symbols.tail)
-    def isStable = Expressions.this.isStable(head)
-
-    def map(f: RealSymbolType => RealSymbolType) = SymbolChain(symbols.map(f))
-
-    def prettyPrint =
-      symbols.reverse.map(_.name.toString).mkString(".")
-  }
-
-  trait SymbolType {
-    def head: RealSymbolType
-    def tail: SymbolType
-    def isStable: Boolean
-    def symbols: List[RealSymbolType]
-    def map(f: RealSymbolType => RealSymbolType): SymbolType
-
-    def prettyPrint: String
-  }
+ type SymbolType = SymbolChain[RealSymbolType]
 
   val TypeNothing: TypeType
 

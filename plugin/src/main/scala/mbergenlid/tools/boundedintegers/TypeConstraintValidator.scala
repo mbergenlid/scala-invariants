@@ -7,14 +7,14 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
   import global._
 
-  implicit def symbol2ConstrainedSymbol(symbol: Symbol) =
-    new ConstrainedSymbol(SymbolChain(List(symbol)))
+  implicit def symbol2ConstrainedSymbol(symbol: RealSymbolType) =
+    new ConstrainedSymbol(SymbolChain(symbol))
 
   implicit def tree2ConstrainedSymbol(tree: Tree) =
     new ConstrainedSymbol(symbolChainFromTree(tree))
 
-  class ConstrainedSymbol(symbolChain: SymbolChain, thisSymbol: Option[Symbol] = None) {
-    def this(symbol: SymbolChain, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
+  class ConstrainedSymbol(symbolChain: SymbolType, thisSymbol: Option[Symbol] = None) {
+    def this(symbol: SymbolType, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
 
     def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbolChain, withThisSymbol)
 
