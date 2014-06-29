@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers.scalacheck
 
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
 import org.scalacheck.{Arbitrary, Gen}
@@ -113,6 +114,7 @@ class Constraints extends FunSuite with Checkers with CUT {
 
   override val TypeNothing: TypeType = typeOf[Nothing]
   override type RealSymbolType = global.Symbol
+  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }
 
 

@@ -1,6 +1,7 @@
 
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe._
@@ -118,4 +119,6 @@ class ExpressionsSpec extends FunSuite
     assert(diff2.isNaN)
 //    assert()
   }
+
+  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }

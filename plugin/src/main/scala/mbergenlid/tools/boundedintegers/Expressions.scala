@@ -6,9 +6,11 @@ import scala.language.implicitConversions
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
 
-trait Expressions extends ExpressionParser {
+trait Expressions {
   type RealSymbolType <: scala.reflect.api.Symbols#SymbolApi
   type TypeType = scala.reflect.api.Types#TypeApi
+
+  def parseExpression[T: TypeTag: RichNumeric](s: String, scope: List[RealSymbolType]): Expression
 
   def isStable(symbol: RealSymbolType): Boolean =
     if(symbol.isTerm) {
@@ -88,7 +90,6 @@ trait Expressions extends ExpressionParser {
 
   class ExpressionFactory[T: RichNumeric: TypeTag](
     val convertedType: TypeType,
-    typeFacades: TypeFacades,
     extraContext: List[RealSymbolType] = Nil) {
 
       def fromConstant(constant: T) = Polynomial.fromConstant(constant)
@@ -103,10 +104,10 @@ trait Expressions extends ExpressionParser {
         Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
       def fromParameter(param: String): Expression =
-        new ExprParser[T](extraContext, typeFacades).parseExpression(param).get
+        parseExpression[T](param, extraContext)
 
       def withExtraContext(symbols: List[RealSymbolType]) =
-        new ExpressionFactory(convertedType, typeFacades, extraContext ++ symbols)
+        new ExpressionFactory(convertedType, extraContext ++ symbols)
 
       lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
       lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)

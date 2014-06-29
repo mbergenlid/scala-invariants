@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
 import scala.util.parsing.combinator.JavaTokenParsers
@@ -200,5 +201,11 @@ class BoundedTypeTreesSpec extends FunSuite
     test(expr) {
       assert(f(), e1)
     }
+  }
+
+  override def parseExpression[T: TypeTag : RichNumeric](
+    s: String,
+    scope: List[RealSymbolType]): Expression = {
+      Polynomial.Zero
   }
 }

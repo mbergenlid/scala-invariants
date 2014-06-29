@@ -83,12 +83,12 @@ object PropertyRunner extends MyUniverse with Assertions {
 
   private def methodConstraints(method: MethodSymbol) = {
     val globalSymbol = method.asInstanceOf[global.MethodSymbol]
-    BoundsFactory.apply(globalSymbol, globalSymbol.returnType)
+    BoundsFactory.apply(SymbolChain(List(globalSymbol))).constraint
   }
 
   private def parameterConstraints(param: Symbol) = {
     val globalSymbol = param.asInstanceOf[global.Symbol]
-    BoundsFactory.apply(globalSymbol, globalSymbol.typeSignature)
+    BoundsFactory.apply(SymbolChain(List(globalSymbol))).constraint
   }
 
   import org.scalacheck.Prop

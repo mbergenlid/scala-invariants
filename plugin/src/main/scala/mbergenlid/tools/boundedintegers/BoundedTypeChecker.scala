@@ -1,19 +1,12 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.reflect.api.Universe
-import mbergenlid.tools.boundedintegers.annotations.{
-  GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
-  LessThan => LessThanAnnotation,
-  LessThanOrEqual => LessThanOrEqualAnnotation,
-  Equal => EqualAnnotation,
-  Bounded,
-  GreaterThan => GreaterThanAnnotation,
-  Property => PropertyAnnotation}
+import mbergenlid.tools.boundedintegers.annotations.{GreaterThanOrEqual => GreaterThanOrEqualAnnotation, LessThan => LessThanAnnotation, LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, GreaterThan => GreaterThanAnnotation, Property => PropertyAnnotation, RichNumeric, Bounded}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import scala.reflect.runtime.universe
 
-trait MyUniverse extends Constraints with TypeContext with TypeFacades {
+trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expressions with ExpressionParser {
   val global: Universe
   import global._
 
@@ -291,16 +284,16 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
     case IntTypeExtractor() =>
-      new ExpressionFactory[Int](IntType, this)
+      new ExpressionFactory[Int](IntType)
     case LongTypeExtractor() =>
-      new ExpressionFactory[Long](LongType, this)
+      new ExpressionFactory[Long](LongType)
     case DoubleTypeExtractor() =>
-      new ExpressionFactory[Double](DoubleType, this)
+      new ExpressionFactory[Double](DoubleType)
 
     case MethodType(params, IntTypeExtractor()) =>
-      new ExpressionFactory[Int](IntType, this, params)
+      new ExpressionFactory[Int](IntType, params)
     case MethodType(params, DoubleTypeExtractor()) =>
-      new ExpressionFactory[Double](DoubleType, this, params)
+      new ExpressionFactory[Double](DoubleType, params)
   }
 
   def symbolChainFromTree(tree: Tree): SymbolChain = {
@@ -312,6 +305,13 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
     SymbolChain(symbolList(tree))
   }
 
+
+  override def parseExpression[T: universe.TypeTag : RichNumeric](
+    s: String,
+    scope: List[RealSymbolType]): Expression = {
+
+      new ExprParser[T](scope, this).parseExpression(s).get
+  }
 }
 
 

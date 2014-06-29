@@ -1,5 +1,6 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import org.scalatest.FunSuite
 import scala.reflect.runtime.universe._
 import scala.util.parsing.combinator.JavaTokenParsers
@@ -463,4 +464,6 @@ class ConstraintsSpec extends FunSuite
       (ident ^^ stringToExpression) | (wholeNumber ^^ {x: String => bigIntToExpression(BigDecimal(x))} )
 
   }
+
+  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }

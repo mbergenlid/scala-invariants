@@ -1,17 +1,27 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import org.scalatest.FunSuite
+import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
 
 class ContextSpec extends FunSuite
-    with TypeContext with Constraints with Expressions with TypeFacades with MyUniverse {
+with TypeContext with Constraints with Expressions {
 
-  val global = scala.reflect.runtime.universe
-  import global._
+  type RealSymbolType = Symbol
+  val TypeNothing = typeOf[Nothing]
+  val IntSymbol = typeOf[Int].typeSymbol
+  def createConstraintFromSymbol(symbol: SymbolType) =
+    NoConstraints
 
   val OverflowConstant = Polynomial(Set(Term(TypedConstantValue[Int](BigDecimal(Int.MaxValue+1)), Map.empty)))
+
+  def expressionForType = {
+    case TypeRef(_, IntSymbol, Nil) =>
+      new ExpressionFactory[Int](typeOf[Int])
+  }
 
   var symbolCache = Map[String, SymbolType]()
 
@@ -116,16 +126,16 @@ class ContextSpec extends FunSuite
     new Context(Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> And(LessThan(Polynomial.fromConstant(10)),
-                                     GreaterThan(Polynomial.fromConstant(0)))
+        GreaterThan(Polynomial.fromConstant(0)))
     ))) (
-      LessThan(Polynomial.fromConstant(14)), GreaterThan(Polynomial.fromConstant(4))
-    )()
+    LessThan(Polynomial.fromConstant(14)), GreaterThan(Polynomial.fromConstant(4))
+  )()
 
   contextTest(
     new Context(Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))),
       sym("y") -> (LessThan(Polynomial.fromConstant(0)) ||
-                    GreaterThan(Polynomial.fromConstant(10)))
+        GreaterThan(Polynomial.fromConstant(10)))
     ))) ()(LessThan(Polynomial.fromConstant(4)))
 
   /**
@@ -138,7 +148,7 @@ class ContextSpec extends FunSuite
     new Context(Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(-5)))) ,
       sym("y") -> And(GreaterThanOrEqual(Polynomial.fromConstant(0)),
-                                    LessThanOrEqual(Polynomial.fromConstant(5)))
+        LessThanOrEqual(Polynomial.fromConstant(5)))
     )))(GreaterThanOrEqual(Polynomial.fromConstant(-5)))(GreaterThan(Polynomial.fromConstant(-5)))
 
   /**
@@ -176,11 +186,11 @@ class ContextSpec extends FunSuite
     new Context(Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(1, "z")))),
       sym("y") -> And(GreaterThanOrEqual(Polynomial.fromConstant(0)),
-                                     LessThanOrEqual(Polynomial.fromConstant(5))),
+        LessThanOrEqual(Polynomial.fromConstant(5))),
       sym("z") -> And(GreaterThanOrEqual(Polynomial.fromConstant(1)),
-                                      LessThanOrEqual(Polynomial.fromConstant(6)))
+        LessThanOrEqual(Polynomial.fromConstant(6)))
     )))(GreaterThanOrEqual(Polynomial.fromConstant(1)), LessThan(Polynomial.fromConstant(12)))(LessThanOrEqual(Polynomial.fromConstant(10)))
-  
+
   /**
    * _ = y + z
    * y >= 0 && y <= 5
@@ -211,4 +221,6 @@ class ContextSpec extends FunSuite
       }
     }
   }
+
+  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }
