@@ -5,6 +5,8 @@ class ArraySearchTests extends PluginTestRunner {
   test("Recursive linear search") {
     compile(
       """
+        |@GreaterThanOrEqual(-1)
+        |@LessThan("array.length")
         |def find(
         |  array: Array[Int],
         |  element: Int,

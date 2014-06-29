@@ -48,8 +48,12 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
         val fromConstants =
           Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
+
+        val fromAnnotatedConstants =
+          Context.substituteConstants(exprConstraints, symbol.typeSignature, extractSymbols(target))
         val assignee =
-          exprConstraints && fromConstants
+          exprConstraints && fromConstants && fromAnnotatedConstants
+
         if(!(assignee definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
         boundExpr
@@ -66,6 +70,17 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       }
     }
 
+    private def extractSymbols(constraint: Constraint): Context = {
+      val map = for {
+        ec <- constraint.toList
+        symbol <- ec.expression.extractSymbols
+      } yield {
+        (symbol, BoundsFactory.fromSymbolChain(symbol))
+      }
+      new Context((Map.empty[SymbolType, Constraint] /: map) {(m, t) =>
+        m + (t._1 -> (m.getOrElse(t._1, NoConstraints) && t._2))
+      })
+    }
 
     private def replaceThisSymbols(simpleConstraint: SimpleConstraint): Constraint =
       simpleConstraint.map { sc =>

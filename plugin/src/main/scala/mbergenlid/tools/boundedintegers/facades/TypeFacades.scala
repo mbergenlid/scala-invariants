@@ -5,15 +5,17 @@ import mbergenlid.tools.boundedintegers.MyUniverse
 
 trait TypeFacades {
   self: MyUniverse =>
+
+  type Symbol = global.Symbol
   import global._
 
   lazy private val typeFacades = Map[Type, Type] (
-    universe.typeOf[String].asInstanceOf[Type] -> universe.typeOf[StringFacade].asInstanceOf[global.Type],
-    universe.typeOf[Array[_]].asInstanceOf[Type] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[global.Type],
+    universe.typeOf[String].asInstanceOf[Type] -> universe.typeOf[StringFacade].asInstanceOf[Type],
+    universe.typeOf[Array[_]].asInstanceOf[Type] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[Type],
     universe.typeOf[Int].asInstanceOf[Type] -> universe.typeOf[IntFacade].asInstanceOf[Type]
   )
 
-  lazy private val symbolFacades: Map[String, RealSymbolType] =
+  lazy private val symbolFacades: Map[String, Symbol] =
     typeFacades.map { t =>
       t._1.typeSymbol.fullName -> t._2.typeSymbol
     }

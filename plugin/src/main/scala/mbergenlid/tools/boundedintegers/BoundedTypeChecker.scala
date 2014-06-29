@@ -243,7 +243,8 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
                 ec: ExpressionConstraint): Constraint =
                   symbols match {
                     case (symbol, c) :: rest =>
-                      for(sub <- c) yield substitute(rest, ec.substitute(symbol, sub).get)
+                      for(sub <- c; result <- ec.substitute(symbol, sub)) yield
+                        substitute(rest, result)
                     case Nil =>
                       ec
                   }
@@ -290,16 +291,16 @@ trait MyUniverse extends Constraints with TypeContext with TypeFacades {
 
   def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
     case IntTypeExtractor() =>
-      new ExpressionFactory[Int](IntType)
+      new ExpressionFactory[Int](IntType, this)
     case LongTypeExtractor() =>
-      new ExpressionFactory[Long](LongType)
+      new ExpressionFactory[Long](LongType, this)
     case DoubleTypeExtractor() =>
-      new ExpressionFactory[Double](DoubleType)
+      new ExpressionFactory[Double](DoubleType, this)
 
     case MethodType(params, IntTypeExtractor()) =>
-      new ExpressionFactory[Int](IntType, params)
+      new ExpressionFactory[Int](IntType, this, params)
     case MethodType(params, DoubleTypeExtractor()) =>
-      new ExpressionFactory[Double](DoubleType, params)
+      new ExpressionFactory[Double](DoubleType, this, params)
   }
 
   def symbolChainFromTree(tree: Tree): SymbolChain = {

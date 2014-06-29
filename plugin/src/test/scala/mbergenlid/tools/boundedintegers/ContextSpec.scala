@@ -1,24 +1,17 @@
 package mbergenlid.tools.boundedintegers
+
+import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import org.scalatest.FunSuite
-import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
 
 class ContextSpec extends FunSuite
-    with TypeContext with Constraints with Expressions {
+    with TypeContext with Constraints with Expressions with TypeFacades with MyUniverse {
 
-  type RealSymbolType = Symbol
-  val TypeNothing = typeOf[Nothing]
-  val IntSymbol = typeOf[Int].typeSymbol
-  def createConstraintFromSymbol(symbol: SymbolType) =
-    NoConstraints
+  val global = scala.reflect.runtime.universe
+  import global._
 
   val OverflowConstant = Polynomial(Set(Term(TypedConstantValue[Int](BigDecimal(Int.MaxValue+1)), Map.empty)))
-
-  def expressionForType = {
-    case TypeRef(_, IntSymbol, Nil) =>
-      new ExpressionFactory[Int](typeOf[Int])
-  }
 
   var symbolCache = Map[String, SymbolType]()
 

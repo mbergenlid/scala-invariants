@@ -111,11 +111,14 @@ trait TypeContext { self: Constraints =>
           newConstraint <- ec.combine(boundedBy)
         } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
 
-        from.map { fromSc: ExpressionConstraint =>
+        val constants = for {
+          fromSc <- from.toList
+        } yield {
           val l: Iterable[Constraint] = fromConstant(fromSc)
           val c = l.reduceLeftOption(_&&_).getOrElse(NoConstraints)
           c
         }
+        constants.reduceOption(_&&_).getOrElse(NoConstraints)
     }
 
     private def findSymbolConstraints(

@@ -1,5 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.facades.TypeFacades
+
 import scala.language.implicitConversions
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import scala.reflect.runtime.universe._
@@ -85,10 +87,10 @@ trait Expressions extends ExpressionParser {
   }
 
   class ExpressionFactory[T: RichNumeric: TypeTag](
-    val convertedType: TypeType, 
-    extraContext: List[RealSymbolType]) {
+    val convertedType: TypeType,
+    typeFacades: TypeFacades,
+    extraContext: List[RealSymbolType] = Nil) {
 
-      def this(convertedType: TypeType) = this(convertedType, Nil)
       def fromConstant(constant: T) = Polynomial.fromConstant(constant)
       def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
       def convertConstant[U: RichNumeric](constant: U): Expression =
@@ -101,10 +103,10 @@ trait Expressions extends ExpressionParser {
         Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
 
       def fromParameter(param: String): Expression =
-        new ExprParser[T](extraContext).parseExpression(param).get
+        new ExprParser[T](extraContext, typeFacades).parseExpression(param).get
 
       def withExtraContext(symbols: List[RealSymbolType]) =
-        new ExpressionFactory(convertedType, extraContext ++ symbols)
+        new ExpressionFactory(convertedType, typeFacades, extraContext ++ symbols)
 
       lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)
       lazy val MinValue = fromConstant(implicitly[RichNumeric[T]].minValue)
