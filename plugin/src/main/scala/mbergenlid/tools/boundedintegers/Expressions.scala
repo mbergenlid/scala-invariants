@@ -180,14 +180,14 @@ trait Expressions {
       terms.exists(_.variables != Map.empty)
 
     def increment = terms.find(_.variables.isEmpty) match {
-      case Some(_) => this + Polynomial.fromConstant(1)
+      case Some(constantTerm) => Polynomial((terms - constantTerm) + constantTerm.increment)
       case None => this
     }
 
     def decrement = {
       val constantTerm =
         terms.find(_.variables.isEmpty)
-      if(constantTerm.isDefined) this - Polynomial.fromConstant(1)
+      if(constantTerm.isDefined) Polynomial((terms - constantTerm.get) + constantTerm.get.decrement)
       else this
     }
 
