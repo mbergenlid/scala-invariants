@@ -84,11 +84,9 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
     private def replaceThisSymbols(simpleConstraint: SimpleConstraint): Constraint =
       simpleConstraint.map { sc =>
-        Polynomial(
-          for {
-            term <- sc.expression.terms
-          } yield replaceThisSymbol(term)
-        )
+        sc.expression.map { term =>
+          replaceThisSymbol(term)
+        }
       }
 
     private def replaceThisSymbol(term: Term) = Term(term.coeff,

@@ -281,7 +281,7 @@ trait Constraints extends Expressions {
     override def definitelySubsetOf(that: Constraint) = that match {
       case LessThan(v2) => v2 >= expression
       case LessThanOrEqual(v2) =>
-        expression.decrement <= v2
+        v2.increment >= expression
       case _ => super.definitelySubsetOf(that)
     }
 

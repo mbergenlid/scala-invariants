@@ -96,7 +96,7 @@ class ExpressionsSpec extends FunSuite
     val e2 = Polynomial.fromConstant(Int.MinValue)
 
     val result = e1.substitute("n", e2)
-    assert(result.isNaN)
+    assert(result > Polynomial.fromConstant(Int.MaxValue))
   }
 
   test("Constant comparison") {
@@ -115,9 +115,8 @@ class ExpressionsSpec extends FunSuite
     val diff2 = Polynomial(Set(t(1, "x"))) -
       Polynomial(Set(t(Int.MinValue), t(1, "x")))
 
-    assert(diff1.isNaN)
-    assert(diff2.isNaN)
-//    assert()
+    assert(diff1 > Polynomial.fromConstant(Int.MaxValue))
+    assert(diff2 > Polynomial.fromConstant(Int.MaxValue))
   }
 
   override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???

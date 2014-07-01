@@ -13,7 +13,7 @@ class TypeTest extends PluginTestRunner {
       """.stripMargin)(Nil)
   }
 
-  test("Decrement") {
+  test("Increment") {
     compile(
       """
         |@LessThanOrEqual(9)
@@ -31,7 +31,7 @@ class TypeTest extends PluginTestRunner {
       """.stripMargin)(List(6, 11))
   }
 
-  test("Increment") {
+  test("Decrement") {
     compile(
       """
         |@GreaterThanOrEqual(10)

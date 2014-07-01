@@ -58,29 +58,25 @@ trait Expressions {
 
     def extractSymbols: Set[SymbolType]
     def extractSymbol(symbol: SymbolType): Expression
-    def tpe: TypeType = terms.headOption match {
-      case Some(term) => term.tpe
-      case None => TypeNothing
-    }
 
-    def isNaN =
-      terms.exists(_.coeff.isNaN)
+    def map(f: Term  => Term): Expression
   }
 
   class ExpressionFactory[T: RichNumeric: TypeTag](
     val convertedType: TypeType,
     extraContext: List[RealSymbolType] = Nil) {
 
+      val numeric = implicitly[RichNumeric[T]]
       def fromConstant(constant: T) = Polynomial.fromConstant(constant)
       def fromSymbol(symbol: SymbolType) = Polynomial.fromSymbol(symbol)
       def convertConstant[U: RichNumeric](constant: U): Expression =
-        Polynomial.fromConstant(implicitly[RichNumeric[T]].fromType[U](constant))
+        Polynomial.fromConstant(numeric.fromType[U](constant))
 
       def convertConstant(constant: ConstantValue): Expression =
-        new Polynomial(Set(Term(constant.convertTo[T], Map.empty)))
+        new Polynomial(Set(Term(constant.convertTo[T], Map.empty)), numeric.isInstanceOf[Integral[_]])
 
       def convertExpression(expr: Expression): Expression =
-        Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])))
+        new Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])), numeric.isInstanceOf[Integral[_]])
 
       def fromParameter(param: String): Expression =
         parseExpression[T](param, extraContext)
@@ -97,26 +93,33 @@ trait Expressions {
       typeOf[this.type].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[RealSymbolType]
   }
 
+  object FractionalPolynomial {
+    def apply(terms: Set[Term]) =
+      new Polynomial(terms, false)
+
+    val Zero = new Polynomial(Set.empty, false)
+  }
+
   object Polynomial {
     def apply(terms: Set[Term]) =
-      new Polynomial(terms)
+      new Polynomial(terms, true)
 
     def apply(terms: Term*) =
-      new Polynomial(terms.toSet[Term])
+      new Polynomial(terms.toSet[Term], true)
 
     def fromConstant[T: RichNumeric :TypeTag](constant: T) =
-      new Polynomial(Set(Term(ConstantValue(constant), Map.empty)))
+      new Polynomial(Set(Term(ConstantValue(constant), Map.empty)), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
 
     def fromSymbol[T: RichNumeric :TypeTag](symbol: SymbolType) = {
       new Polynomial(
         Set(Term(ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
-        Map(symbol -> 1))))
+        Map(symbol -> 1))), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
     }
 
-    def Zero = new Polynomial(Set.empty)
+    val Zero = new Polynomial(Set.empty, true)
   }
 
-  class Polynomial(val terms: Set[Term]) extends Expression  {
+  class Polynomial private[Expressions] (val terms: Set[Term], isIntegral: Boolean) extends Expression  {
     def >(that: Expression ): Boolean = {
         val diff = (this - that).terms
         diff.nonEmpty && diff.forall(t => t.greaterThanZero)
@@ -137,59 +140,56 @@ trait Expressions {
       (this - that).terms.forall(_.isZero)
 
 
-    def +(that: Expression ): Expression  = Polynomial(
+    def +(that: Expression ): Expression  = new Polynomial(
       (terms /: that.terms) {(set, term) =>
         addTerm(set, term) 
-      }
+      },
+      isIntegral
     )
 
     private def addTerm(terms: Set[Term ], that: Term ): Set[Term ] = {
       terms.find(_.+.isDefinedAt(that)) match {
         case Some(t) => 
           val newTerm = t + that
-          if(!newTerm.coeff.isNaN && newTerm.isZero) terms - t
+          if(newTerm.isZero) terms - t
           else (terms - t) + newTerm
         case None => terms + that
       }
     }
 
     def -(that: Expression ): Expression  = this + (-that)
-    def *(that: Expression ): Expression  = Polynomial(for {
+    def *(that: Expression ): Expression  = new Polynomial(for {
       thisTerm <- terms
       thatTerm <- that.terms
-    } yield { thisTerm * thatTerm })
+    } yield { thisTerm * thatTerm }, isIntegral)
 
     def unary_- : Expression = map(_.unary_-)
     def substitute(symbol: SymbolType, expr: Expression): Expression = {
       terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
-        p + t.substitute(symbol, expr)
+        p + t.substitute(symbol, expr, isIntegral)
       }}
     }
 
     def substituteConstant(expr: Expression) = {
-      var substututed = false
+      var substituted = false
       val newExpr = terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
-        p + (if(t.variables.isEmpty) {substututed = true; expr} else Polynomial(t))
+        p + (if(t.variables.isEmpty) {substituted = true; expr} else new Polynomial(Set(t), isIntegral))
       }}
 
-      if(substututed) newExpr
+      if(substituted) newExpr
       else newExpr + expr
     }
 
     def containsSymbols =
       terms.exists(_.variables != Map.empty)
 
-    def increment = terms.find(_.variables.isEmpty) match {
-      case Some(constantTerm) => Polynomial((terms - constantTerm) + constantTerm.increment)
-      case None => this
-    }
-
-    def decrement = {
-      val constantTerm =
-        terms.find(_.variables.isEmpty)
-      if(constantTerm.isDefined) Polynomial((terms - constantTerm.get) + constantTerm.get.decrement)
+    def increment =
+      if(isIntegral) this + Polynomial.fromConstant(1)
       else this
-    }
+
+    def decrement =
+      if(isIntegral) this - Polynomial.fromConstant(1)
+      else this
 
     def extractSymbols: Set[SymbolType] = for {
       term <- terms
@@ -201,13 +201,13 @@ trait Expressions {
         case Some(term) =>
           new Polynomial(terms.collect {
             case t if t != term => -t
-          })
+          }, isIntegral)
         case None => this
       }
     }
 
-    private def map(f: Term  => Term ) =
-      Polynomial(terms.map(f))
+    def map(f: Term  => Term) =
+      new Polynomial(terms.map(f), isIntegral)
 
     override def toString =
       if(terms.isEmpty) "0"
@@ -221,11 +221,11 @@ trait Expressions {
     def greaterThanZero = variables.isEmpty && coeff.isGreaterThanZero
     def lessThanZero = variables.isEmpty && coeff.isLessThanZero
 
-    def substitute(symbol: SymbolType, expr: Expression ): Expression  =
+    def substitute(symbol: SymbolType, expr: Expression, isIntegral: Boolean): Expression  =
       if(variables.contains(symbol)) {
-        expr * Polynomial(Set(Term(coeff, variables - symbol)))
+        expr * new Polynomial(Set(Term(coeff, variables - symbol)), isIntegral)
       } else {
-        Polynomial(Set(this))
+        new Polynomial(Set(this), isIntegral)
       }
 
 
@@ -264,15 +264,6 @@ trait Expressions {
       else (coeff.toString + "*") + printVariables
     }
 
-    def increment =
-      if(variables.isEmpty) Term(coeff.increment, variables)
-      else this
-
-    def decrement =
-      if(variables.isEmpty) Term(coeff.decrement, variables)
-      else this
-
-    def tpe: TypeType = coeff.tpe
   }
 
   case class SymbolExpression(symbol: SymbolType) {
@@ -281,16 +272,12 @@ trait Expressions {
 
   trait ConstantValue extends Ordered[ConstantValue] {
     type T
-    implicit protected[boundedintegers] def typeInfo: TypeTag[T]
     implicit protected def num: RichNumeric[T]
     protected[boundedintegers] def value: BigDecimal
-    def tpe: TypeType = typeInfo.tpe
-
 
     def convertTo[U: RichNumeric: TypeTag] =
       TypedConstantValue[U](value)
 
-    def zero = ConstantValue(num.zero)
     def one = ConstantValue(num.one)
     def isOne = value == BigDecimal(1)
     def isZero = value == BigDecimal(0)
@@ -299,32 +286,15 @@ trait Expressions {
 
     def unary_- : ConstantValue = TypedConstantValue(-value)
 
-    lazy val MinValue = num.toBigDecimal(num.minValue)
-    lazy val MaxValue = num.toBigDecimal(num.maxValue)
-
     def +(that: ConstantValue) = {
-//        assertSameType(that)
         val newValue = value + that.value
         TypedConstantValue(newValue)
     }
 
     def *(that: ConstantValue): ConstantValue = {
-//        assertSameType(that)
         val newValue = value*that.value
         TypedConstantValue(newValue)
     }
-
-    def increment =
-      if(num.isInstanceOf[Integral[_]] && value < MaxValue)
-        TypedConstantValue(value + 1)
-      else
-        this
-
-    def decrement =
-      if(num.isInstanceOf[Integral[_]] && value > MinValue)
-        TypedConstantValue(value - 1)
-      else
-        this
 
     override def compare(other: ConstantValue) =
         value.compare(other.value)
@@ -332,24 +302,17 @@ trait Expressions {
     override def toString = value.toString()
     def substitute(symbol: SymbolType, expr: Expression) = this
 
-    def isNaN =
-        value > MaxValue || value < MinValue
-
-    private def assertSameType(const: ConstantValue): Unit = {
-        assert(const.typeInfo == typeInfo, s"Type Mismatch in Expression: ${const.typeInfo} vs $typeInfo")
-    }
   }
 
   object ConstantValue {
-    def apply[U: RichNumeric : TypeTag](value: U): ConstantValue =
+    def apply[U: RichNumeric](value: U): ConstantValue =
       TypedConstantValue[U](implicitly[RichNumeric[U]].toBigDecimal(value))
 
   }
 
 
   case class TypedConstantValue[U]( protected[boundedintegers] val value: BigDecimal)
-                                  (implicit ev1: RichNumeric[U],
-                                   protected[boundedintegers] val typeInfo: TypeTag[U]) extends ConstantValue {
+                                  (implicit ev1: RichNumeric[U]) extends ConstantValue {
     type T = U
     override protected def num = implicitly[RichNumeric[U]]
   }
