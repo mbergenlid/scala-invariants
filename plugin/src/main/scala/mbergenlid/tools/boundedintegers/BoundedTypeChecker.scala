@@ -6,7 +6,8 @@ import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumer
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import scala.reflect.runtime.universe
 
-trait MyUniverse extends Constraints with TypeContext with TypeFacades with Expressions with ExpressionParser {
+trait MyUniverse extends Constraints with TypeContext with
+    TypeFacades with Expressions with ExpressionParser with BoundedTypes {
   val global: Universe
   import global._
 
@@ -336,8 +337,10 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   def checkBounds(context: Context)(tree: Tree): this.BoundedType = {
     def traverseChildren(children: List[Tree]) = {
       (context /: children) {(c,child) =>
-        val bounds = checkBounds(c)(child)
-        updateContext(c, child, bounds.constraint)
+        checkBounds(c)(child) match {
+          case NumericType(constraint) => updateContext(c, child, constraint)
+          case _ => c
+        }
       }
     }
     if(tree.children.isEmpty) {
