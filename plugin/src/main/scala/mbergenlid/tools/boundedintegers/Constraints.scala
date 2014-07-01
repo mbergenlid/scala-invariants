@@ -738,6 +738,8 @@ trait Constraints extends Expressions {
 
     def unary_! = ???
   }
+
+
 //
 //  object PropertyConstraint {
 //    def apply(symbol: RealSymbolType, constraint: Constraint): Constraint =

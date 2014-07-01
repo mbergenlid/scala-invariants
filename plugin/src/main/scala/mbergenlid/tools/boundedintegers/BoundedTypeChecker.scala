@@ -1,19 +1,12 @@
 package mbergenlid.tools.boundedintegers
 
 import scala.reflect.api.Universe
-import mbergenlid.tools.boundedintegers.annotations.{
-  GreaterThanOrEqual => GreaterThanOrEqualAnnotation,
-  LessThan => LessThanAnnotation,
-  LessThanOrEqual => LessThanOrEqualAnnotation,
-  Equal => EqualAnnotation,
-  Bounded,
-  GreaterThan => GreaterThanAnnotation,
-  Property => PropertyAnnotation}
+import mbergenlid.tools.boundedintegers.annotations.{GreaterThanOrEqual => GreaterThanOrEqualAnnotation, LessThan => LessThanAnnotation, LessThanOrEqual => LessThanOrEqualAnnotation, Equal => EqualAnnotation, GreaterThan => GreaterThanAnnotation, Property => PropertyAnnotation, IfTrue, Bounded}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric.{LongIsRichNumeric, IntIsRichNumeric}
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import scala.reflect.runtime.universe
 
-trait MyUniverse extends Constraints with TypeContext with TypeFacades {
+trait MyUniverse extends Constraints with TypeContext with TypeFacades with BoundedTypes {
   val global: Universe
   import global._
 
@@ -335,8 +328,10 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   def checkBounds(context: Context)(tree: Tree): this.BoundedType = {
     def traverseChildren(children: List[Tree]) = {
       (context /: children) {(c,child) =>
-        val bounds = checkBounds(c)(child)
-        updateContext(c, child, bounds.constraint)
+        checkBounds(c)(child) match {
+          case NumericType(constraint) => updateContext(c, child, constraint)
+          case _ => c
+        }
       }
     }
     if(tree.children.isEmpty) {

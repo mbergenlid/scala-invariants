@@ -220,37 +220,4 @@ trait TypeContext { self: Constraints =>
       else cList.reduce(_&&_)
     }
   }
-
-
-  class BoundedType(val constraint: Constraint) {
-    protected def this() = this(NoConstraints)
-
-    def convertTo(tpe: TypeType): BoundedType = {
-      val f = expressionForType(tpe)
-      val newConstraint = constraint.map { sc => f.convertExpression(sc.expression) }
-      new BoundedType(newConstraint)
-    }
-
-    def <:<(other: BoundedType): Boolean =
-      constraint.definitelySubsetOf(other.constraint)
-
-    override def toString = s"BoundedInteger(${constraint.prettyPrint()})"
-    override def equals(other: Any) = 
-      other.isInstanceOf[BoundedType] &&
-      other.asInstanceOf[BoundedType].constraint == this.constraint
-  }
-
-  object BoundedType {
-    def apply(constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
-      new BoundedType(constraint.map { sc =>
-        expressionFactory.convertExpression(sc.expression)
-      })
-    }
-
-    def apply(constraint: Constraint) = {
-      new BoundedType(constraint)
-    }
-
-    def noBounds = new BoundedType()
-  }
 }
