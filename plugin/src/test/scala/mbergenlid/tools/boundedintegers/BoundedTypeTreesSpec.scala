@@ -26,7 +26,7 @@ class BoundedTypeTreesSpec extends FunSuite
   }
 
   implicit def bigIntToExpression(v: BigDecimal): Expression =
-    Polynomial(Set(Term(TypedConstantValue[Int](v), Map.empty)))
+    Polynomial(Set(Term(TypedConstantValue(v), Map.empty)))
   implicit def intToConstant(v: Int) = ConstantValue(v)
   implicit def intToExpresion(v: Int): Expression = Polynomial.fromConstant(v)
 

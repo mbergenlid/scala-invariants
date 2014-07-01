@@ -33,7 +33,7 @@ trait ExpressionParser { self: Expressions =>
 
 
     def bigIntToExpression(v: BigDecimal): Expression =
-      Polynomial(Set(Term(TypedConstantValue[Int](v), Map.empty)))
+      Polynomial(Set(Term(TypedConstantValue(v), Map.empty)))
 
     def symbol: Parser[Expression] =
       ident ~ "." ~ repsep(ident, ".") ^^ {case obj ~ "." ~ rest => listToExpression(obj :: rest)}

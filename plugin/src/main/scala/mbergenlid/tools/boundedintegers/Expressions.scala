@@ -73,10 +73,10 @@ trait Expressions {
         Polynomial.fromConstant(numeric.fromType[U](constant))
 
       def convertConstant(constant: ConstantValue): Expression =
-        new Polynomial(Set(Term(constant.convertTo[T], Map.empty)), numeric.isInstanceOf[Integral[_]])
+        new Polynomial(Set(Term(constant, Map.empty)), numeric.isInstanceOf[Integral[_]])
 
       def convertExpression(expr: Expression): Expression =
-        new Polynomial(expr.terms.map(t => t.copy(coeff = t.coeff.convertTo[T])), numeric.isInstanceOf[Integral[_]])
+        new Polynomial(expr.terms, numeric.isInstanceOf[Integral[_]])
 
       def fromParameter(param: String): Expression =
         parseExpression[T](param, extraContext)
@@ -260,7 +260,7 @@ trait Expressions {
 
       if(variables.isEmpty) coeff.toString
       else if(coeff.isOne) printVariables
-      else if(coeff == -coeff.one) "-" + printVariables
+      else if(coeff == -ConstantValue.One) "-" + printVariables
       else (coeff.toString + "*") + printVariables
     }
 
@@ -271,14 +271,8 @@ trait Expressions {
   }
 
   trait ConstantValue extends Ordered[ConstantValue] {
-    type T
-    implicit protected def num: RichNumeric[T]
     protected[boundedintegers] def value: BigDecimal
 
-    def convertTo[U: RichNumeric: TypeTag] =
-      TypedConstantValue[U](value)
-
-    def one = ConstantValue(num.one)
     def isOne = value == BigDecimal(1)
     def isZero = value == BigDecimal(0)
     def isGreaterThanZero = value > 0
@@ -306,16 +300,13 @@ trait Expressions {
 
   object ConstantValue {
     def apply[U: RichNumeric](value: U): ConstantValue =
-      TypedConstantValue[U](implicitly[RichNumeric[U]].toBigDecimal(value))
+      TypedConstantValue(implicitly[RichNumeric[U]].toBigDecimal(value))
 
+    lazy val One = ConstantValue(1)
   }
 
 
-  case class TypedConstantValue[U]( protected[boundedintegers] val value: BigDecimal)
-                                  (implicit ev1: RichNumeric[U]) extends ConstantValue {
-    type T = U
-    override protected def num = implicitly[RichNumeric[U]]
-  }
+  case class TypedConstantValue( protected[boundedintegers] val value: BigDecimal)  extends ConstantValue
 
   implicit object ConstantValueOrdering extends Ordering[ConstantValue] {
     override def compare(x: ConstantValue, y: ConstantValue): Int = x.compare(y)
