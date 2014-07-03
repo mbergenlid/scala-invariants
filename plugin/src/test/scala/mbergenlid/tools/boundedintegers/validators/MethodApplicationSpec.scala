@@ -6,7 +6,7 @@ import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe.runtimeMirror
 
 class MethodApplicationSpec extends FunSuite
-  with MyUniverse {
+  with MyUniverse with TypeBoundFactories {
   
   def tb = TestEnvironment.tb
   implicit val global = tb.u

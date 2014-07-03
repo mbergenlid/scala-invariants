@@ -2,7 +2,7 @@ package mbergenlid.tools.boundedintegers
 
 
 class BoundedTypeCheckerSpec extends PluginTestRunner
-  with MyUniverse {
+  with MyUniverse with TypeBoundFactories {
   
   test("Failure with constant argument") {
     compile("""

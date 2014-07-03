@@ -3,7 +3,7 @@ package mbergenlid.tools.boundedintegers
 import scala.language.implicitConversions
 
 trait TypeConstraintValidator extends AbstractBoundsValidator {
-  self: MyUniverse =>
+  self: MyUniverse with TypeBoundFactories =>
 
   import global._
 

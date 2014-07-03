@@ -4,7 +4,8 @@ import mbergenlid.tools.boundedintegers._
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
 trait MethodApplication extends AbstractBoundsValidator {
-  self: MyUniverse with TypeFacades with TypeContext with Expressions with TypeConstraintValidator =>
+  self: MyUniverse with TypeFacades with TypeContext with Expressions with TypeConstraintValidator
+          with TypeBoundFactories with BoundedTypes =>
   import global._
 
   abstract override def checkBounds(context: Context)(tree: Tree) = 
