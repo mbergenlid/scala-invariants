@@ -1,9 +1,12 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.tools.boundedintegers.facades.TypeFacades
+
 import scala.language.implicitConversions
 
 trait TypeConstraintValidator extends AbstractBoundsValidator {
-  self: MyUniverse with TypeBoundFactories =>
+  self: MyUniverse with TypeBoundFactories with
+    BoundedTypes with TypeContext with Constraints with Expressions with TypeFacades =>
 
   import global._
 
@@ -99,7 +102,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     )
 
 
-    private def createErrorMessage(targetSymbol: Symbol, targetBounds: Constraint,
+    private def createErrorMessage(targetSymbol: RealSymbolType, targetBounds: Constraint,
                                    assignee: Tree, assigneeBounds: Constraint)
                                  (context: Context): String = {
       val targetName = targetSymbol.name

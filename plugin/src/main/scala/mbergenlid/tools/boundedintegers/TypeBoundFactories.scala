@@ -33,26 +33,64 @@ trait TypeBoundFactories {
   object EqualExtractor extends
     AnnotationExtractor(EqualType, universe.typeOf[EqualAnnotation])
 
+  trait BoundedTypeFactory {
+    def fromSymbolChain(symbol: SymbolType): Constraint
+    def fromTree(tree: Tree): BoundedType
+    def fromMethodApplication(
+      symbolChain: SymbolType,
+      thisBounds: BoundedType,
+      args: Map[RealSymbolType, BoundedType]): BoundedType
+  }
+
   object BoundsFactory {
+
+    private def getFactory(tpe: Type): BoundedTypeFactory =
+      if(expressionForType.isDefinedAt(tpe)) NumericBoundsFactory
+      else PropertyBoundsFactory
+
+
+    def fromSymbolChain(symbol: SymbolType): Constraint =
+      getFactory(symbol.head.typeSignature).fromSymbolChain(symbol)
+
+    def fromMethod(
+      symbolChain: SymbolType,
+      thisBounds: BoundedType,
+      args: Map[RealSymbolType, BoundedType]): BoundedType = {
+
+        val methodSymbol: MethodSymbol = symbolChain.head.asMethod
+        getFactory(methodSymbol.returnType).fromMethodApplication(symbolChain, thisBounds, args)
+    }
+
+
+    def apply(tree: Tree): BoundedType =
+      getFactory(tree.tpe).fromTree(tree)
+
+    //Temporary
+    def propertyConstraints(symbolChain: SymbolType): Constraint =
+      PropertyBoundsFactory.fromSymbolChain(symbolChain)
+  }
+
+  object NumericBoundsFactory extends BoundedTypeFactory {
 
 
     private def constraint(bounds: Annotation, symbol: RealSymbolType): ExpressionConstraint =
       constraint(bounds.tpe, bounds.scalaArgs, symbol)
 
-    private def constraint(
-                            boundType: Type,
-                            args: List[Tree],
-                            symbol: RealSymbolType): ExpressionConstraint = boundType match {
-      case GreaterThanOrEqualExtractor() =>
-        GreaterThanOrEqual(annotationExpression(args.head, symbol))
-      case LessThanOrEqualExtractor() =>
-        LessThanOrEqual(annotationExpression(args.head, symbol))
-      case EqualExtractor() =>
-        Equal(annotationExpression(args.head, symbol))
-      case LessThanExtractor() =>
-        LessThan(annotationExpression(args.head, symbol))
-      case GreaterThanExtractor() =>
-        GreaterThan(annotationExpression(args.head, symbol))
+    private[TypeBoundFactories]
+    def constraint(
+      boundType: Type,
+      args: List[Tree],
+      symbol: RealSymbolType): ExpressionConstraint = boundType match {
+        case GreaterThanOrEqualExtractor() =>
+          GreaterThanOrEqual(annotationExpression(args.head, symbol))
+        case LessThanOrEqualExtractor() =>
+          LessThanOrEqual(annotationExpression(args.head, symbol))
+        case EqualExtractor() =>
+          Equal(annotationExpression(args.head, symbol))
+        case LessThanExtractor() =>
+          LessThan(annotationExpression(args.head, symbol))
+        case GreaterThanExtractor() =>
+          GreaterThan(annotationExpression(args.head, symbol))
     }
 
     private def annotationExpression(tree: Tree, symbol: RealSymbolType): Expression = {
@@ -92,9 +130,9 @@ trait TypeBoundFactories {
         )
       val ecs = annotations.collect {
         case a if a.tpe <:< typeOf[Bounded] =>
-          BoundsFactory.constraint(a, symbol)
+          constraint(a, symbol)
         case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
-          BoundsFactory.constraint(a, symbol)
+          constraint(a, symbol)
       }
       ecs ++ symbol.allOverriddenSymbols.flatMap(s => annotatedConstraints(s, tpe))
     }
@@ -125,7 +163,83 @@ trait TypeBoundFactories {
       }
     }
 
-    def propertyConstraints(symbolChain: SymbolType): Constraint = {
+    def fromTree(tree: Tree): BoundedType = {
+      val f = expressionForType(tree.tpe)
+      val exp = expression(tree, tree.tpe)
+      if(tree.symbol != null && tree.symbol != NoSymbol) {
+        val symbolChain = symbolChainFromTree(tree)
+        //Only add -Equal(exp)- if the symbol is stable.
+        if(isStable(symbolChain.head))
+          BoundedType(Equal(exp) && fromSymbolChain(symbolChain), f)
+        else
+          BoundedType(fromSymbolChain(symbolChain))
+      } else {
+        BoundedType(Equal(exp), f)
+      }
+    }
+
+    def fromSymbolChain(symbolChain: SymbolType): Constraint = {
+      val list =
+        annotatedConstraints(symbolChain.head, symbolChain.head.typeSignature)
+      val constraints = (NoConstraints.asInstanceOf[Constraint] /: list) (_&&_)
+
+      ensureLowerAndUpperBounds(constraints, symbolChain.head.typeSignature)
+    }
+
+    def fromMethodApplication(
+      symbolChain: SymbolType,
+      thisBounds: BoundedType,
+      args: Map[RealSymbolType, BoundedType]): BoundedType = {
+        val methodSymbol: MethodSymbol = symbolChain.head.asMethod
+        val annotationConstraints: List[ExpressionConstraint] =
+          annotatedConstraints(methodSymbol, methodSymbol.typeSignature)
+
+        val backingFieldConstraint: Constraint =
+          if(isStable(methodSymbol))
+            Equal(expressionForType(methodSymbol.returnType).
+              fromSymbol(symbolChain))
+          else
+            NoConstraints
+
+        val constraint: List[Constraint] =
+          if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
+            annotationConstraints
+          } else {
+            val argSymbols = MethodExpressionFactory.ThisSymbol :: methodSymbol.paramss.head
+
+            def substitute(
+              symbols: List[(SymbolType, Constraint)],
+              ec: ExpressionConstraint): Constraint =
+              symbols match {
+                case (symbol, c) :: rest =>
+                  for(sub <- c; result <- ec.substitute(symbol, sub)) yield
+                    substitute(rest, result)
+                case Nil =>
+                  ec
+              }
+            for {
+              ec <- annotationConstraints
+            } yield {
+              val params = ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head)).toList
+              val paramConstraints: List[Constraint] =
+                params.map(p => args.get(p.head).map(b => b.constraint).getOrElse(NoConstraints))
+
+              val res = substitute((params zip paramConstraints).toList, ec)
+              res
+            }
+          }
+
+        BoundedType(
+          ensureLowerAndUpperBounds(
+            (backingFieldConstraint :: constraint).reduceOption(_&&_).getOrElse(NoConstraints),
+            methodSymbol.returnType
+          ))
+    }
+
+  }
+
+  object PropertyBoundsFactory extends BoundedTypeFactory {
+    override def fromSymbolChain(symbolChain: SymbolType): Constraint = {
       val symbol = symbolChain.head
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
@@ -153,101 +267,23 @@ trait TypeBoundFactories {
 
           val propConstraints: List[Constraint] = for {
             method@Apply(_, param) <- annotations
-          } yield constraint(method.tpe, param, memberSymbol)
+          } yield NumericBoundsFactory.constraint(method.tpe, param, memberSymbol)
 
           PropertyConstraint(memberSymbol,
             propConstraints.reduce(_ && _)
           )
       }) (_ && _)
     }
-
-    def apply(tree: Tree): BoundedType = {
-      if(expressionForType.isDefinedAt(tree.tpe)) {
-        val f = expressionForType(tree.tpe)
-        val exp = expression(tree, tree.tpe)
-        if(tree.symbol != null && tree.symbol != NoSymbol) {
-          val symbolChain = symbolChainFromTree(tree)
-          //Only add -Equal(exp)- if the symbol is stable.
-          if(isStable(symbolChain.head))
-            BoundedType(Equal(exp) && BoundsFactory.fromSymbolChain(symbolChain), f)
-          else
-            BoundedType(BoundsFactory.fromSymbolChain(symbolChain))
-        } else {
-          BoundedType(Equal(exp), f)
-        }
-      } else if(tree.symbol != null) {
+    override def fromTree(tree: Tree): BoundedType =
+      if(tree.symbol != null)
         BoundedType(BoundsFactory.propertyConstraints(symbolChainFromTree(tree)))
-      } else {
+      else
         BoundedType.noBounds
-      }
-    }
 
-    def apply(symbolChain: SymbolType): BoundedType = {
-      BoundedType(fromSymbolChain(symbolChain))
-    }
-
-    def fromSymbolChain(symbolChain: SymbolType): Constraint = {
-      val list =
-        annotatedConstraints(symbolChain.head, symbolChain.head.typeSignature)
-      val constraints = (NoConstraints.asInstanceOf[Constraint] /: list) (_&&_)
-
-      ensureLowerAndUpperBounds(constraints, symbolChain.head.typeSignature)
-    }
-
-    def fromMethod(
-                    symbolChain: SymbolType,
-                    thisBounds: BoundedType,
-                    args: Map[RealSymbolType, BoundedType]): BoundedType = {
-      val methodSymbol: MethodSymbol = symbolChain.head.asMethod
-      if(expressionForType.isDefinedAt(methodSymbol.returnType)) {
-        val annotationConstraints: List[ExpressionConstraint] =
-          annotatedConstraints(methodSymbol, methodSymbol.typeSignature)
-
-        val backingFieldConstraint: Constraint =
-          if(isStable(methodSymbol))
-            Equal(expressionForType(methodSymbol.returnType).
-              fromSymbol(symbolChain))
-          else
-            NoConstraints
-
-        val constraint: List[Constraint] =
-          if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
-            annotationConstraints
-          } else {
-            val argSymbols = MethodExpressionFactory.ThisSymbol :: methodSymbol.paramss.head
-
-            def substitute(
-                            symbols: List[(SymbolType, Constraint)],
-                            ec: ExpressionConstraint): Constraint =
-              symbols match {
-                case (symbol, c) :: rest =>
-                  for(sub <- c; result <- ec.substitute(symbol, sub)) yield
-                    substitute(rest, result)
-                case Nil =>
-                  ec
-              }
-            for {
-              ec <- annotationConstraints
-            } yield {
-              val params = ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head)).toList
-              val paramConstraints: List[Constraint] =
-                params.map(p => args.get(p.head).map(b => b.constraint).getOrElse(NoConstraints))
-
-              val res = substitute((params zip paramConstraints).toList, ec)
-              res
-            }
-          }
-
-        BoundedType(
-          ensureLowerAndUpperBounds(
-            (backingFieldConstraint :: constraint).reduceOption(_&&_).getOrElse(NoConstraints),
-            methodSymbol.returnType
-          ))
-
-      } else {
-        BoundedType(BoundsFactory.propertyConstraints(symbolChain))
-      }
-    }
-
+    override def fromMethodApplication(
+      symbolChain: SymbolType,
+      thisBounds: BoundedType,
+      args: Map[RealSymbolType, BoundedType]): BoundedType =
+        BoundedType(fromSymbolChain(symbolChain))
   }
 }
