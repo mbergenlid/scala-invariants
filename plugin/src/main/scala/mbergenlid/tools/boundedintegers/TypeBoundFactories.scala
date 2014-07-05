@@ -6,7 +6,7 @@ import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import scala.reflect.runtime._
 
 trait TypeBoundFactories {
-  self: MyUniverse with Constraints with Expressions with TypeFacades with BoundedTypes =>
+  self: MyUniverse with Constraints with Expressions with TypeFacades with BoundedTypes with TypeContext =>
 
   import global._
 
