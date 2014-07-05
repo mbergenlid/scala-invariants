@@ -64,10 +64,6 @@ trait TypeBoundFactories {
 
     def apply(tree: Tree): BoundedType =
       getFactory(tree.tpe).fromTree(tree)
-
-    //Temporary
-    def propertyConstraints(symbolChain: SymbolType): Constraint =
-      PropertyBoundsFactory.fromSymbolChain(symbolChain)
   }
 
   object NumericBoundsFactory extends BoundedTypeFactory {
@@ -276,7 +272,7 @@ trait TypeBoundFactories {
     }
     override def fromTree(tree: Tree): BoundedType =
       if(tree.symbol != null)
-        BoundedType(BoundsFactory.propertyConstraints(symbolChainFromTree(tree)))
+        BoundedType(fromSymbolChain(symbolChainFromTree(tree)))
       else
         BoundedType.noBounds
 

@@ -62,7 +62,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         boundExpr
       } else {
 
-        val target = BoundsFactory.propertyConstraints(symbolChain)
+        val target = BoundsFactory.fromSymbolChain(symbolChain)
         val exprConstraints = boundExpr.constraint &&
           Context.getPropertyConstraints(symbolChainFromTree(expr), context)
 
