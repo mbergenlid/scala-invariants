@@ -1,7 +1,7 @@
 package mbergenlid.tools.boundedintegers
 
 trait BoundedTypes {
-  self: Constraints =>
+  self: Constraints with Expressions =>
 
   trait BoundedType {
     def constraint: Constraint

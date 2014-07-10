@@ -128,6 +128,7 @@ trait TypeContext { self: Constraints =>
 
       val seq = for {
         (symbol, constraint) <- context.symbols
+        if symbol.isStable
         sc: SimpleConstraint <- constraint
       } yield constraintFromConstant(sc, symbol, constant, f)
       seq.collect {

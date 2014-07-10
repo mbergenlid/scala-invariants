@@ -63,7 +63,7 @@ trait MyUniverse extends Constraints with TypeContext with
     def symbolList(tree: Tree): List[RealSymbolType] = tree match {
       case Select(t, n) =>
         findFacadeForSymbol(tree.symbol) :: symbolList(t)
-      case _ => List(tree.symbol)
+      case _ => findFacadeForSymbol(tree.symbol) :: Nil
     }
     SymbolChain[RealSymbolType](symbolList(tree))
   }
