@@ -1,11 +1,13 @@
 import sbt._
 import Keys._
-import sbt.Classpaths._
 
-object PluginBuild extends Build {
+object Build extends Build {
   lazy val root = Project(id = "invariants",
                           base = file("."),
                           settings = testSettings) aggregate(annotations, plugin, test)
+
+  lazy val api = Project(id = "api",
+                 base = file("api"))
 
   lazy val annotations = Project(id = "annotations",
                          base = file("annotations"))
