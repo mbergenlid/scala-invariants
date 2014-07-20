@@ -1,5 +1,6 @@
 package mbergenlid.scalainvariants.api.expressions
 
+import mbergenlid.scalainvariants.api.SymbolChain
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 
 trait Expression {
@@ -29,15 +30,15 @@ trait Expression {
   def *(that: Expression): Expression
 
   def unary_- : Expression
-  def substitute(symbol: SymbolType, expr: Expression): Expression
+  def substitute(symbol: SymbolChain, expr: Expression): Expression
   def substituteConstant(expr: Expression): Expression
 
   def containsSymbols: Boolean
   def increment: Expression
   def decrement: Expression
 
-  def extractSymbols: Set[SymbolType]
-  def extractSymbol(symbol: SymbolType): Expression
+  def extractSymbols: Set[SymbolChain]
+  def extractSymbol(symbol: SymbolChain): Expression
 
   def map(f: Term  => Term): Expression
 }
@@ -49,10 +50,10 @@ object Polynomial {
   def apply(terms: Term*) =
     new Polynomial(terms.toSet[Term], true)
 
-  def fromConstant[T: RichNumeric :TypeTag](constant: T) =
+  def fromConstant[T: RichNumeric](constant: T) =
     new Polynomial(Set(Term(ConstantValue(constant), Map.empty)), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
 
-  def fromSymbol[T: RichNumeric :TypeTag](symbol: SymbolType) = {
+  def fromSymbol[T: RichNumeric](symbol: SymbolChain) = {
     new Polynomial(
       Set(Term(ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
         Map(symbol -> 1))), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
@@ -61,7 +62,7 @@ object Polynomial {
   val Zero = new Polynomial(Set.empty, true)
 }
 
-class Polynomial private[Expressions] (val terms: Set[Term], isIntegral: Boolean) extends Expression  {
+class Polynomial private[expressions] (val terms: Set[Term], isIntegral: Boolean) extends Expression  {
   def >(that: Expression ): Boolean = {
     val diff = (this - that).terms
     diff.nonEmpty && diff.forall(t => t.greaterThanZero)
@@ -106,7 +107,7 @@ class Polynomial private[Expressions] (val terms: Set[Term], isIntegral: Boolean
   } yield { thisTerm * thatTerm }, isIntegral)
 
   def unary_- : Expression = map(_.unary_-)
-  def substitute(symbol: SymbolType, expr: Expression): Expression = {
+  def substitute(symbol: SymbolChain, expr: Expression): Expression = {
     terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
       p + t.substitute(symbol, expr, isIntegral)
     }}
@@ -133,12 +134,12 @@ class Polynomial private[Expressions] (val terms: Set[Term], isIntegral: Boolean
     if(isIntegral) this - Polynomial.fromConstant(1)
     else this
 
-  def extractSymbols: Set[SymbolType] = for {
+  def extractSymbols: Set[SymbolChain] = for {
     term <- terms
     (symbol, mult) <- term.variables
   } yield symbol
 
-  def extractSymbol(symbol: SymbolType) = {
+  def extractSymbol(symbol: SymbolChain) = {
     terms.find(_.variables.contains(symbol)) match {
       case Some(term) =>
         new Polynomial(terms.collect {

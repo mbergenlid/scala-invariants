@@ -1,20 +1,16 @@
 
 package mbergenlid.scalainvariants.api.expressions
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
+import mbergenlid.scalainvariants.api.SymbolChain
 import org.scalatest.FunSuite
-import scala.language.implicitConversions
+
 import scala.reflect.runtime.universe._
 
-class ExpressionsSpec extends FunSuite
-    with Expressions {
+class ExpressionsSpec extends FunSuite {
 
-  type RealSymbolType = Symbol
-  val TypeNothing = typeOf[Nothing]
+  var symbolCache = Map[String, SymbolChain]()
 
-  var symbolCache = Map[String, SymbolType]()
-
-  implicit def sym(s: String): SymbolType = {
+  implicit def sym(s: String): SymbolChain = {
     if(!symbolCache.contains(s)) {
       symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
         newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
@@ -25,7 +21,7 @@ class ExpressionsSpec extends FunSuite
   implicit def c(v: Int): Expression = Polynomial.fromConstant(v)
   implicit def s(s: String) = Polynomial.fromSymbol[Int](s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
-  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolType, Int] /: s) { (map, term) =>
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1
     map + (sym(term) -> multiplicity)
   })
@@ -119,6 +115,4 @@ class ExpressionsSpec extends FunSuite
     assert(diff1 > Polynomial.fromConstant(Int.MaxValue))
     assert(diff2 > Polynomial.fromConstant(Int.MaxValue))
   }
-
-  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }
