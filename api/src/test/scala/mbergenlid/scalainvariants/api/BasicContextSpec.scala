@@ -16,8 +16,8 @@ class BasicContextSpec extends FunSuite {
 
   val testClass = new TestClass
   class TestClass {
-    val field1: Int = _
-    val field2: Int = _
+    val field1: Int = 0
+    val field2: Int = 0
   }
   lazy val testClassSymbol = typeOf[BasicContextSpec].member(newTermName("testClass"))
   lazy val field1Symbol = typeOf[TestClass].member(newTermName("field1"))

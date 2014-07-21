@@ -36,7 +36,7 @@ object Constraint {
           constraints.collect{case ec:ExpressionConstraint => ec}.foreach(f)
         case Or(constraints) =>
           constraints.foreach(_.constraints.collect{case ec:ExpressionConstraint => ec}.foreach(f))
-//        case PropertyConstraint(sym, sc) => foreach(f, sc)
+        case PropertyConstraint(sym, sc) => foreach(f, sc)
         case _ => throw new RuntimeException(s"Could not happen: $c")
       }
       foreach(f, c)
@@ -71,7 +71,7 @@ sealed trait Constraint {
 //  lazy val propertyConstraints = new PropertyConstraintTraversable(this)
 }
 
-sealed trait SimpleConstraint extends Constraint {
+trait SimpleConstraint extends Constraint {
   def tryAnd(constraint: SimpleConstraint): Option[SimpleConstraint]
 }
 
