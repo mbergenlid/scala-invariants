@@ -1,6 +1,6 @@
 package mbergenlid.scalainvariants.api
 
-import mbergenlid.scalainvariants.api.constraints.{NoConstraints, Constraint}
+import mbergenlid.scalainvariants.api.constraints.{PropertyConstraint, NoConstraints, Constraint}
 import scala.language.implicitConversions
 
 object Context {
@@ -37,5 +37,10 @@ case class ||(lhs: Context, rhs: Context) extends Context {
 case class Symbol(symbol: SymbolChain, constraint: Constraint) extends Context {
   override def get(symbol: SymbolChain): Constraint =
     if(this.symbol == symbol) constraint
-    else NoConstraints
+    else {
+      this.symbol.foldSuffixOption(symbol, constraint) { (c, s) =>
+        PropertyConstraint(s, c)
+      }.getOrElse(NoConstraints)
+    }
+
 }

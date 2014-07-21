@@ -1,6 +1,6 @@
 package mbergenlid.scalainvariants.api
 
-import mbergenlid.scalainvariants.api.constraints.{NoConstraints, GreaterThan, LessThan}
+import mbergenlid.scalainvariants.api.constraints.{PropertyConstraint, NoConstraints, GreaterThan, LessThan}
 import mbergenlid.scalainvariants.api.expressions.{Polynomial, Expression}
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
@@ -14,17 +14,8 @@ class BasicContextSpec extends FunSuite {
   lazy val symbol1 = typeOf[BasicContextSpec].member(newTermName("variable1"))
   lazy val symbol2 = typeOf[BasicContextSpec].member(newTermName("variable2"))
 
-  val testClass = new TestClass
-  class TestClass {
-    val field1: Int = 0
-    val field2: Int = 0
-  }
-  lazy val testClassSymbol = typeOf[BasicContextSpec].member(newTermName("testClass"))
-  lazy val field1Symbol = typeOf[TestClass].member(newTermName("field1"))
-  lazy val field2Symbol = typeOf[TestClass].member(newTermName("field2"))
-
-  def chain(symbol: SymbolApi): SymbolChain =
-    SymbolChain(List(symbol))
+  def chain(symbol: SymbolApi*): SymbolChain =
+    SymbolChain(symbol.toList)
 
   implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)
 
@@ -55,4 +46,79 @@ class BasicContextSpec extends FunSuite {
     assert(constraint2 == NoConstraints)
   }
 
+
+  val testClass = new TestClass
+  class TestClass {
+    val field1: Int = 0
+    val field2: Int = 0
+    val field3 = new TestClass2
+  }
+  val testClass2 = new TestClass2
+  class TestClass2 {
+    val field1: Int = 0
+  }
+  lazy val testClassSymbol = typeOf[BasicContextSpec].member(newTermName("testClass"))
+  lazy val field1Symbol = typeOf[TestClass].member(newTermName("field1"))
+  lazy val field2Symbol = typeOf[TestClass].member(newTermName("field2"))
+  lazy val field3Symbol = typeOf[TestClass].member(newTermName("field3"))
+
+  lazy val testClass2Symbol = typeOf[BasicContextSpec].member(newTermName("testClass2"))
+  lazy val testClass2Field1 = typeOf[TestClass2].member(newTermName("field1"))
+
+  test("Partial SymbolChain") {
+    val context = EmptyContext &&
+      chain(field1Symbol, testClassSymbol) -> LessThan(10)
+
+    val constraint = context.get(chain(testClassSymbol))
+    assert(constraint === PropertyConstraint(field1Symbol, LessThan(10)))
+
+    val context2 = EmptyContext &&
+      chain(field1Symbol, testClassSymbol) -> LessThan(10) &&
+      chain(field2Symbol, testClassSymbol) -> GreaterThan(0)
+
+    val constraint2 = context2.get(chain(testClassSymbol))
+    assert(constraint2.definitelySubsetOf(PropertyConstraint(field1Symbol, LessThan(10)) &&
+      PropertyConstraint(field2Symbol, GreaterThan(0))),
+      constraint2)
+  }
+
+  test("Partial SymbolChain2") {
+    val context = EmptyContext &&
+      chain(testClass2Field1, field3Symbol, testClassSymbol) -> GreaterThan(0)
+
+    //testClass.field3.field1 > 0
+    //testClass -> PropertyConstraint(field3, PropertyConstraint(field1, >0))
+    val constraint = context.get(chain(testClassSymbol))
+    assert(constraint.definitelySubsetOf(PropertyConstraint(field3Symbol,
+      PropertyConstraint(testClass2Field1, GreaterThan(0)))),
+      constraint)
+  }
+
+  test("Partial SymbolChain3") {
+    val context = EmptyContext &&
+      chain(testClass2Field1, field3Symbol, testClassSymbol) -> GreaterThan(0) &&
+      chain(field1Symbol, testClassSymbol) -> GreaterThan(10)
+
+    val constraint = context.get(chain(testClassSymbol))
+
+    println(constraint.prettyPrint())
+    assert(constraint.definitelySubsetOf(
+      PropertyConstraint(field3Symbol, PropertyConstraint(testClass2Field1, GreaterThan(0))) &&
+      PropertyConstraint(field1Symbol, GreaterThan(10))
+    ), constraint.prettyPrint())
+  }
+
+  test("Partial SymbolChain4") {
+    val context = EmptyContext &&
+      chain(testClass2Field1, field3Symbol, testClassSymbol) -> GreaterThan(0) &&
+      chain(testClass2Field1, testClass2Symbol) -> LessThan(-10)
+
+    val constraint = context.get(chain(testClassSymbol))
+    assert(constraint.definitelySubsetOf(PropertyConstraint(field3Symbol,
+      PropertyConstraint(testClass2Field1, GreaterThan(0)))),
+      constraint.prettyPrint())
+
+    val constraint2 = context.get(chain(field3Symbol, testClassSymbol))
+    assert(constraint2.definitelySubsetOf(PropertyConstraint(testClass2Field1, GreaterThan(0))))
+  }
 }
