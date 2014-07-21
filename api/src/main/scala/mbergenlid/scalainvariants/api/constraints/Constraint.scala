@@ -64,13 +64,11 @@ sealed trait Constraint {
 
   def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
   def flatMap(f: ExpressionConstraint => Constraint): Constraint
-  //    def flatMap(f: ExpressionConstraint => Traversable[Constraint]): Constraint
 
   def &&(other: Constraint): Constraint
   def ||(other: Constraint): Constraint
 
 //  lazy val propertyConstraints = new PropertyConstraintTraversable(this)
-
 }
 
 sealed trait SimpleConstraint extends Constraint {

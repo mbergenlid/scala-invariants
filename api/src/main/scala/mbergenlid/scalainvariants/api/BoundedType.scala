@@ -16,6 +16,7 @@ case class NumericType(constraint: Constraint) extends BoundedType {
 }
 
 object BoundedType {
+  import Constraint._
   def apply(constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
     NumericType(constraint.map { sc =>
       expressionFactory.convertExpression(sc.expression)
