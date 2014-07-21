@@ -8,6 +8,7 @@ import scala.reflect.runtime.universe._
 
 class ExpressionsSpec extends FunSuite {
 
+  import scala.language.implicitConversions
   var symbolCache = Map[String, SymbolChain]()
 
   implicit def sym(s: String): SymbolChain = {

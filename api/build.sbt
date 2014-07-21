@@ -12,3 +12,5 @@ libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-compiler" % "2.10.3",
   "org.scalatest" % "scalatest_2.10" % "2.1.5" % "test"
 )
+
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
