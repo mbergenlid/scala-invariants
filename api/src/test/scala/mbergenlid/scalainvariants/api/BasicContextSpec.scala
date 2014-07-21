@@ -121,4 +121,23 @@ class BasicContextSpec extends FunSuite {
     val constraint2 = context.get(chain(field3Symbol, testClassSymbol))
     assert(constraint2.definitelySubsetOf(PropertyConstraint(testClass2Field1, GreaterThan(0))))
   }
+
+  test("Remove mapping from Context") {
+    val context = EmptyContext &&
+      chain(symbol1) -> GreaterThan(0) &&
+      chain(symbol2) -> LessThan(0)
+
+    val newContext = context - chain(symbol2)
+    assert(newContext.get(chain(symbol2)) === NoConstraints)
+
+    val context2 = EmptyContext &&
+      chain(field1Symbol, testClassSymbol) -> GreaterThan(0) &&
+      chain(symbol1) -> LessThan(100)
+
+    val newContext2 = context2 - chain(testClassSymbol)
+    assert(newContext2.get(chain(testClassSymbol)) === NoConstraints)
+
+    val newContext3 = context2 - chain(field1Symbol, testClassSymbol)
+    assert(newContext3.get(chain(testClassSymbol)) === NoConstraints)
+  }
 }
