@@ -101,7 +101,6 @@ class BasicContextSpec extends FunSuite {
 
     val constraint = context.get(chain(testClassSymbol))
 
-    println(constraint.prettyPrint())
     assert(constraint.definitelySubsetOf(
       PropertyConstraint(field3Symbol, PropertyConstraint(testClass2Field1, GreaterThan(0))) &&
       PropertyConstraint(field1Symbol, GreaterThan(10))

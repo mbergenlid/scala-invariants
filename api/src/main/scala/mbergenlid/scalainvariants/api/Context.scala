@@ -1,5 +1,6 @@
 package mbergenlid.scalainvariants.api
 
+import mbergenlid.scalainvariants.api.Context.ContextTraversable
 import mbergenlid.scalainvariants.api.constraints.{PropertyConstraint, NoConstraints, Constraint}
 import scala.language.implicitConversions
 
@@ -9,6 +10,18 @@ object Context {
 
   implicit def apply(v: (SymbolChain, Constraint)): Context =
     Symbol(v._1, v._2)
+
+  class ContextTraversable(context: Context) extends Traversable[(SymbolChain, Constraint)] {
+    override def foreach[U](f: ((SymbolChain, Constraint)) => U): Unit = {
+      def foreach(f: ((SymbolChain, Constraint)) => U, c: Context): Unit = c match {
+        case lhs && rhs => foreach(f, rhs); foreach(f, lhs)
+        case lhs || rhs => foreach(f, rhs); foreach(f, lhs)
+        case Symbol(sym, constraint) => f(sym, constraint)
+        case EmptyContext =>
+      }
+      foreach(f, context)
+    }
+  }
 }
 
 trait Context {
@@ -20,6 +33,9 @@ trait Context {
   def get(symbol: SymbolChain): Constraint
 
   def -(symbol: SymbolChain): Context
+
+  def symbols: Traversable[(SymbolChain, Constraint)] =
+    new ContextTraversable(this)
 
 }
 
@@ -34,7 +50,7 @@ trait ScopedContext extends Context {
 }
 
 
-object EmptyContext extends Context {
+case object EmptyContext extends Context {
   override def get(symbol: SymbolChain): Constraint = NoConstraints
   override def -(symbol: SymbolChain): Context = this
 }

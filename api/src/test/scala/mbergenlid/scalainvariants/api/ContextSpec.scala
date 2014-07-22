@@ -5,8 +5,7 @@ import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
 import mbergenlid.scalainvariants.api.constraints._
-import mbergenlid.scalainvariants.api.expressions.{ExpressionFactory, Polynomial, ConstantValue}
-import mbergenlid.scalainvariants.api.expressions.Term
+import mbergenlid.scalainvariants.api.expressions._
 import mbergenlid.scalainvariants.api.constraints.Equal
 import mbergenlid.scalainvariants.api.constraints.GreaterThan
 import mbergenlid.scalainvariants.api.constraints.LessThan
@@ -33,6 +32,7 @@ class ContextSpec extends FunSuite {
 
   var symbolCache = Map[String, SymbolChain]()
 
+  implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)
   implicit def sym(s: String): SymbolChain = {
     if(!symbolCache.contains(s)) {
       symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
@@ -40,6 +40,7 @@ class ContextSpec extends FunSuite {
     }
     symbolCache(s)
   }
+  implicit def sym2Expression(sym: SymbolChain): Expression = Polynomial.fromSymbol[Int](sym)
 
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
   def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain, Int] /: s) { (map, term) =>
@@ -200,7 +201,17 @@ class ContextSpec extends FunSuite {
       sym("z") -> GreaterThan(Polynomial.fromConstant(1))
     ))(GreaterThanOrEqual(Polynomial.fromSymbol[Int]("z")), GreaterThan(Polynomial.fromConstant(1)))()
 
-  def contextTest(contextMap: Map[SymbolChain, Constraint], debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
+  contextConstantsTest(
+    Map(
+      sym("x") -> GreaterThan(10)
+    ),
+    Equal(0)
+  )(LessThan(sym("x")))()
+
+  def contextTest
+      (contextMap: Map[SymbolChain, Constraint], debug: Boolean = false)
+      (positiveAsserts: Constraint*)
+      (negativeAsserts: Constraint*) {
     val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
     test(c.toString) {
       val xBounds = transitiveContext.getConstraint("x", typeOf[Int], c)
@@ -216,5 +227,30 @@ class ContextSpec extends FunSuite {
           s"Expected ${xBounds.prettyPrint("x")} to NOT be a subset of ${x.prettyPrint("x")}")
       }
     }
+  }
+
+
+  def contextConstantsTest(
+    contextMap: Map[SymbolChain, Constraint],
+    startConstraint: Constraint,
+    debug: Boolean = false)(
+    positiveAsserts: Constraint*)(
+    negativeAsserts: Constraint*) {
+
+      val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
+      test("Constants: " + c.toString) {
+        val bounds = transitiveContext.substituteConstants(startConstraint, typeOf[Int], c)
+        if(debug) {
+          println(bounds.prettyPrint())
+        }
+        positiveAsserts foreach { x =>
+          assert(bounds definitelySubsetOf x,
+            s"Expected ${bounds.prettyPrint("_")} to be a subset of ${x.prettyPrint("_")}")
+        }
+        negativeAsserts.foreach {x =>
+          assert(!(bounds definitelySubsetOf x),
+            s"Expected ${bounds.prettyPrint("_")} to NOT be a subset of ${x.prettyPrint("_")}")
+        }
+      }
   }
 }
