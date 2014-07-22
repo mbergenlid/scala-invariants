@@ -13,6 +13,7 @@ class DefaultConstraintBuilder extends ConstraintBuilder[Constraint] {
 }
 
 object Constraint {
+  import scala.language.implicitConversions
   implicit val fromConstraint = new DefaultConstraintBuilder
 
   implicit val fromExpression: ConstraintBuilder[Expression] =
@@ -41,6 +42,11 @@ object Constraint {
       }
       foreach(f, c)
     }
+  }
+
+  implicit def option2Constraint(c: Option[Constraint]): Constraint = c match {
+    case Some(x) => x
+    case None => NoConstraints
   }
 }
 

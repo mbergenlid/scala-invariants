@@ -1,31 +1,39 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.scalainvariants.api
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
-import mbergenlid.tools.boundedintegers.facades.TypeFacades
 import org.scalatest.FunSuite
 import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
+import mbergenlid.scalainvariants.api.constraints._
+import mbergenlid.scalainvariants.api.expressions.{ExpressionFactory, Polynomial, ConstantValue}
+import mbergenlid.scalainvariants.api.expressions.Term
+import mbergenlid.scalainvariants.api.constraints.Equal
+import mbergenlid.scalainvariants.api.constraints.GreaterThan
+import mbergenlid.scalainvariants.api.constraints.LessThan
+import scala.reflect.api.Symbols
 
-class ContextSpec extends FunSuite
-with TypeContext with Constraints with Expressions {
+class ContextSpec extends FunSuite {
 
-  type RealSymbolType = Symbol
-  val TypeNothing = typeOf[Nothing]
-  val IntSymbol = typeOf[Int].typeSymbol
-  def createConstraintFromSymbol(symbol: SymbolType) =
-    NoConstraints
+  val transitiveContext = new TransitiveContext {
+    import scala.reflect.runtime.universe
 
-  val OverflowConstant = Polynomial(Set(Term(TypedConstantValue(BigDecimal(Int.MaxValue+1)), Map.empty)))
+    lazy val IntSymbol = universe.typeOf[Int].typeSymbol
 
-  def expressionForType = {
-    case TypeRef(_, IntSymbol, Nil) =>
-      new ExpressionFactory[Int](typeOf[Int])
+    override def createConstraintFromSymbol(symbol: SymbolChain): Constraint = NoConstraints
+
+    override def expressionForType: PartialFunction[Type, ExpressionFactory[_]] = {
+      case TypeRef(_, IntSymbol, Nil) =>
+        new ExpressionFactory[Int](Facades)
+    }
+
+    object Facades extends TypeFacades {
+      override def findFacadeForSymbol(symbol: Symbols#SymbolApi): Symbols#SymbolApi = symbol
+    }
   }
 
-  var symbolCache = Map[String, SymbolType]()
+  var symbolCache = Map[String, SymbolChain]()
 
-  implicit def sym(s: String): SymbolType = {
+  implicit def sym(s: String): SymbolChain = {
     if(!symbolCache.contains(s)) {
       symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
         newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
@@ -34,7 +42,7 @@ with TypeContext with Constraints with Expressions {
   }
 
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
-  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolType, Int] /: s) { (map, term) =>
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain, Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(sym(term), 0) + 1
     map + (sym(term) -> multiplicity)
   })
@@ -42,101 +50,88 @@ with TypeContext with Constraints with Expressions {
   test("Simple retrieval") {
     val expected =
       LessThan(Polynomial.fromConstant(4))
-    val c = new Context(Map(
-      sym("x") -> expected
-    ))
+    val c = EmptyContext && sym("x") -> expected
 
-    assert(Context.getConstraint("x", typeOf[Int], c) === expected)
+    assert(transitiveContext.getConstraint("x", typeOf[Int], c) === expected)
   }
 
   test("More complex transitive with Mixed") {
     val originalXBound = LessThan(Polynomial(Set(t(1, "y"), t(4))))
-    val c = new Context(Map(
-      sym("x") -> originalXBound,
+    val c = EmptyContext &&
+      sym("x") -> originalXBound &&
       sym("y") -> GreaterThan(Polynomial.fromConstant(4))
-    ))
 
-    val xBounds = Context.getConstraint("x", typeOf[Int], c)
+
+    val xBounds = transitiveContext.getConstraint("x", typeOf[Int], c)
     assert(xBounds.asInstanceOf[And].constraints.head === originalXBound)
   }
 
-  test("Failed case") {
-    val res = for {
-      ec1 <- Equal(Polynomial.fromSymbol[Int](sym("x")))
-      ec2 <- GreaterThanOrEqual(Polynomial.fromConstant(0)) && LessThan(Polynomial.fromConstant(10)) &&
-        Equal(Polynomial.fromSymbol[Int](sym("x")))
-      s <- ec1.substitute(sym("x"), ec2)
-    } yield s
-  }
-
-
-
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> LessThan(Polynomial.fromSymbol[Int]("y")),
       sym("y") -> LessThan(Polynomial.fromConstant(4))
-    )))(LessThan(Polynomial.fromConstant(4)))()
+    ))(LessThan(Polynomial.fromConstant(4)))()
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> LessThan(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> LessThan(Polynomial.fromConstant(4))
-    )))(LessThan(Polynomial.fromConstant(8)))(LessThan(Polynomial.fromConstant(4)))
+    ))(LessThan(Polynomial.fromConstant(8)))(LessThan(Polynomial.fromConstant(4)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> LessThan(Polynomial.fromSymbol[Int]("y")) ,
       sym("y") -> LessThan(Polynomial(Set(t(1, "z"), t(4)))) ,
       sym("z") -> LessThan(Polynomial.fromConstant(1))
-    )))(LessThan(Polynomial.fromConstant(5)))(LessThan(Polynomial.fromConstant(4)))
+    ))(LessThan(Polynomial.fromConstant(5)))(LessThan(Polynomial.fromConstant(4)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> LessThan(Polynomial.fromConstant(4))
-    )))(LessThan(Polynomial.fromConstant(8)))(LessThan(Polynomial.fromConstant(4)))
+    ))(LessThan(Polynomial.fromConstant(8)))(LessThan(Polynomial.fromConstant(4)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> GreaterThan(Polynomial.fromConstant(4))
-    )))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
+    ))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> Equal(Polynomial.fromConstant(4))
-    )))(
+    ))(
       Equal(Polynomial.fromConstant(8)), LessThan(Polynomial.fromConstant(9))
     )(GreaterThan(Polynomial.fromConstant(9)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> GreaterThan(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> GreaterThan(Polynomial.fromConstant(4))
-    )))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
+    ))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> GreaterThanOrEqual(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> GreaterThan(Polynomial.fromConstant(4))
-    )))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
+    ))(GreaterThan(Polynomial.fromConstant(8)))(GreaterThan(Polynomial.fromConstant(9)))
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))) ,
       sym("y") -> And(LessThan(Polynomial.fromConstant(10)),
         GreaterThan(Polynomial.fromConstant(0)))
-    ))) (
+    )) (
     LessThan(Polynomial.fromConstant(14)), GreaterThan(Polynomial.fromConstant(4))
   )()
 
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(4)))),
       sym("y") -> (LessThan(Polynomial.fromConstant(0)) ||
         GreaterThan(Polynomial.fromConstant(10)))
-    ))) ()(LessThan(Polynomial.fromConstant(4)))
+    )) ()(LessThan(Polynomial.fromConstant(4)))
 
   /**
    * x = y - 5
@@ -145,11 +140,11 @@ with TypeContext with Constraints with Expressions {
    * x >= -5 && x <= 0
    */
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(-5)))) ,
       sym("y") -> And(GreaterThanOrEqual(Polynomial.fromConstant(0)),
         LessThanOrEqual(Polynomial.fromConstant(5)))
-    )))(GreaterThanOrEqual(Polynomial.fromConstant(-5)))(GreaterThan(Polynomial.fromConstant(-5)))
+    ))(GreaterThanOrEqual(Polynomial.fromConstant(-5)))(GreaterThan(Polynomial.fromConstant(-5)))
 
   /**
    * x > y
@@ -158,10 +153,10 @@ with TypeContext with Constraints with Expressions {
    * x > y && x > 0
    */
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> GreaterThan(Polynomial(Set(t(1, "y")))) ,
       sym("y") -> GreaterThanOrEqual(Polynomial.fromConstant(0))
-    )))(GreaterThan(Polynomial.fromConstant(0)))()
+    ))(GreaterThan(Polynomial.fromConstant(0)))()
 
   /**
    * x < y
@@ -170,10 +165,10 @@ with TypeContext with Constraints with Expressions {
    * x < y && x < 0
    */
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> LessThan(Polynomial(Set(t(1, "y")))) ,
       sym("y") -> LessThanOrEqual(Polynomial.fromConstant(0))
-    )))(LessThan(Polynomial.fromConstant(0)))()
+    ))(LessThan(Polynomial.fromConstant(0)))()
 
   /**
    * _ = y + z
@@ -183,13 +178,13 @@ with TypeContext with Constraints with Expressions {
    * _ >= 1
    */
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(1, "z")))),
       sym("y") -> And(GreaterThanOrEqual(Polynomial.fromConstant(0)),
         LessThanOrEqual(Polynomial.fromConstant(5))),
       sym("z") -> And(GreaterThanOrEqual(Polynomial.fromConstant(1)),
         LessThanOrEqual(Polynomial.fromConstant(6)))
-    )))(GreaterThanOrEqual(Polynomial.fromConstant(1)), LessThan(Polynomial.fromConstant(12)))(LessThanOrEqual(Polynomial.fromConstant(10)))
+    ))(GreaterThanOrEqual(Polynomial.fromConstant(1)), LessThan(Polynomial.fromConstant(12)))(LessThanOrEqual(Polynomial.fromConstant(10)))
 
   /**
    * _ = y + z
@@ -199,15 +194,16 @@ with TypeContext with Constraints with Expressions {
    * _ >= 1
    */
   contextTest(
-    new Context(Map(
+    Map(
       sym("x") -> Equal(Polynomial(Set(t(1, "y"), t(1, "z")))),
       sym("y") -> GreaterThanOrEqual(Polynomial.fromConstant(0)),
       sym("z") -> GreaterThan(Polynomial.fromConstant(1))
-    )))(GreaterThanOrEqual(Polynomial.fromSymbol[Int]("z")), GreaterThan(Polynomial.fromConstant(1)))()
+    ))(GreaterThanOrEqual(Polynomial.fromSymbol[Int]("z")), GreaterThan(Polynomial.fromConstant(1)))()
 
-  def contextTest(c: Context, debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
+  def contextTest(contextMap: Map[SymbolChain, Constraint], debug: Boolean = false)(positiveAsserts: Constraint*)(negativeAsserts: Constraint*) {
+    val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
     test(c.toString) {
-      val xBounds = Context.getConstraint("x", typeOf[Int], c)
+      val xBounds = transitiveContext.getConstraint("x", typeOf[Int], c)
       if(debug) {
         println(xBounds.prettyPrint("x"))
       }
@@ -221,6 +217,4 @@ with TypeContext with Constraints with Expressions {
       }
     }
   }
-
-  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }

@@ -23,6 +23,17 @@ trait Context {
 
 }
 
+trait ScopedContext extends Context {
+  def currentScope: Context
+  def pushScope(context: Context): ScopedContext
+  def popScope(context: Context): ScopedContext
+
+  override def get(symbol: SymbolChain): Constraint =
+    currentScope.get(symbol)
+
+}
+
+
 object EmptyContext extends Context {
   override def get(symbol: SymbolChain): Constraint = NoConstraints
   override def -(symbol: SymbolChain): Context = this
