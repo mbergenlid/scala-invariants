@@ -1,9 +1,10 @@
 package mbergenlid.scalainvariants.api
 
+import mbergenlid.scalainvariants.api.util.TestUniverse
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
 
-class BasicContextSpec extends FunSuite with ApiUniverse {
+class BasicContextSpec extends FunSuite with TestUniverse {
 
   import scala.reflect.runtime.universe._
 
@@ -12,7 +13,7 @@ class BasicContextSpec extends FunSuite with ApiUniverse {
   lazy val symbol1 = typeOf[BasicContextSpec].member(newTermName("variable1"))
   lazy val symbol2 = typeOf[BasicContextSpec].member(newTermName("variable2"))
 
-  def chain(symbol: SymbolApi*): SymbolChain =
+  def chain(symbol: SymbolApi*): SymbolChain[SymbolApi] =
     SymbolChain(symbol.toList)
 
   implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)

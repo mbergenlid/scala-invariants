@@ -2,18 +2,17 @@ package mbergenlid.scalainvariants.api.expressions
 
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 import mbergenlid.scalainvariants.api.{ApiUniverse, TypeFacades, SymbolChain}
-import scala.reflect.api.Symbols
 
 trait ExpressionFactories {
   self: ApiUniverse =>
 
   class ExpressionFactory[T: RichNumeric](
-    facades: TypeFacades,
-    extraContext: List[Symbols#SymbolApi] = Nil) {
+    facades: TypeFacades[SymbolType],
+    extraContext: List[SymbolType] = Nil) {
 
     val numeric = implicitly[RichNumeric[T]]
     def fromConstant(constant: T) = Polynomial.fromConstant(constant)
-    def fromSymbol(symbol: SymbolChain) = Polynomial.fromSymbol(symbol)
+    def fromSymbol(symbol: SymbolChain[SymbolType]) = Polynomial.fromSymbol(symbol)
     def convertConstant[U: RichNumeric](constant: U): Expression =
       Polynomial.fromConstant(numeric.fromType[U](constant))
 
@@ -26,7 +25,7 @@ trait ExpressionFactories {
     def fromParameter(param: String): Expression =
       new ExpressionParser[T](extraContext, facades).parseExpression(param).get
 
-    def withExtraContext(symbols: List[Symbols#SymbolApi]) =
+    def withExtraContext(symbols: List[SymbolType]) =
       new ExpressionFactory(facades, extraContext ++ symbols)
 
     lazy val MaxValue = fromConstant(implicitly[RichNumeric[T]].maxValue)

@@ -1,44 +1,29 @@
 package mbergenlid.scalainvariants.api
 
+import mbergenlid.scalainvariants.api.util.TestUniverse
 import org.scalatest.FunSuite
-import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
-import scala.reflect.api.Symbols
 
-class ContextSpec extends FunSuite with ApiUniverse {
+class ContextSpec extends FunSuite with TestUniverse {
+  import scala.reflect.runtime.universe._
 
-  val transitiveContext = new TransitiveContext {
-    import scala.reflect.runtime.universe
+  val transitiveContext = new TransitiveContext {}
 
-    lazy val IntSymbol = universe.typeOf[Int].typeSymbol
-
-    override def createConstraintFromSymbol(symbol: SymbolChain): Constraint = NoConstraints
-
-    override def expressionForType: PartialFunction[Type, ExpressionFactory[_]] = {
-      case TypeRef(_, IntSymbol, Nil) =>
-        new ExpressionFactory[Int](Facades)
-    }
-
-    object Facades extends TypeFacades {
-      override def findFacadeForSymbol(symbol: Symbols#SymbolApi): Symbols#SymbolApi = symbol
-    }
-  }
-
-  var symbolCache = Map[String, SymbolChain]()
+  var symbolCache = Map[String, SymbolChain[SymbolType]]()
 
   implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)
-  implicit def sym(s: String): SymbolChain = {
+  implicit def sym(s: String): SymbolChain[SymbolType] = {
     if(!symbolCache.contains(s)) {
-      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+      symbolCache += (s -> SymbolChain[SymbolType](List(typeOf[this.type].termSymbol.
         newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
     }
     symbolCache(s)
   }
-  implicit def sym2Expression(sym: SymbolChain): Expression = Polynomial.fromSymbol[Int](sym)
+  implicit def sym2Expression(sym: SymbolChain[SymbolType]): Expression = Polynomial.fromSymbol[Int](sym)
 
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
-  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain, Int] /: s) { (map, term) =>
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain[SymbolType], Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(sym(term), 0) + 1
     map + (sym(term) -> multiplicity)
   })
@@ -204,7 +189,7 @@ class ContextSpec extends FunSuite with ApiUniverse {
   )(LessThan(sym("x")))()
 
   def contextTest
-      (contextMap: Map[SymbolChain, Constraint], debug: Boolean = false)
+      (contextMap: Map[SymbolChain[SymbolType], Constraint], debug: Boolean = false)
       (positiveAsserts: Constraint*)
       (negativeAsserts: Constraint*) {
     val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
@@ -226,7 +211,7 @@ class ContextSpec extends FunSuite with ApiUniverse {
 
 
   def contextConstantsTest(
-    contextMap: Map[SymbolChain, Constraint],
+    contextMap: Map[SymbolChain[SymbolType], Constraint],
     startConstraint: Constraint,
     debug: Boolean = false)(
     positiveAsserts: Constraint*)(

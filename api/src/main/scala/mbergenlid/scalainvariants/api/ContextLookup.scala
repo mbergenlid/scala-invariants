@@ -10,9 +10,6 @@ trait ContextLookup {
 
     import Constraint._
 
-    def expressionForType: PartialFunction[Type, ExpressionFactory[_]]
-    def createConstraintFromSymbol(symbol: SymbolChain): Constraint
-
     def getConstraint(start: Constraint, resultType: Type, context: Context): Constraint = {
       val f = expressionForType.lift(resultType)
       if(f.isDefined)
@@ -26,11 +23,11 @@ trait ContextLookup {
         NoConstraints
     }
 
-    def getConstraint(symbol: SymbolChain, resultType: Type, context: Context): Constraint = {
+    def getConstraint(symbol: SymbolChain[SymbolType], resultType: Type, context: Context): Constraint = {
       val f = expressionForType(resultType)
       val constraint =
-        (if(symbol.isStable) createConstraintFromSymbol(symbol) && context.get(symbol)
-        else createConstraintFromSymbol(symbol)).map { sc =>
+        (if(symbol.isStable) createConstraintFromSymbol(symbol.head) && context.get(symbol)
+        else createConstraintFromSymbol(symbol.head)).map { sc =>
           f.convertExpression(sc.expression)
         }
       for {
@@ -86,7 +83,7 @@ trait ContextLookup {
 
     private def constraintFromConstant(
       sc: SimpleConstraint,
-      boundSymbol: SymbolChain,
+      boundSymbol: SymbolChain[SymbolType],
       constant: ConstantValue,
       f: ExpressionFactory[_]): SimpleConstraint = sc match {
 
@@ -119,7 +116,7 @@ trait ContextLookup {
 
     private def substitute(
       constraint: Constraint,
-      symbols: List[SymbolChain],
+      symbols: List[SymbolChain[SymbolType]],
       resultType: Type,
       context: Context): Constraint =
       symbols match {
@@ -141,7 +138,7 @@ trait ContextLookup {
       }
 
 
-    private def getConstraintWitUpperLowerBounds(symbol: SymbolChain, resultType: Type, context: Context) = {
+    private def getConstraintWitUpperLowerBounds(symbol: SymbolChain[SymbolType], resultType: Type, context: Context) = {
       val c = getConstraint(symbol, resultType, context)
       val f = expressionForType(resultType)
       (

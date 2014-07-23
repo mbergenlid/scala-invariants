@@ -9,12 +9,12 @@ trait Contexts {
 
     val Empty = EmptyContext
 
-    implicit def apply(v: (SymbolChain, Constraint)): Context =
+    implicit def apply(v: (SymbolChain[SymbolType], Constraint)): Context =
       Symbol(v._1, v._2)
 
-    class ContextTraversable(context: Context) extends Traversable[(SymbolChain, Constraint)] {
-      override def foreach[U](f: ((SymbolChain, Constraint)) => U): Unit = {
-        def foreach(f: ((SymbolChain, Constraint)) => U, c: Context): Unit = c match {
+    class ContextTraversable(context: Context) extends Traversable[(SymbolChain[SymbolType], Constraint)] {
+      override def foreach[U](f: ((SymbolChain[SymbolType], Constraint)) => U): Unit = {
+        def foreach(f: ((SymbolChain[SymbolType], Constraint)) => U, c: Context): Unit = c match {
           case lhs && rhs => foreach(f, rhs); foreach(f, lhs)
           case lhs || rhs => foreach(f, rhs); foreach(f, lhs)
           case Symbol(sym, constraint) => f(sym, constraint)
@@ -31,11 +31,11 @@ trait Contexts {
 
     def ||(other: Context): Context = new ||(this, other)
 
-    def get(symbol: SymbolChain): Constraint
+    def get(symbol: SymbolChain[SymbolType]): Constraint
 
-    def -(symbol: SymbolChain): Context
+    def -(symbol: SymbolChain[SymbolType]): Context
 
-    def symbols: Traversable[(SymbolChain, Constraint)] =
+    def symbols: Traversable[(SymbolChain[SymbolType], Constraint)] =
       new Context.ContextTraversable(this)
 
   }
@@ -45,35 +45,35 @@ trait Contexts {
     def pushScope(context: Context): ScopedContext
     def popScope(context: Context): ScopedContext
 
-    override def get(symbol: SymbolChain): Constraint =
+    override def get(symbol: SymbolChain[SymbolType]): Constraint =
       currentScope.get(symbol)
 
   }
 
 
   case object EmptyContext extends Context {
-    override def get(symbol: SymbolChain): Constraint = NoConstraints
-    override def -(symbol: SymbolChain): Context = this
+    override def get(symbol: SymbolChain[SymbolType]): Constraint = NoConstraints
+    override def -(symbol: SymbolChain[SymbolType]): Context = this
   }
 
   case class &&(lhs: Context, rhs: Context) extends Context {
-    override def get(symbol: SymbolChain): Constraint =
+    override def get(symbol: SymbolChain[SymbolType]): Constraint =
       lhs.get(symbol) && rhs.get(symbol)
 
-    override def -(symbol: SymbolChain): Context =
+    override def -(symbol: SymbolChain[SymbolType]): Context =
       new &&(lhs - symbol, rhs - symbol)
   }
 
   case class ||(lhs: Context, rhs: Context) extends Context {
-    override def get(symbol: SymbolChain): Constraint =
+    override def get(symbol: SymbolChain[SymbolType]): Constraint =
       lhs.get(symbol) || rhs.get(symbol)
 
-    override def -(symbol: SymbolChain): Context =
+    override def -(symbol: SymbolChain[SymbolType]): Context =
       new ||(lhs - symbol, rhs - symbol)
   }
 
-  case class Symbol(symbol: SymbolChain, constraint: Constraint) extends Context {
-    override def get(symbol: SymbolChain): Constraint =
+  case class Symbol(symbol: SymbolChain[SymbolType], constraint: Constraint) extends Context {
+    override def get(symbol: SymbolChain[SymbolType]): Constraint =
       if(this.symbol == symbol) constraint
       else {
         this.symbol.foldSuffixOption(symbol, constraint) { (c, s) =>
@@ -81,7 +81,7 @@ trait Contexts {
         }.getOrElse(NoConstraints)
       }
 
-    override def -(symbol: SymbolChain): Context =
+    override def -(symbol: SymbolChain[SymbolType]): Context =
       if(this.symbol.matchesPrefix(symbol)) EmptyContext
       else this
   }

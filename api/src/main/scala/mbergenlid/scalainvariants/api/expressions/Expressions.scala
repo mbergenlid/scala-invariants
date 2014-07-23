@@ -1,9 +1,10 @@
 package mbergenlid.scalainvariants.api.expressions
 
-import mbergenlid.scalainvariants.api.SymbolChain
+import mbergenlid.scalainvariants.api.{SymbolChain, ApiUniverse}
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
 
 trait Expressions {
+  self: ApiUniverse =>
   trait Expression {
     def isConstant: Boolean =
       terms.isEmpty ||
@@ -31,15 +32,15 @@ trait Expressions {
     def *(that: Expression): Expression
 
     def unary_- : Expression
-    def substitute(symbol: SymbolChain, expr: Expression): Expression
+    def substitute(symbol: SymbolChain[SymbolType], expr: Expression): Expression
     def substituteConstant(expr: Expression): Expression
 
     def containsSymbols: Boolean
     def increment: Expression
     def decrement: Expression
 
-    def extractSymbols: Set[SymbolChain]
-    def extractSymbol(symbol: SymbolChain): Expression
+    def extractSymbols: Set[SymbolChain[SymbolType]]
+    def extractSymbol(symbol: SymbolChain[SymbolType]): Expression
 
     def map(f: Term  => Term): Expression
   }
@@ -54,7 +55,7 @@ trait Expressions {
     def fromConstant[T: RichNumeric](constant: T) =
       new Polynomial(Set(Term(ConstantValue(constant), Map.empty)), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
 
-    def fromSymbol[T: RichNumeric](symbol: SymbolChain) = {
+    def fromSymbol[T: RichNumeric](symbol: SymbolChain[SymbolType]) = {
       new Polynomial(
         Set(Term(ConstantValue(implicitly[RichNumeric[T]].fromInt(1)),
           Map(symbol -> 1))), implicitly[RichNumeric[T]].isInstanceOf[Integral[_]])
@@ -108,7 +109,7 @@ trait Expressions {
     } yield { thisTerm * thatTerm }, isIntegral)
 
     def unary_- : Expression = map(_.unary_-)
-    def substitute(symbol: SymbolChain, expr: Expression): Expression = {
+    def substitute(symbol: SymbolChain[SymbolType], expr: Expression): Expression = {
       terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
         p + t.substitute(symbol, expr, isIntegral)
       }}
@@ -135,12 +136,12 @@ trait Expressions {
       if(isIntegral) this - Polynomial.fromConstant(1)
       else this
 
-    def extractSymbols: Set[SymbolChain] = for {
+    def extractSymbols: Set[SymbolChain[SymbolType]] = for {
       term <- terms
       (symbol, mult) <- term.variables
     } yield symbol
 
-    def extractSymbol(symbol: SymbolChain) = {
+    def extractSymbol(symbol: SymbolChain[SymbolType]) = {
       terms.find(_.variables.contains(symbol)) match {
         case Some(term) =>
           new Polynomial(terms.collect {
@@ -159,13 +160,13 @@ trait Expressions {
 
   }
 
-  case class Term(coeff: ConstantValue, variables: Map[SymbolChain, Int]) {
+  case class Term(coeff: ConstantValue, variables: Map[SymbolChain[SymbolType], Int]) {
     def unary_- = Term(-coeff, variables)
     def isZero = coeff.isZero
     def greaterThanZero = variables.isEmpty && coeff.isGreaterThanZero
     def lessThanZero = variables.isEmpty && coeff.isLessThanZero
 
-    def substitute(symbol: SymbolChain, expr: Expression, isIntegral: Boolean): Expression  =
+    def substitute(symbol: SymbolChain[SymbolType], expr: Expression, isIntegral: Boolean): Expression  =
       if(variables.contains(symbol)) {
         expr * new Polynomial(Set(Term(coeff, variables - symbol)), isIntegral)
       } else {
@@ -194,7 +195,7 @@ trait Expressions {
 
     override def toString = {
       def printVariables = {
-        def printVariable(v: SymbolChain, mult: Int) =
+        def printVariable(v: SymbolChain[SymbolType], mult: Int) =
           v.prettyPrint + (
             if(mult == 1) ""
             else "^" + mult

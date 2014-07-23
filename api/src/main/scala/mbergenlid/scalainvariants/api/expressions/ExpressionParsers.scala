@@ -1,14 +1,16 @@
 package mbergenlid.scalainvariants.api.expressions
 
 import mbergenlid.tools.boundedintegers.annotations.RichNumeric
-import scala.reflect.api.Symbols
 import scala.util.parsing.combinator.JavaTokenParsers
 import mbergenlid.scalainvariants.api.{ApiUniverse, TypeFacades, SymbolChain}
 
 trait ExpressionParsers {
   self: ApiUniverse =>
   
-  class ExpressionParser[T: RichNumeric](symbols: List[Symbols#SymbolApi], typeFacades: TypeFacades) extends JavaTokenParsers {
+  class ExpressionParser[T: RichNumeric](
+      symbols: List[SymbolType],
+      typeFacades: TypeFacades[SymbolType])
+    extends JavaTokenParsers {
 
     def parseExpression(input: String) =
       parseAll(expression, input)
@@ -39,11 +41,11 @@ trait ExpressionParsers {
       ident ~ "." ~ repsep(ident, ".") ^^ {case obj ~ "." ~ rest => listToExpression(obj :: rest)}
 
     def listToExpression(l: List[String]): Expression = {
-      val firstSymbol = symbols.find(_.name.toString == l.head).get
-      val symbolChain = (List(firstSymbol) /: l.tail) { (symbols, name) =>
-        val symbol =
+      val firstSymbol: SymbolType = symbols.find(_.name.toString == l.head).get
+      val symbolChain: List[SymbolType] = (List(firstSymbol) /: l.tail) { (symbols, name) =>
+        val symbol: SymbolType =
           symbols.head.typeSignature.
-            members.find(_.name.toString == name).get
+            members.find(_.name.toString == name).get.asInstanceOf[SymbolType]
 
         typeFacades.findFacadeForSymbol(symbol) :: symbols
       }

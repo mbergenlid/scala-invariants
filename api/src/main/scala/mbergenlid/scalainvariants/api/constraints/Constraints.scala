@@ -166,7 +166,7 @@ trait Constraints {
     protected[api]
     def combineNegative(other: ExpressionConstraint): Option[Expression => ExpressionConstraint]
 
-    def substitute(symbol: SymbolChain, other: ExpressionConstraint): Option[ExpressionConstraint] =
+    def substitute(symbol: SymbolChain[SymbolType], other: ExpressionConstraint): Option[ExpressionConstraint] =
       for {
         term <- expression.terms.find(_.variables.contains(symbol))
         f <-  if(term.coeff.isLessThanZero) combineNegative(other)

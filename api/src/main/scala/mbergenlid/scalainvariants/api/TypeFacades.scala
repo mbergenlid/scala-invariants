@@ -2,7 +2,7 @@ package mbergenlid.scalainvariants.api
 
 import scala.reflect.api.Symbols
 
-trait TypeFacades {
+trait TypeFacades[S <: Symbols#SymbolApi] {
 
-  def findFacadeForSymbol(symbol: Symbols#SymbolApi): Symbols#SymbolApi
+  def findFacadeForSymbol(symbol: S): S
 }

@@ -1,11 +1,10 @@
 package mbergenlid.scalainvariants.api.constraints
 
-import mbergenlid.scalainvariants.api.ApiUniverse
 import org.scalatest.FunSuite
-import mbergenlid.scalainvariants.api.util.TestExpressionParser
+import mbergenlid.scalainvariants.api.util.{TestUniverse, TestExpressionParser}
 
 class ConstraintsSpec extends FunSuite
-   with TestExpressionParser with ApiUniverse {
+   with TestExpressionParser with TestUniverse {
 
   import Constraint._
   import scala.language.implicitConversions

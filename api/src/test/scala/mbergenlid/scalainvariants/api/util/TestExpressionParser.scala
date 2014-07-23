@@ -7,10 +7,7 @@ import scala.language.implicitConversions
 import mbergenlid.scalainvariants.api.{ApiUniverse, SymbolChain}
 
 trait TestExpressionParser {
-  self: ApiUniverse =>
-
-  type RealSymbolType = Symbol
-  val TypeNothing = typeOf[Nothing]
+  self: TestUniverse =>
 
   implicit def c(s: String): Constraint =
     parser.parseExpression(s).get
@@ -24,11 +21,11 @@ trait TestExpressionParser {
   def stringToExpression(s: String): Expression =
     Polynomial.fromSymbol[Int](stringToSymbol(s))
 
-  var symbolCache = Map[String, SymbolChain]()
+  var symbolCache = Map[String, SymbolChain[SymbolType]]()
 
-  implicit def stringToSymbol(s: String): SymbolChain = {
+  implicit def stringToSymbol(s: String): SymbolChain[SymbolType] = {
     if(!symbolCache.contains(s)) {
-      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+      symbolCache += (s -> SymbolChain[SymbolType](List(typeOf[this.type].termSymbol.
         newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
     }
     symbolCache(s)

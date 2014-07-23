@@ -1,19 +1,20 @@
 
 package mbergenlid.scalainvariants.api.expressions
 
+import mbergenlid.scalainvariants.api.util.TestUniverse
 import mbergenlid.scalainvariants.api.{ApiUniverse, SymbolChain}
 import org.scalatest.FunSuite
 
 import scala.reflect.runtime.universe._
 
-class ExpressionsSpec extends FunSuite with ApiUniverse {
+class ExpressionsSpec extends FunSuite with TestUniverse {
 
   import scala.language.implicitConversions
-  var symbolCache = Map[String, SymbolChain]()
+  var symbolCache = Map[String, SymbolChain[SymbolType]]()
 
-  implicit def sym(s: String): SymbolChain = {
+  implicit def sym(s: String): SymbolChain[SymbolType] = {
     if(!symbolCache.contains(s)) {
-      symbolCache += (s -> SymbolChain(List(typeOf[this.type].termSymbol.
+      symbolCache += (s -> SymbolChain[SymbolType](List(typeOf[this.type].termSymbol.
         newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
     }
     symbolCache(s)
@@ -22,7 +23,7 @@ class ExpressionsSpec extends FunSuite with ApiUniverse {
   implicit def c(v: Int): Expression = Polynomial.fromConstant(v)
   implicit def s(s: String) = Polynomial.fromSymbol[Int](s)
   def t(v: Int) = Term(ConstantValue(v), Map.empty)
-  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain, Int] /: s) { (map, term) =>
+  def t(v: Int, s: String*) = Term(ConstantValue(v), (Map.empty[SymbolChain[SymbolType], Int] /: s) { (map, term) =>
     val multiplicity = map.getOrElse(term, 0) + 1
     map + (sym(term) -> multiplicity)
   })
