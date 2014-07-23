@@ -18,7 +18,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
     errors = Nil
-    checkBounds(new Context())(tree)
+    checkBounds(EmptyContext)(tree)
     errors.reverse
   }
 
@@ -40,7 +40,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case Block(body, res) =>
         val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
-        val blockConstraint = Context.getConstraint(bounds.constraint, res.tpe, newContext)
+        val blockConstraint = TransitiveContext.getConstraint(bounds.constraint, res.tpe, newContext)
         BoundedType(blockConstraint)
       case _ => 
         traverseChildren(tree.children)
@@ -49,9 +49,9 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   }
 
   def updateContext(context: Context, tree: Tree, constraint: Constraint): Context = tree match {
-    case Assign(_, _) => context.removeSymbolConstraints(symbolChainFromTree(tree))
+//    case Assign(_, _) => TransitiveContext.removeSymbolConstraints(symbolChainFromTree(tree))
     case _ if constraint != NoConstraints =>
-      context && new Context(Map(symbolChainFromTree(tree) -> constraint))
+      context && (symbolChainFromTree(tree) -> constraint)
     case _ => context      
   }
 }

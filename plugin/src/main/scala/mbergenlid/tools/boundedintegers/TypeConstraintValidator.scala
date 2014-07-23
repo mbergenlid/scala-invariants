@@ -1,25 +1,26 @@
 package mbergenlid.tools.boundedintegers
 
-import mbergenlid.tools.boundedintegers.facades.TypeFacades
+import mbergenlid.scalainvariants.api.SymbolChain
 
 import scala.language.implicitConversions
 
 trait TypeConstraintValidator extends AbstractBoundsValidator {
-  self: MyUniverse with TypeBoundFactories with
-    BoundedTypes with TypeContext with Constraints with Expressions with TypeFacades =>
+  self: MyUniverse =>
 
   import global._
 
-  implicit def symbol2ConstrainedSymbol(symbol: RealSymbolType) =
-    new ConstrainedSymbol(SymbolChain(symbol))
+  import Constraint._
+
+  implicit def symbol2ConstrainedSymbol(symbol: SymbolType) =
+    new ConstrainedSymbol(SymbolChain[SymbolType](List(symbol)))
 
   implicit def tree2ConstrainedSymbol(tree: Tree) =
     new ConstrainedSymbol(symbolChainFromTree(tree))
 
-  class ConstrainedSymbol(symbolChain: SymbolType, thisSymbol: Option[Symbol] = None) {
-    def this(symbol: SymbolType, thisSymbol: Symbol) = this(symbol, Some(thisSymbol))
+  class ConstrainedSymbol(symbolChain: SymbolChain[SymbolType], thisSymbol: Option[SymbolType] = None) {
+    def this(symbol: SymbolChain[SymbolType], thisSymbol: SymbolType) = this(symbol, Some(thisSymbol))
 
-    def withThisSymbol(withThisSymbol: Symbol) = new ConstrainedSymbol(symbolChain, withThisSymbol)
+    def withThisSymbol(withThisSymbol: SymbolType) = new ConstrainedSymbol(symbolChain, withThisSymbol)
 
     def tryAssign(expr: Tree, boundExpr: BoundedType)(implicit context: Context): BoundedType = {
       try {
@@ -47,13 +48,13 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           for(sc <- BoundsFactory.fromSymbolChain(symbolChain)) yield replaceThisSymbols(sc)
 
         val exprConstraints =
-          Context.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+          TransitiveContext.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
 
         val fromConstants =
-          Context.substituteConstants(exprConstraints, symbol.typeSignature, context)
+          TransitiveContext.substituteConstants(exprConstraints, symbol.typeSignature, context)
 
         val fromAnnotatedConstants =
-          Context.substituteConstants(exprConstraints, symbol.typeSignature, extractSymbols(target))
+          TransitiveContext.substituteConstants(exprConstraints, symbol.typeSignature, extractSymbols(target))
         val assignee =
           exprConstraints && fromConstants && fromAnnotatedConstants
 
@@ -64,7 +65,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
         val target = BoundsFactory.fromSymbolChain(symbolChain)
         val exprConstraints = boundExpr.constraint &&
-          Context.getPropertyConstraints(symbolChainFromTree(expr), context)
+          context.get(symbolChainFromTree(expr))
 
         if(!(exprConstraints definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, exprConstraints)(context)))
@@ -80,9 +81,8 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
       } yield {
         (symbol, BoundsFactory.fromSymbolChain(symbol))
       }
-      new Context((Map.empty[SymbolType, Constraint] /: map) {(m, t) =>
-        m + (t._1 -> (m.getOrElse(t._1, NoConstraints) && t._2))
-      })
+
+      map.foldLeft[Context](EmptyContext)(_&&_)
     }
 
     private def replaceThisSymbols(simpleConstraint: SimpleConstraint): Constraint =
@@ -92,9 +92,9 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         }
       }
 
-    private def replaceThisSymbol(term: Term) = Term(term.coeff,
+    private def replaceThisSymbol(term: Term): Term = Term(term.coeff,
       for {
-        (v: SymbolType, mult) <- term.variables
+        (v: SymbolChain[SymbolType], mult) <- term.variables
       } yield (v.map { sym =>
         if(sym.isType) thisSymbol.get
         else sym
@@ -102,7 +102,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
     )
 
 
-    private def createErrorMessage(targetSymbol: RealSymbolType, targetBounds: Constraint,
+    private def createErrorMessage(targetSymbol: SymbolType, targetBounds: Constraint,
                                    assignee: Tree, assigneeBounds: Constraint)
                                  (context: Context): String = {
       val targetName = targetSymbol.name

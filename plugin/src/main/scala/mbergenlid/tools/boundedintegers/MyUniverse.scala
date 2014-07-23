@@ -1,17 +1,23 @@
 package mbergenlid.tools.boundedintegers
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
+import mbergenlid.scalainvariants.api.{BoundedTypes, Contexts, SymbolChain, ApiUniverse}
 import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
-import scala.reflect.api.Universe
+import scala.reflect.api.{Types, Universe}
 import scala.reflect.runtime._
 
-trait MyUniverse extends Constraints with TypeContext with
-    TypeFacades with Expressions with ExpressionParser with BoundedTypes {
+trait MyUniverse extends ApiUniverse
+                    with TypeFacades
+                    with TypeBoundFactories
+                    with Contexts
+                    with BoundedTypes
+                    with TypeConstraintValidator
+{
   val global: Universe
   import global._
 
-  type RealSymbolType = global.Symbol
+  type SymbolType = global.Symbol
+  type TypeType = TypeApi
 
   trait BoundedTypeError {
     def pos: Position
@@ -45,34 +51,27 @@ trait MyUniverse extends Constraints with TypeContext with
   object LongTypeExtractor extends TypeExtractor(LongType)
   object DoubleTypeExtractor extends TypeExtractor(DoubleType)
 
-  def expressionForType: PartialFunction[TypeType, ExpressionFactory[_]] = {
+  override def expressionForType: PartialFunction[Types#TypeApi, ExpressionFactory[_]] = {
     case IntTypeExtractor() =>
-      new ExpressionFactory[Int](IntType)
+      new ExpressionFactory[Int](TypeFacade)
     case LongTypeExtractor() =>
-      new ExpressionFactory[Long](LongType)
+      new ExpressionFactory[Long](TypeFacade)
     case DoubleTypeExtractor() =>
-      new ExpressionFactory[Double](DoubleType)
+      new ExpressionFactory[Double](TypeFacade)
 
     case MethodType(params, IntTypeExtractor()) =>
-      new ExpressionFactory[Int](IntType, params)
+      new ExpressionFactory[Int](TypeFacade, params)
     case MethodType(params, DoubleTypeExtractor()) =>
-      new ExpressionFactory[Double](DoubleType, params)
+      new ExpressionFactory[Double](TypeFacade, params)
   }
 
-  def symbolChainFromTree(tree: Tree): SymbolType = {
-    def symbolList(tree: Tree): List[RealSymbolType] = tree match {
+  def symbolChainFromTree(tree: Tree): SymbolChain[SymbolType] = {
+    def symbolList(tree: Tree): List[SymbolType] = tree match {
       case Select(t, n) =>
-        findFacadeForSymbol(tree.symbol) :: symbolList(t)
-      case _ => findFacadeForSymbol(tree.symbol) :: Nil
+        TypeFacade.findFacadeForSymbol(tree.symbol) :: symbolList(t)
+      case _ => TypeFacade.findFacadeForSymbol(tree.symbol) :: Nil
     }
-    SymbolChain[RealSymbolType](symbolList(tree))
+    SymbolChain[SymbolType](symbolList(tree))
   }
 
-
-  override def parseExpression[T: universe.TypeTag : RichNumeric](
-                                                                   s: String,
-                                                                   scope: List[RealSymbolType]): Expression = {
-
-    new ExprParser[T](scope, this).parseExpression(s).get
-  }
 }

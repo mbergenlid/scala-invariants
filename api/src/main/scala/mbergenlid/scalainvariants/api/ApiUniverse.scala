@@ -12,6 +12,7 @@ trait ApiUniverse extends Expressions
                           with ExpressionConstraints
                           with Contexts
                           with ContextLookup
+                          with BoundedTypes
 {
 
   type SymbolType <: Symbols#SymbolApi

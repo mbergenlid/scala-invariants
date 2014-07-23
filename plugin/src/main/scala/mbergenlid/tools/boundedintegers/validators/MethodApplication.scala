@@ -1,12 +1,12 @@
 package mbergenlid.tools.boundedintegers.validators
 
+import mbergenlid.scalainvariants.api.SymbolChain
 import mbergenlid.tools.boundedintegers._
-import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
-trait MethodApplication extends AbstractBoundsValidator {
-  self: MyUniverse with TypeFacades with TypeContext with Expressions with TypeConstraintValidator
-          with TypeBoundFactories with BoundedTypes =>
+trait MethodApplication extends AbstractBoundsValidator with MyUniverse {
+
   import global._
+
 
   abstract override def checkBounds(context: Context)(tree: Tree) = 
     validate(context).applyOrElse(tree, super.checkBounds(context))
@@ -14,24 +14,24 @@ trait MethodApplication extends AbstractBoundsValidator {
   private def validate(implicit context: Context): Validator = {
     case Apply(s@Select(_this, method), args) if s.symbol.isMethod =>
       var updatedContext = context
-      val parameterMap: Map[RealSymbolType, BoundedType] = (for {
+      val parameterMap: Map[SymbolType, BoundedType] = (for {
         (argSymbol, paramValue) <- extractMethodParams(s, args)
       } yield {
         val paramBounds = argSymbol.withThisSymbol(_this.symbol).tryAssign(paramValue)(updatedContext)
-        updatedContext = updatedContext.add(SymbolChain(List(argSymbol)), paramBounds.constraint)
+        updatedContext = updatedContext && Context(SymbolChain(List(argSymbol)) -> paramBounds.constraint)
         (argSymbol, paramBounds)
       }).toMap
       val _thisBounds: BoundedType = checkBounds(context)(_this)
       BoundsFactory.fromMethod(symbolChainFromTree(s), _thisBounds,
-        parameterMap + (MethodExpressionFactory.ThisSymbol -> _thisBounds))
+        parameterMap + (ThisSymbol -> _thisBounds))
 
     case t@Apply(method, args) if method.symbol.isMethod =>
       var updatedContext = context
-      val parameterMap: Map[RealSymbolType, BoundedType] = (for {
+      val parameterMap: Map[SymbolType, BoundedType] = (for {
         (argSymbol, paramValue) <- extractMethodParams(method, args)
       } yield {
         val paramBounds = argSymbol.tryAssign(paramValue)(updatedContext)
-        updatedContext = updatedContext.add(SymbolChain(List(argSymbol)), paramBounds.constraint)
+        updatedContext = updatedContext && (SymbolChain(List(argSymbol)) -> paramBounds.constraint)
         (argSymbol, paramBounds)
       }).toMap
 
@@ -39,8 +39,11 @@ trait MethodApplication extends AbstractBoundsValidator {
   }
 
   protected[boundedintegers] 
-  def extractMethodParams(methodApplication: Tree, args: List[Tree]): List[(RealSymbolType, Tree)] = {
-    val symbol = findFacadeForSymbol(methodApplication.symbol).asMethod
+  def extractMethodParams(
+      methodApplication: Tree,
+      args: List[Tree]): List[(SymbolType, Tree)] = {
+
+    val symbol = TypeFacade.findFacadeForSymbol(methodApplication.symbol).asMethod
     val res = symbol.paramss.headOption match {
       case Some(list) => list.zip(args)
       case None => Nil
