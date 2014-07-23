@@ -8,7 +8,7 @@ import scala.language.implicitConversions
 class ContextSpec extends FunSuite with TestUniverse {
   import scala.reflect.runtime.universe._
 
-  val transitiveContext = new TransitiveContext {}
+  val transitiveContext = TransitiveContext
 
   var symbolCache = Map[String, SymbolChain[SymbolType]]()
 

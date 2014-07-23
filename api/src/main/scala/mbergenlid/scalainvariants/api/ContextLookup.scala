@@ -5,7 +5,7 @@ import scala.reflect.api.Types
 trait ContextLookup {
   self: ApiUniverse =>
 
-  trait TransitiveContext {
+  object TransitiveContext {
     type Type = Types#TypeApi
 
     import Constraint._
