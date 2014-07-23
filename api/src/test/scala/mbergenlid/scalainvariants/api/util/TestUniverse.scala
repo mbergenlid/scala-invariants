@@ -20,5 +20,5 @@ trait TestUniverse extends ApiUniverse {
     override def findFacadeForSymbol(symbol: SymbolApi): SymbolApi = symbol
   }
 
-  override def createConstraintFromSymbol(symbol: SymbolType): Constraint = ???
+  override def createConstraintFromSymbol(symbol: SymbolType): Constraint = NoConstraints
 }
