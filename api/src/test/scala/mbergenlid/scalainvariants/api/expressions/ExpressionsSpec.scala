@@ -1,12 +1,12 @@
 
 package mbergenlid.scalainvariants.api.expressions
 
-import mbergenlid.scalainvariants.api.SymbolChain
+import mbergenlid.scalainvariants.api.{ApiUniverse, SymbolChain}
 import org.scalatest.FunSuite
 
 import scala.reflect.runtime.universe._
 
-class ExpressionsSpec extends FunSuite {
+class ExpressionsSpec extends FunSuite with ApiUniverse {
 
   import scala.language.implicitConversions
   var symbolCache = Map[String, SymbolChain]()

@@ -4,14 +4,9 @@ import org.scalatest.FunSuite
 import scala.reflect.runtime.universe._
 
 import scala.language.implicitConversions
-import mbergenlid.scalainvariants.api.constraints._
-import mbergenlid.scalainvariants.api.expressions._
-import mbergenlid.scalainvariants.api.constraints.Equal
-import mbergenlid.scalainvariants.api.constraints.GreaterThan
-import mbergenlid.scalainvariants.api.constraints.LessThan
 import scala.reflect.api.Symbols
 
-class ContextSpec extends FunSuite {
+class ContextSpec extends FunSuite with ApiUniverse {
 
   val transitiveContext = new TransitiveContext {
     import scala.reflect.runtime.universe

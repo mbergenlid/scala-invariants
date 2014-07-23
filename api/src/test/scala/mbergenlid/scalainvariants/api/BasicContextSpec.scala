@@ -1,11 +1,9 @@
 package mbergenlid.scalainvariants.api
 
-import mbergenlid.scalainvariants.api.constraints.{PropertyConstraint, NoConstraints, GreaterThan, LessThan}
-import mbergenlid.scalainvariants.api.expressions.{Polynomial, Expression}
 import org.scalatest.FunSuite
 import scala.language.implicitConversions
 
-class BasicContextSpec extends FunSuite {
+class BasicContextSpec extends FunSuite with ApiUniverse {
 
   import scala.reflect.runtime.universe._
 

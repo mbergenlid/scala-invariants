@@ -1,14 +1,13 @@
 package mbergenlid.scalainvariants.api.util
 
-import mbergenlid.scalainvariants.api.constraints._
 
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.reflect.runtime.universe._
 import scala.language.implicitConversions
-import mbergenlid.scalainvariants.api.expressions.{Polynomial, Term, ConstantValue, Expression}
-import mbergenlid.scalainvariants.api.SymbolChain
+import mbergenlid.scalainvariants.api.{ApiUniverse, SymbolChain}
 
 trait TestExpressionParser {
+  self: ApiUniverse =>
 
   type RealSymbolType = Symbol
   val TypeNothing = typeOf[Nothing]

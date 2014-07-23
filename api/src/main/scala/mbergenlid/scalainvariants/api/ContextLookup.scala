@@ -1,51 +1,52 @@
 package mbergenlid.scalainvariants.api
 
 import scala.reflect.api.Types
-import mbergenlid.scalainvariants.api.expressions.{Polynomial, ConstantValue, Expression, ExpressionFactory}
-import mbergenlid.scalainvariants.api.constraints._
 
-trait TransitiveContext {
-  type Type = Types#TypeApi
+trait ContextLookup {
+  self: ApiUniverse =>
 
-  import Constraint._
+  trait TransitiveContext {
+    type Type = Types#TypeApi
 
-  def expressionForType: PartialFunction[Type, ExpressionFactory[_]]
-  def createConstraintFromSymbol(symbol: SymbolChain): Constraint
+    import Constraint._
 
-  def getConstraint(start: Constraint, resultType: Type, context: Context): Constraint = {
-    val f = expressionForType.lift(resultType)
-    if(f.isDefined)
+    def expressionForType: PartialFunction[Type, ExpressionFactory[_]]
+    def createConstraintFromSymbol(symbol: SymbolChain): Constraint
+
+    def getConstraint(start: Constraint, resultType: Type, context: Context): Constraint = {
+      val f = expressionForType.lift(resultType)
+      if(f.isDefined)
+        for {
+          sc <- start.map(s => f.get.convertExpression(s.expression))
+        } yield {
+          val s = substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
+          s
+        }
+      else
+        NoConstraints
+    }
+
+    def getConstraint(symbol: SymbolChain, resultType: Type, context: Context): Constraint = {
+      val f = expressionForType(resultType)
+      val constraint =
+        (if(symbol.isStable) createConstraintFromSymbol(symbol) && context.get(symbol)
+        else createConstraintFromSymbol(symbol)).map { sc =>
+          f.convertExpression(sc.expression)
+        }
       for {
-        sc <- start.map(s => f.get.convertExpression(s.expression))
-      } yield {
-        val s = substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
-        s
-      }
-    else
-      NoConstraints
-  }
+        sc <- constraint
+      } yield substitute(
+        sc,
+        sc.expression.extractSymbols.filterNot(_ == symbol).toList,
+        resultType,
+        context - symbol)
 
-  def getConstraint(symbol: SymbolChain, resultType: Type, context: Context): Constraint = {
-    val f = expressionForType(resultType)
-    val constraint =
-      (if(symbol.isStable) createConstraintFromSymbol(symbol) && context.get(symbol)
-      else createConstraintFromSymbol(symbol)).map { sc =>
-        f.convertExpression(sc.expression)
-      }
-    for {
-      sc <- constraint
-    } yield substitute(
-      sc,
-      sc.expression.extractSymbols.filterNot(_ == symbol).toList,
-      resultType,
-      context - symbol)
+    }
 
-  }
-
-  def substituteConstants(
-    from: Constraint,
-    resultType: Type,
-    context: Context): Constraint = {
+    def substituteConstants(
+      from: Constraint,
+      resultType: Type,
+      context: Context): Constraint = {
 
       val f = expressionForType(resultType)
 
@@ -66,12 +67,12 @@ trait TransitiveContext {
         c
       }
       constants.reduceOption(_&&_).getOrElse(NoConstraints)
-  }
+    }
 
-  private def findSymbolConstraints(
-    constant: ConstantValue,
-    context: Context,
-    f: ExpressionFactory[_]): Traversable[ExpressionConstraint] = {
+    private def findSymbolConstraints(
+      constant: ConstantValue,
+      context: Context,
+      f: ExpressionFactory[_]): Traversable[ExpressionConstraint] = {
 
       val seq = for {
         (symbol, constraint) <- context.symbols
@@ -81,13 +82,13 @@ trait TransitiveContext {
       seq.collect {
         case ec:ExpressionConstraint => ec
       }
-  }
+    }
 
-  private def constraintFromConstant(
-    sc: SimpleConstraint,
-    boundSymbol: SymbolChain,
-    constant: ConstantValue,
-    f: ExpressionFactory[_]): SimpleConstraint = sc match {
+    private def constraintFromConstant(
+      sc: SimpleConstraint,
+      boundSymbol: SymbolChain,
+      constant: ConstantValue,
+      f: ExpressionFactory[_]): SimpleConstraint = sc match {
 
       case GreaterThan(v) if v.isConstant =>
         if(f.convertExpression(v) >= f.convertConstant(constant))
@@ -114,13 +115,13 @@ trait TransitiveContext {
         else if(constrainedExpression < constantExpression) GreaterThan(f.fromSymbol(boundSymbol))
         else LessThan(f.fromSymbol(boundSymbol))
       case _ => NoConstraints
-  }
+    }
 
-  private def substitute(
-    constraint: Constraint,
-    symbols: List[SymbolChain],
-    resultType: Type,
-    context: Context): Constraint =
+    private def substitute(
+      constraint: Constraint,
+      symbols: List[SymbolChain],
+      resultType: Type,
+      context: Context): Constraint =
       symbols match {
         case symbol :: rest =>
           val b = getConstraintWitUpperLowerBounds(symbol, resultType, context)
@@ -137,22 +138,24 @@ trait TransitiveContext {
             context - symbol
           )
         case Nil => constraint
+      }
+
+
+    private def getConstraintWitUpperLowerBounds(symbol: SymbolChain, resultType: Type, context: Context) = {
+      val c = getConstraint(symbol, resultType, context)
+      val f = expressionForType(resultType)
+      (
+        if(!c.lowerBound.exists(_.expression.isConstant))
+          c && GreaterThanOrEqual(f.MinValue)
+        else
+          c
+        ) && (
+        if(!c.upperBound.exists(_.expression.isConstant))
+          c && LessThanOrEqual(f.MaxValue)
+        else
+          c
+        )
     }
-
-
-  private def getConstraintWitUpperLowerBounds(symbol: SymbolChain, resultType: Type, context: Context) = {
-    val c = getConstraint(symbol, resultType, context)
-    val f = expressionForType(resultType)
-    (
-      if(!c.lowerBound.exists(_.expression.isConstant))
-        c && GreaterThanOrEqual(f.MinValue)
-      else
-        c
-      ) && (
-      if(!c.upperBound.exists(_.expression.isConstant))
-        c && LessThanOrEqual(f.MaxValue)
-      else
-        c
-      )
   }
+
 }

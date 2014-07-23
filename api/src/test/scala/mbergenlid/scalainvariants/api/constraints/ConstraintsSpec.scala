@@ -1,11 +1,11 @@
 package mbergenlid.scalainvariants.api.constraints
 
+import mbergenlid.scalainvariants.api.ApiUniverse
 import org.scalatest.FunSuite
 import mbergenlid.scalainvariants.api.util.TestExpressionParser
-import mbergenlid.scalainvariants.api.expressions.{Expression, Polynomial}
 
 class ConstraintsSpec extends FunSuite
-   with TestExpressionParser {
+   with TestExpressionParser with ApiUniverse {
 
   import Constraint._
   import scala.language.implicitConversions
