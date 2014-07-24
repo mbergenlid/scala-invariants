@@ -10,32 +10,26 @@ trait ContextLookup {
 
     import Constraint._
 
-    def getConstraint(start: Constraint, resultType: Type, context: Context): Constraint = {
-      val f = expressionForType.lift(resultType)
-      if(f.isDefined)
-        for {
-          sc <- start.map(s => f.get.convertExpression(s.expression))
-        } yield {
-          val s = substitute(sc, sc.expression.extractSymbols.toList, resultType, context)
-          s
-        }
-      else
-        NoConstraints
+    def getConstraint(start: Constraint, context: Context): Constraint = {
+      for {
+        sc <- start
+      } yield {
+        val s = substitute(sc, sc.expression.extractSymbols.toList, context)
+        s
+      }
     }
 
-    def getConstraint(symbol: SymbolChain[SymbolType], resultType: Type, context: Context): Constraint = {
-      val f = expressionForType(resultType)
+    def getConstraint(symbol: SymbolChain[SymbolType], context: Context): Constraint = {
       val constraint =
-        (if(symbol.isStable) createConstraintFromSymbol(symbol.head) && context.get(symbol)
-        else createConstraintFromSymbol(symbol.head)).map { sc =>
-          f.convertExpression(sc.expression)
-        }
+        if (symbol.isStable)
+          createConstraintFromSymbol(symbol.head) && context.get(symbol)
+        else
+          createConstraintFromSymbol(symbol.head)
       for {
         sc <- constraint
       } yield substitute(
         sc,
         sc.expression.extractSymbols.filterNot(_ == symbol).toList,
-        resultType,
         context - symbol)
 
     }
@@ -117,11 +111,10 @@ trait ContextLookup {
     private def substitute(
       constraint: Constraint,
       symbols: List[SymbolChain[SymbolType]],
-      resultType: Type,
       context: Context): Constraint =
       symbols match {
         case symbol :: rest =>
-          val b = getConstraintWitUpperLowerBounds(symbol, resultType, context)
+          val b = getConstraintWitUpperLowerBounds(symbol, context)
           val substituted = for {
             sc1 <- constraint
             sc2 <- b
@@ -131,16 +124,15 @@ trait ContextLookup {
           substitute (
             constraint && substituted,
             rest,
-            resultType,
             context - symbol
           )
         case Nil => constraint
       }
 
 
-    private def getConstraintWitUpperLowerBounds(symbol: SymbolChain[SymbolType], resultType: Type, context: Context) = {
-      val c = getConstraint(symbol, resultType, context)
-      val f = expressionForType(resultType)
+    private def getConstraintWitUpperLowerBounds(symbol: SymbolChain[SymbolType], context: Context) = {
+      val c = getConstraint(symbol, context)
+      val f = expressionForType(symbol.head.typeSignature)
       (
         if(!c.lowerBound.exists(_.expression.isConstant))
           c && GreaterThanOrEqual(f.MinValue)

@@ -48,7 +48,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
           for(sc <- BoundsFactory.fromSymbolChain(symbolChain)) yield replaceThisSymbols(sc)
 
         val exprConstraints: Constraint =
-          TransitiveContext.getConstraint(boundExpr.constraint, symbol.typeSignature, context)
+          TransitiveContext.getConstraint(boundExpr.constraint, context)
 
         val fromConstants =
           TransitiveContext.substituteConstants(exprConstraints, symbol.typeSignature, context)
@@ -65,7 +65,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
         val target = BoundsFactory.fromSymbolChain(symbolChain)
         val exprConstraints = boundExpr.constraint &&
-          context.get(symbolChainFromTree(expr))
+          TransitiveContext.getConstraint(context.get(symbolChainFromTree(expr)), context)
 
         if(!(exprConstraints definitelySubsetOf target))
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, exprConstraints)(context)))

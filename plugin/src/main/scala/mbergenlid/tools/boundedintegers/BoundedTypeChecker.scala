@@ -40,7 +40,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case Block(body, res) =>
         val newContext = traverseChildren(body)
         val bounds = checkBounds(newContext)(res)
-        val blockConstraint = TransitiveContext.getConstraint(bounds.constraint, res.tpe, newContext)
+        val blockConstraint = TransitiveContext.getConstraint(bounds.constraint, newContext)
         BoundedType(blockConstraint)
       case _ => 
         traverseChildren(tree.children)
