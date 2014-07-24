@@ -53,7 +53,9 @@ trait ExpressionParsers {
     }
 
     def stringToExpression(s: String): Expression =
-      Polynomial.fromSymbol[T](SymbolChain(List(symbols.find(_.name.toString == s).get)))
+      symbols.find(_.name.toString == s).map { sym =>
+        Polynomial.fromSymbol[T](SymbolChain(List(sym)))
+      }.getOrElse(throw new NoSuchElementException(s"$s is not in $symbols"))
   }
 }
 

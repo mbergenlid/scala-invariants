@@ -6,6 +6,8 @@ case class SymbolChain[S <: Symbols#SymbolApi](symbols: List[S]) extends AnyVal 
   def head: S = symbols.head
   def tail: SymbolChain[S] = new SymbolChain(symbols.tail)
 
+  def ::(s: S): SymbolChain[S] = SymbolChain(s :: symbols)
+
   def isStable: Boolean =
     if(head.isTerm) {
       val termSymbol = head.asTerm

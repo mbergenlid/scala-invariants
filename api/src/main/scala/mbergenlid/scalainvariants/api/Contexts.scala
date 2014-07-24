@@ -9,8 +9,10 @@ trait Contexts {
 
     val Empty = EmptyContext
 
-    implicit def apply(v: (SymbolChain[SymbolType], Constraint)): Context =
-      Symbol(v._1, v._2)
+    implicit def apply(v: (SymbolChain[SymbolType], Constraint)): Context = v._2 match {
+      case PropertyConstraint(prop, c) => Symbol(prop :: v._1, c)
+      case c => Symbol(v._1, c)
+    }
 
     class ContextTraversable(context: Context) extends Traversable[(SymbolChain[SymbolType], Constraint)] {
       override def foreach[U](f: ((SymbolChain[SymbolType], Constraint)) => U): Unit = {

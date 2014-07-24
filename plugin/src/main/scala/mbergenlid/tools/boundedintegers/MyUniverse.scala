@@ -60,9 +60,9 @@ trait MyUniverse extends ApiUniverse
       new ExpressionFactory[Double](TypeFacade)
 
     case MethodType(params, IntTypeExtractor()) =>
-      new ExpressionFactory[Int](TypeFacade, params)
+      new ExpressionFactory[Int](TypeFacade, ThisSymbol :: params)
     case MethodType(params, DoubleTypeExtractor()) =>
-      new ExpressionFactory[Double](TypeFacade, params)
+      new ExpressionFactory[Double](TypeFacade, ThisSymbol :: params)
   }
 
   def symbolChainFromTree(tree: Tree): SymbolChain[SymbolType] = {

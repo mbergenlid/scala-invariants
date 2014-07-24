@@ -264,7 +264,7 @@ trait ExpressionConstraints {
   }
 
    case class PropertyConstraint(
-      symbol: Symbols#SymbolApi,
+      symbol: SymbolType,
       constraint: Constraint
     ) extends SimpleConstraint {
 
@@ -281,7 +281,7 @@ trait ExpressionConstraints {
 
     def &&(other: Constraint) = other match {
       case PropertyConstraint(sym, c) if sym == symbol =>
-        (constraint && c).map(ec => PropertyConstraint(symbol, ec))
+        PropertyConstraint(symbol, constraint && c)
       case s: SimpleConstraint => And(List(this, s))
       case And(cs) => And(this :: cs)
       case _ => other && this

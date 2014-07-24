@@ -13,7 +13,7 @@ trait TypeBoundFactories extends ApiUniverse {
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
   lazy val EqualType = typeOf[EqualAnnotation]
   lazy val ThisSymbol =
-    typeOf[this.type].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
+    typeOf[String].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
   override def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbol(symbol)
 
