@@ -1,12 +1,13 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.scalainvariants.api.constraints
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
-import mbergenlid.tools.boundedintegers.util.TestExpressionParser
 import org.scalatest.FunSuite
-import scala.reflect.runtime.universe._
+import mbergenlid.scalainvariants.api.util.{TestUniverse, TestExpressionParser}
 
 class ConstraintsSpec extends FunSuite
-   with Constraints with TestExpressionParser {
+   with TestExpressionParser with TestUniverse {
+
+  import Constraint._
+  import scala.language.implicitConversions
 
   test("ExpressionConstraint.&&") {
     val res1 = LessThanOrEqual(1) && GreaterThanOrEqual(1)
@@ -268,13 +269,6 @@ class ConstraintsSpec extends FunSuite
     } yield ec1 && ec2
 
     assert(res4 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
-
-    val res5 = for {
-      ec1 <- c("x == y")
-      ec2 <- c("(x >= 0 && x < 10) && x == z")
-    } yield ec2
-
-//    assert(res5 === c("(x > 5 && x < 10) || (x > 20 && x < 25)"), res4.prettyPrint())
   }
 
   test("Adding expression constraints") {
@@ -390,6 +384,4 @@ class ConstraintsSpec extends FunSuite
     //a == x1 >= x2 == 12 ==> a > 12
     assertFactory(ec("x == a") >=| ec("x == 12"), Some(GreaterThanOrEqual))
   }
-
-  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }

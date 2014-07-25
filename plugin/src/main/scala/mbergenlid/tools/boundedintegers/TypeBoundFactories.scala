@@ -1,19 +1,21 @@
 package mbergenlid.tools.boundedintegers
 
+import mbergenlid.scalainvariants.api.{ApiUniverse, SymbolChain}
 import mbergenlid.tools.boundedintegers.annotations.{Equal => EqualAnnotation, GreaterThan => GreaterThanAnnotation, GreaterThanOrEqual => GreaterThanOrEqualAnnotation, LessThan => LessThanAnnotation, LessThanOrEqual => LessThanOrEqualAnnotation, Property => PropertyAnnotation, Bounded}
-import mbergenlid.tools.boundedintegers.facades.TypeFacades
 
 import scala.reflect.runtime._
 
-trait TypeBoundFactories {
-  self: MyUniverse with Constraints with Expressions with TypeFacades with BoundedTypes with TypeContext =>
+trait TypeBoundFactories extends ApiUniverse {
+  self: MyUniverse =>
 
   import global._
 
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
   lazy val EqualType = typeOf[EqualAnnotation]
+  lazy val ThisSymbol =
+    typeOf[String].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
-  def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbolChain(symbol)
+  override def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbol(symbol)
 
   abstract class AnnotationExtractor(expectedType: Type, globalType: universe.Type) {
     def unapply(tpe: Type): Boolean = {
@@ -34,12 +36,12 @@ trait TypeBoundFactories {
     AnnotationExtractor(EqualType, universe.typeOf[EqualAnnotation])
 
   trait BoundedTypeFactory {
-    def fromSymbolChain(symbol: SymbolType): Constraint
+    def fromSymbol(symbol: SymbolType): Constraint
     def fromTree(tree: Tree): BoundedType
     def fromMethodApplication(
-      symbolChain: SymbolType,
+      symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[RealSymbolType, BoundedType]): BoundedType
+      args: Map[SymbolType, BoundedType]): BoundedType
   }
 
   object BoundsFactory {
@@ -49,13 +51,16 @@ trait TypeBoundFactories {
       else PropertyBoundsFactory
 
 
-    def fromSymbolChain(symbol: SymbolType): Constraint =
-      getFactory(symbol.head.typeSignature).fromSymbolChain(symbol)
+    def fromSymbol(symbol: SymbolType): Constraint =
+      getFactory(symbol.typeSignature).fromSymbol(symbol)
+
+    def fromSymbolChain(symbol: SymbolChain[SymbolType]): Constraint =
+      fromSymbol(symbol.head)
 
     def fromMethod(
-      symbolChain: SymbolType,
+      symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[RealSymbolType, BoundedType]): BoundedType = {
+      args: Map[SymbolType, BoundedType]): BoundedType = {
 
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         getFactory(methodSymbol.returnType).fromMethodApplication(symbolChain, thisBounds, args)
@@ -69,14 +74,14 @@ trait TypeBoundFactories {
   object NumericBoundsFactory extends BoundedTypeFactory {
 
 
-    private def constraint(bounds: Annotation, symbol: RealSymbolType): ExpressionConstraint =
+    private def constraint(bounds: Annotation, symbol: SymbolType): ExpressionConstraint =
       constraint(bounds.tpe, bounds.scalaArgs, symbol)
 
     private[TypeBoundFactories]
     def constraint(
       boundType: Type,
       args: List[Tree],
-      symbol: RealSymbolType): ExpressionConstraint = boundType match {
+      symbol: SymbolType): ExpressionConstraint = boundType match {
         case GreaterThanOrEqualExtractor() =>
           GreaterThanOrEqual(annotationExpression(args.head, symbol))
         case LessThanOrEqualExtractor() =>
@@ -89,12 +94,12 @@ trait TypeBoundFactories {
           GreaterThan(annotationExpression(args.head, symbol))
     }
 
-    private def annotationExpression(tree: Tree, symbol: RealSymbolType): Expression = {
+    private def annotationExpression(tree: Tree, symbol: SymbolType): Expression = {
       val Apply(_, List(value)) = tree
       expression(value, symbol)
     }
 
-    private def expression(tree: Tree, symbol: RealSymbolType): Expression = tree match {
+    private def expression(tree: Tree, symbol: SymbolType): Expression = tree match {
       case Literal(Constant(s: String)) =>
         val factory = expressionForType(symbol.typeSignature)
         if(symbol.isMethod)
@@ -119,7 +124,7 @@ trait TypeBoundFactories {
         expressionForType(tpe).fromSymbol(symbolChainFromTree(x))
     }
 
-    private def annotatedConstraints(symbol: RealSymbolType, tpe: TypeType): List[ExpressionConstraint] = {
+    private def annotatedConstraints(symbol: SymbolType, tpe: TypeType): List[ExpressionConstraint] = {
       val annotations = symbol.annotations ++ (
         if(symbol.isMethod && symbol.asMethod.isGetter) symbol.asMethod.accessed.annotations
         else Nil
@@ -165,33 +170,33 @@ trait TypeBoundFactories {
       if(tree.symbol != null && tree.symbol != NoSymbol) {
         val symbolChain = symbolChainFromTree(tree)
         //Only add -Equal(exp)- if the symbol is stable.
-        if(isStable(symbolChain.head))
-          BoundedType(Equal(exp) && fromSymbolChain(symbolChain), f)
+        if(symbolChain.isStable)
+          BoundedType(Equal(exp) && fromSymbol(symbolChain.head), f)
         else
-          BoundedType(fromSymbolChain(symbolChain))
+          BoundedType(fromSymbol(symbolChain.head))
       } else {
         BoundedType(Equal(exp), f)
       }
     }
 
-    def fromSymbolChain(symbolChain: SymbolType): Constraint = {
+    def fromSymbol(symbolChain: SymbolType): Constraint = {
       val list =
-        annotatedConstraints(symbolChain.head, symbolChain.head.typeSignature)
+        annotatedConstraints(symbolChain, symbolChain.typeSignature)
       val constraints = (NoConstraints.asInstanceOf[Constraint] /: list) (_&&_)
 
-      ensureLowerAndUpperBounds(constraints, symbolChain.head.typeSignature)
+      ensureLowerAndUpperBounds(constraints, symbolChain.typeSignature)
     }
 
     def fromMethodApplication(
-      symbolChain: SymbolType,
+      symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[RealSymbolType, BoundedType]): BoundedType = {
+      args: Map[SymbolType, BoundedType]): BoundedType = {
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         val annotationConstraints: List[ExpressionConstraint] =
           annotatedConstraints(methodSymbol, methodSymbol.typeSignature)
 
         val backingFieldConstraint: Constraint =
-          if(isStable(methodSymbol))
+          if(SymbolChain(List(methodSymbol)).isStable)
             Equal(expressionForType(methodSymbol.returnType).
               fromSymbol(symbolChain))
           else
@@ -201,10 +206,10 @@ trait TypeBoundFactories {
           if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
             annotationConstraints
           } else {
-            val argSymbols = MethodExpressionFactory.ThisSymbol :: methodSymbol.paramss.head
+            val argSymbols = ThisSymbol :: methodSymbol.paramss.head
 
             def substitute(
-              symbols: List[(SymbolType, Constraint)],
+              symbols: List[(SymbolChain[SymbolType], Constraint)],
               ec: ExpressionConstraint): Constraint =
               symbols match {
                 case (symbol, c) :: rest =>
@@ -235,8 +240,7 @@ trait TypeBoundFactories {
   }
 
   object PropertyBoundsFactory extends BoundedTypeFactory {
-    override def fromSymbolChain(symbolChain: SymbolType): Constraint = {
-      val symbol = symbolChain.head
+    override def fromSymbol(symbol: SymbolType): Constraint = {
       (NoConstraints.asInstanceOf[Constraint] /: symbol.annotations.collect {
         case a if a.tpe <:< typeOf[PropertyAnnotation] =>
           val (t@Literal(Constant(prop: String))) :: annotations = a.scalaArgs
@@ -251,7 +255,7 @@ trait TypeBoundFactories {
             throw new CompilationError(
               Error(t.pos, s"Can not find property $prop in type ${symbol.typeSignature}"))
 
-          if(!isStable(memberSymbol))
+          if(!SymbolChain(List(memberSymbol)).isStable)
             throw new CompilationError(
               Error(t.pos, s"Can not be bound to property $prop in type ${symbol.typeSignature} as " +
                 s"it is not stable."))
@@ -272,14 +276,14 @@ trait TypeBoundFactories {
     }
     override def fromTree(tree: Tree): BoundedType =
       if(tree.symbol != null)
-        BoundedType(fromSymbolChain(symbolChainFromTree(tree)))
+        BoundedType(fromSymbol(symbolChainFromTree(tree).head))
       else
         BoundedType.noBounds
 
     override def fromMethodApplication(
-      symbolChain: SymbolType,
+      symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[RealSymbolType, BoundedType]): BoundedType =
-        BoundedType(fromSymbolChain(symbolChain))
+      args: Map[SymbolType, BoundedType]): BoundedType =
+        BoundedType(fromSymbol(symbolChain.head))
   }
 }

@@ -33,4 +33,8 @@ class MethodApplicationSpec extends FunSuite
 
     assert(argList.size === 2)
   }
+
+  override def checkBounds(context: Context)(tree: global.Tree): BoundedType = ???
+
+  override def reportError(error: BoundedTypeError): Unit = ???
 }

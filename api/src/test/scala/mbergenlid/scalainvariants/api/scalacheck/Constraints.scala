@@ -1,17 +1,16 @@
-package mbergenlid.tools.boundedintegers.scalacheck
+package mbergenlid.scalainvariants.api.scalacheck
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
+import mbergenlid.scalainvariants.api.util.TestUniverse
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary._
 import org.scalacheck.Prop._
-import mbergenlid.tools.boundedintegers.{Constraints => CUT}
 import scala.reflect.runtime.universe.runtimeMirror
 import scala.tools.reflect.ToolBox
 import scala.language.implicitConversions
 
-class Constraints extends FunSuite with Checkers with CUT {
+class Constraints extends FunSuite with Checkers with TestUniverse {
 
   implicit def int2Expression(v: Int): Expression = Polynomial.fromConstant(v)
 
@@ -87,10 +86,9 @@ class Constraints extends FunSuite with Checkers with CUT {
       })
       true
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         println(t.getMessage)
         false
-      }
     }
 
   }
@@ -110,12 +108,5 @@ class Constraints extends FunSuite with Checkers with CUT {
 
   lazy val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
   val global = tb.u
-  import global._
 
-  override val TypeNothing: TypeType = typeOf[Nothing]
-  override type RealSymbolType = global.Symbol
-  override def parseExpression[T: TypeTag : RichNumeric](s: String, scope: List[RealSymbolType]): Expression = ???
 }
-
-
-

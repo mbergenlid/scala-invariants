@@ -12,6 +12,7 @@ class IntFacades extends PluginTestRunner {
        |y + 1
      """.stripMargin)
 
-    println(bounds.constraint.prettyPrint())
+    import cut._
+    assert(bounds.constraint.definitelySubsetOf(Equal(6)))
   }
 }

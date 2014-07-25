@@ -3,11 +3,21 @@ package mbergenlid.tools.boundedintegers.facades
 import scala.reflect.runtime._
 import mbergenlid.tools.boundedintegers.MyUniverse
 
+import mbergenlid.scalainvariants.api
+
 trait TypeFacades {
   self: MyUniverse =>
 
-  type Symbol = global.Symbol
   import global._
+
+  object TypeFacade extends api.TypeFacades[SymbolType] {
+
+    override def findFacadeForSymbol(symbol: SymbolType): SymbolType = symbol match {
+      case m: MethodSymbol => findFacadeForMethodSymbol(m)
+      case t: ClassSymbol => find(symbol.typeSignature).map(_.typeSymbol).getOrElse(symbol)
+      case _ => symbol
+    }
+  }
 
   lazy private val typeFacades = Map[Type, Type] (
     universe.typeOf[String].asInstanceOf[Type] -> universe.typeOf[StringFacade].asInstanceOf[Type],
@@ -15,7 +25,7 @@ trait TypeFacades {
     universe.typeOf[Int].asInstanceOf[Type] -> universe.typeOf[IntFacade].asInstanceOf[Type]
   )
 
-  lazy private val symbolFacades: Map[String, Symbol] =
+  lazy private val symbolFacades: Map[String, global.Symbol] =
     typeFacades.map { t =>
       t._1.typeSymbol.fullName -> t._2.typeSymbol
     }
@@ -34,12 +44,6 @@ trait TypeFacades {
           }
     }.getOrElse(symbol).asMethod
     res
-  }
-
-  def findFacadeForSymbol(symbol: Symbol): Symbol = symbol match {
-    case m: MethodSymbol => findFacadeForMethodSymbol(m)
-    case t: ClassSymbol => find(symbol.typeSignature).map(_.typeSymbol).getOrElse(symbol)
-    case _ => symbol
   }
 
   def findFacadeForType(tpe: Type): Type =

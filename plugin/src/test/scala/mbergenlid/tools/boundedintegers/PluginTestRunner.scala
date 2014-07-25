@@ -43,7 +43,7 @@ trait PluginTestRunner extends FunSuite {
         |println("Start of test")
       """.stripMargin + expression
 
-    cut.checkBounds(new cut.Context())(typeCheck(withImports))
+    cut.checkBounds(cut.EmptyContext)(typeCheck(withImports))
   }
 
   implicit def int2Expression(v: Int) =

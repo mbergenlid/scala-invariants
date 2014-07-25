@@ -1,12 +1,11 @@
-package mbergenlid.tools.boundedintegers
+package mbergenlid.scalainvariants.api
 
 trait BoundedTypes {
-  self: Constraints with Expressions =>
+  self: ApiUniverse =>
 
   trait BoundedType {
     def constraint: Constraint
   }
-
   case class NumericType(constraint: Constraint) extends BoundedType {
     protected def this() = this(NoConstraints)
 
@@ -17,6 +16,7 @@ trait BoundedTypes {
   }
 
   object BoundedType {
+    import Constraint._
     def apply(constraint: Constraint, expressionFactory: ExpressionFactory[_]) = {
       NumericType(constraint.map { sc =>
         expressionFactory.convertExpression(sc.expression)
@@ -33,6 +33,4 @@ trait BoundedTypes {
   object NoBounds extends BoundedType {
     val constraint = NoConstraints
   }
-
 }
-

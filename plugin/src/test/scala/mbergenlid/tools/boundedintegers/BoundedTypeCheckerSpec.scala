@@ -239,4 +239,7 @@ class BoundedTypeCheckerSpec extends PluginTestRunner
 
   }
 
+  override def checkBounds(context: Context)(tree: global.Tree): BoundedType = ???
+
+  override def reportError(error: BoundedTypeError): Unit = ???
 }
