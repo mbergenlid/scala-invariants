@@ -17,6 +17,10 @@ class ArraySearchTests extends PluginTestRunner {
         |    else find(array, element, start+1)
         |}
         |
+        |val sa = Array(1,2,3,4,5)
+        |val index = find(sa, 4, 0)
+        |
+        |if(index > -1) sa(index)
         |true
       """.stripMargin)(Nil)
   }

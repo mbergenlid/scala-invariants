@@ -74,21 +74,21 @@ object PropertyRunner extends MyUniverse with Assertions {
 
   }
 
-  private def getPropertyParams(symbol: Symbol): PropertyParams = symbol.typeSignature match {
+  private def getPropertyParams(symbol: SymbolApi): PropertyParams = symbol.typeSignature match {
     case TypeRef(_, IntSymbol, _) =>
-      PropertyParams[Int](new ExpressionFactory[Int](IntType), parameterConstraints(symbol))
+      PropertyParams[Int](new ExpressionFactory[Int](TypeFacade), parameterConstraints(symbol))
     case TypeRef(_, DoubleSymbol, _) =>
-      PropertyParams[Double](new ExpressionFactory[Double](DoubleType), parameterConstraints(symbol))
+      PropertyParams[Double](new ExpressionFactory[Double](TypeFacade), parameterConstraints(symbol))
   }
 
   private def methodConstraints(method: MethodSymbol) = {
     val globalSymbol = method.asInstanceOf[global.MethodSymbol]
-    BoundsFactory.apply(SymbolChain(List(globalSymbol))).constraint
+    BoundsFactory.fromSymbol(globalSymbol)
   }
 
-  private def parameterConstraints(param: Symbol) = {
+  private def parameterConstraints(param: SymbolApi) = {
     val globalSymbol = param.asInstanceOf[global.Symbol]
-    BoundsFactory.apply(SymbolChain(List(globalSymbol))).constraint
+    BoundsFactory.fromSymbol(globalSymbol)
   }
 
   import org.scalacheck.Prop
@@ -222,4 +222,8 @@ object PropertyRunner extends MyUniverse with Assertions {
         shrink.asInstanceOf[Shrink[Any]], constraint,
         expressionFactory.asInstanceOf[ExpressionFactory[Any]])
   }
+
+  override def checkBounds(context: PropertyRunner.Context)(tree: global.Tree): PropertyRunner.BoundedType = ???
+
+  override def reportError(error: PropertyRunner.BoundedTypeError): Unit = ???
 }

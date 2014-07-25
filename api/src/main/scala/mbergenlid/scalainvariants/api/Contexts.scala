@@ -10,8 +10,8 @@ trait Contexts {
     val Empty = EmptyContext
 
     implicit def apply(v: (SymbolChain[SymbolType], Constraint)): Context = v._2 match {
-      case PropertyConstraint(prop, c) => Symbol(prop :: v._1, c)
-      case c => Symbol(v._1, c)
+      case PropertyConstraint(prop, c) => SymbolContext(prop :: v._1, c)
+      case c => SymbolContext(v._1, c)
     }
 
     class ContextTraversable(context: Context) extends Traversable[(SymbolChain[SymbolType], Constraint)] {
@@ -19,7 +19,7 @@ trait Contexts {
         def foreach(f: ((SymbolChain[SymbolType], Constraint)) => U, c: Context): Unit = c match {
           case lhs && rhs => foreach(f, rhs); foreach(f, lhs)
           case lhs || rhs => foreach(f, rhs); foreach(f, lhs)
-          case Symbol(sym, constraint) => f(sym, constraint)
+          case SymbolContext(sym, constraint) => f(sym, constraint)
           case EmptyContext =>
         }
         foreach(f, context)
@@ -74,7 +74,7 @@ trait Contexts {
       new ||(lhs - symbol, rhs - symbol)
   }
 
-  case class Symbol(symbol: SymbolChain[SymbolType], constraint: Constraint) extends Context {
+  case class SymbolContext(symbol: SymbolChain[SymbolType], constraint: Constraint) extends Context {
     override def get(symbol: SymbolChain[SymbolType]): Constraint =
       if(this.symbol == symbol) constraint
       else {

@@ -10,14 +10,24 @@ class ContextSpec extends FunSuite with TestUniverse {
 
   val transitiveContext = TransitiveContext
 
-  var symbolCache = Map[String, SymbolChain[SymbolType]]()
+  class Wrapper {
+    val x: Int = 1
+    val y: Int = 2
+    val z: Int = 3
+  }
+
+  var symbolCache = Map[String, SymbolChain[SymbolType]](
+    "x" -> SymbolChain(List(typeOf[Wrapper].member(newTermName("x")))),
+    "y" -> SymbolChain(List(typeOf[Wrapper].member(newTermName("y")))),
+    "z" -> SymbolChain(List(typeOf[Wrapper].member(newTermName("z"))))
+  )
 
   implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)
   implicit def sym(s: String): SymbolChain[SymbolType] = {
-    if(!symbolCache.contains(s)) {
-      symbolCache += (s -> SymbolChain[SymbolType](List(typeOf[this.type].termSymbol.
-        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
-    }
+//    if(!symbolCache.contains(s)) {
+//      symbolCache += (s -> SymbolChain[SymbolType](List(typeOf[this.type].termSymbol.
+//        newTermSymbol(newTermName(s), NoPosition, NoFlags | Flag.FINAL ))))
+//    }
     symbolCache(s)
   }
   implicit def sym2Expression(sym: SymbolChain[SymbolType]): Expression = Polynomial.fromSymbol[Int](sym)
