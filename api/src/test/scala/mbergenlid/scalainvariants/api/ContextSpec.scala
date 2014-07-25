@@ -33,7 +33,7 @@ class ContextSpec extends FunSuite with TestUniverse {
       LessThan(Polynomial.fromConstant(4))
     val c = EmptyContext && sym("x") -> expected
 
-    assert(transitiveContext.getConstraint("x", typeOf[Int], c) === expected)
+    assert(transitiveContext.getConstraint("x", c) === expected)
   }
 
   test("More complex transitive with Mixed") {
@@ -43,7 +43,7 @@ class ContextSpec extends FunSuite with TestUniverse {
       sym("y") -> GreaterThan(Polynomial.fromConstant(4))
 
 
-    val xBounds = transitiveContext.getConstraint("x", typeOf[Int], c)
+    val xBounds = transitiveContext.getConstraint("x", c)
     assert(xBounds.asInstanceOf[And].constraints.head === originalXBound)
   }
 
@@ -194,7 +194,7 @@ class ContextSpec extends FunSuite with TestUniverse {
       (negativeAsserts: Constraint*) {
     val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
     test(c.toString) {
-      val xBounds = transitiveContext.getConstraint("x", typeOf[Int], c)
+      val xBounds = transitiveContext.getConstraint("x", c)
       if(debug) {
         println(xBounds.prettyPrint("x"))
       }
