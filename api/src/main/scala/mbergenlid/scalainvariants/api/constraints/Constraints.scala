@@ -328,7 +328,8 @@ trait Constraints {
       constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
     def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
-      exprConstraints.map(ec => bf(f(ec), ec)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
+      constraints.map(_.map(f)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
+//      exprConstraints.map(ec => bf(f(ec), ec)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
 
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
 

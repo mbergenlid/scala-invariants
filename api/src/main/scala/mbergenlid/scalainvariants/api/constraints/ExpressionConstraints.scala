@@ -277,7 +277,13 @@ trait ExpressionConstraints {
 
     def tryAnd(constraint: SimpleConstraint) = ???
 
-    def ||(other: Constraint) = ???
+    def ||(other: Constraint) = other match {
+      case PropertyConstraint(sym, c) if sym == symbol =>
+        PropertyConstraint(symbol, constraint || c)
+      case s: SimpleConstraint => Or(List(And(this), And(s)))
+      case a: And => Or(List(And(this), a))
+      case Or(ands) => Or(And(this) :: ands)
+    }
 
     def &&(other: Constraint) = other match {
       case PropertyConstraint(sym, c) if sym == symbol =>
@@ -289,7 +295,8 @@ trait ExpressionConstraints {
 
     def flatMap(f: (ExpressionConstraint) => Constraint) = ???
 
-    def map[B](f: (ExpressionConstraint) => B)(implicit bf: ConstraintBuilder[B]) = ???
+    def map[B](f: (ExpressionConstraint) => B)(implicit bf: ConstraintBuilder[B]) =
+      PropertyConstraint(symbol, constraint.map(f))
 
     def isSymbolConstraint = ???
 

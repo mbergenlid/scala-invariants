@@ -48,7 +48,7 @@ class BoundToInputSpec extends PluginTestRunner {
          |myMethod(10)
        """.stripMargin)
 
-    println(b.constraint.prettyPrint())
+    assert(b.constraint.definitelySubsetOf(cut.Equal(10)))
   }
 
   test("Bound to double input") {
