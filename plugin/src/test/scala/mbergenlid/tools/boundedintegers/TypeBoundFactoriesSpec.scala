@@ -3,44 +3,20 @@ package mbergenlid.tools.boundedintegers
 
 class TypeBoundFactoriesSpec extends PluginTestRunner {
 
-  /**
-   *
-   * int -> checkBounds(5) = NumericType(Equal(5))
-   * array -> checkBounds(sa) = PropertyType(PropertyConstraint(length, sa.length)
-   *                                property(length) = ==sa.length
-   * PropertyConstraint(length, ==sa.length) flatMap
-   *  PropertyConstraint(length, ==sa.length)
-   *
-   * args = (
-   *   array -> PropertyBounds(sa, ...)
-   * )
-   *
-   * ec = Equal("array.length")
-   *
-   * sa.length
-   *
-   * params = array.length
-   *
-   * symbol = array.length
-   * args.find(t => symbol.matchesPrefix(t._1)) match {
-   *    case Some((sym, bounds)) => bounds.property()
-   * }
-   *
-   * ec.extractSymbols.collect {
-   *   case s if args.
-   * }
-   */
   test("Numeric method application") {
-    val bounds = expression(
+    compile(
       """
         |@Equal("array.length")
         |def testMethod(array: Array[Int]): Int = array.length
         |
         |val sa = Array(1,2,3,4,5)
-        |testMethod(sa)
-      """.stripMargin)
+        |
+        |@Equal(sa.length)
+        |val index = testMethod(sa)
+        |
+        |true
+      """.stripMargin)(Nil)
 
-    println(bounds.constraint.prettyPrint())
   }
 
   test("PropertyType with no direct constraints") {

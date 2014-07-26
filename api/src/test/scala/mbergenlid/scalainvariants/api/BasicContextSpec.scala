@@ -127,13 +127,13 @@ class BasicContextSpec extends FunSuite with TestUniverse {
     val constraint = context.get(chain(field1Symbol, testClassSymbol))
     assert(constraint === GreaterThan(0))
 
-//    val context2 = EmptyContext &&
-//      chain(testClassSymbol) ->
-//        (PropertyConstraint(field1Symbol, GreaterThan(0)) &&
-//          PropertyConstraint(field2Symbol, LessThan(0)))
-//
-//    val constraint2 = context2.get(chain(field1Symbol, testClassSymbol))
-//    assert(constraint2 === GreaterThan(0))
+    val context2 = EmptyContext &&
+      chain(testClassSymbol) ->
+        (PropertyConstraint(field1Symbol, GreaterThan(0)) &&
+          PropertyConstraint(field2Symbol, LessThan(0)))
+
+    val constraint2 = context2.get(chain(field1Symbol, testClassSymbol))
+    assert(constraint2 === GreaterThan(0))
   }
 
   test("Remove mapping from Context") {

@@ -11,6 +11,7 @@ trait Contexts {
 
     implicit def apply(v: (SymbolChain[SymbolType], Constraint)): Context = v._2 match {
       case PropertyConstraint(prop, c) => SymbolContext(prop :: v._1, c)
+      case And(cs) => cs.foldLeft[Context](Empty)((c1, c2) => c1 && apply(v._1, c2))
       case c => SymbolContext(v._1, c)
     }
 

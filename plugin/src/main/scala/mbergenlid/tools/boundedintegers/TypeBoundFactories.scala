@@ -41,7 +41,7 @@ trait TypeBoundFactories extends ApiUniverse {
     def fromMethodApplication(
       symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[SymbolType, BoundedType]): BoundedType
+      args: Context): BoundedType
   }
 
   object BoundsFactory {
@@ -60,7 +60,7 @@ trait TypeBoundFactories extends ApiUniverse {
     def fromMethod(
       symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[SymbolType, BoundedType]): BoundedType = {
+      args: Context): BoundedType = {
 
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         getFactory(methodSymbol.returnType).fromMethodApplication(symbolChain, thisBounds, args)
@@ -190,7 +190,7 @@ trait TypeBoundFactories extends ApiUniverse {
     def fromMethodApplication(
       symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[SymbolType, BoundedType]): BoundedType = {
+      args: Context): BoundedType = {
         val methodSymbol: MethodSymbol = symbolChain.head.asMethod
         val annotationConstraints: List[ExpressionConstraint] =
           annotatedConstraints(methodSymbol, methodSymbol.typeSignature)
@@ -206,7 +206,6 @@ trait TypeBoundFactories extends ApiUniverse {
           if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
             annotationConstraints
           } else {
-            val argSymbols = ThisSymbol :: methodSymbol.paramss.head
 
             def substitute(
               symbols: List[(SymbolChain[SymbolType], Constraint)],
@@ -221,11 +220,11 @@ trait TypeBoundFactories extends ApiUniverse {
             for {
               ec <- annotationConstraints
             } yield {
-              val params = ec.expression.extractSymbols.filter(s => argSymbols.contains(s.head)).toList
-              val paramConstraints: List[Constraint] =
-                params.map(p => args.get(p.head).map(b => b.constraint).getOrElse(NoConstraints))
+              val params = ec.expression.extractSymbols.map { s =>
+                (s, args.get(s))
+              }
 
-              val res = substitute((params zip paramConstraints).toList, ec)
+              val res = substitute(params.toList, ec)
               res
             }
           }
@@ -303,7 +302,7 @@ trait TypeBoundFactories extends ApiUniverse {
     override def fromMethodApplication(
       symbolChain: SymbolChain[SymbolType],
       thisBounds: BoundedType,
-      args: Map[SymbolType, BoundedType]): BoundedType =
+      args: Context): BoundedType =
         BoundedType(fromSymbol(symbolChain.head))
   }
 }

@@ -275,7 +275,12 @@ trait ExpressionConstraints {
       case _ => false
     }
 
-    def tryAnd(constraint: SimpleConstraint) = ???
+    def tryAnd(that: SimpleConstraint) = that match {
+      case PropertyConstraint(otherSymbol, otherConstraint) if otherSymbol == symbol =>
+        Some(copy(constraint = constraint && otherConstraint))
+      case _ => None
+    }
+
 
     def ||(other: Constraint) = other match {
       case PropertyConstraint(sym, c) if sym == symbol =>

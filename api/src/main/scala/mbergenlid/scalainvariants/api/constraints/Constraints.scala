@@ -29,7 +29,7 @@ trait Constraints {
         }
       }
 
-    implicit class Constraint2SimpleTraversable(c: Constraint) extends Traversable[ExpressionConstraint] {
+    implicit class Constraint2ExpressionTraversable(c: Constraint) extends Traversable[ExpressionConstraint] {
       def foreach[U](f: ExpressionConstraint => U): Unit = {
         def foreach(f: ExpressionConstraint => U, c: Constraint): Unit = c match {
           case s: ExpressionConstraint => f(s)
@@ -50,6 +50,23 @@ trait Constraints {
       case Some(x) => x
       case None => NoConstraints
     }
+
+    class SimpleTraversable(c: Constraint) extends Traversable[SimpleConstraint] {
+      def foreach[U](f: SimpleConstraint => U): Unit = {
+        def foreach(f: SimpleConstraint => U, c: Constraint): Unit = c match {
+          case s: SimpleConstraint => f(s)
+          case And(constraints) =>
+            constraints.collect{case ec:SimpleConstraint => ec}.foreach(f)
+          case Or(constraints) =>
+            constraints.foreach(_.constraints.collect{case ec:SimpleConstraint => ec}.foreach(f))
+          case _ => throw new RuntimeException(s"Could not happen: $c")
+        }
+        foreach(f, c)
+      }
+    }
+
+    def simpleConstraints(c: Constraint): SimpleTraversable =
+      new SimpleTraversable(c)
   }
 
   sealed trait Constraint {
