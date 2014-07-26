@@ -32,6 +32,9 @@ case class SymbolChain[S <: Symbols#SymbolApi](symbols: List[S]) extends AnyVal 
   def matchesPrefix(symbol: SymbolChain[S]): Boolean =
     this.symbols.endsWith(symbol.symbols)
 
+  def matchesPrefix(symbol: S): Boolean =
+    this.matchesPrefix(SymbolChain(List(symbol)))
+
   def prettyPrint =
     symbols.reverse.map(_.name.toString).mkString(".")
 }

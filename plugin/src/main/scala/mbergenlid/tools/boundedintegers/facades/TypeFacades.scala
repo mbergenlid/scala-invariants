@@ -17,6 +17,8 @@ trait TypeFacades {
       case t: ClassSymbol => find(symbol.typeSignature).map(_.typeSymbol).getOrElse(symbol)
       case _ => symbol
     }
+
+    def findFacadeForType(tpe: Type): Type = find(tpe).getOrElse(tpe)
   }
 
   lazy private val typeFacades = Map[Type, Type] (

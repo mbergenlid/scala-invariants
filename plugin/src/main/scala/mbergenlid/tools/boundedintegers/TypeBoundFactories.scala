@@ -275,10 +275,30 @@ trait TypeBoundFactories extends ApiUniverse {
       }) (_ && _)
     }
     override def fromTree(tree: Tree): BoundedType =
-      if(tree.symbol != null)
-        BoundedType(fromSymbol(symbolChainFromTree(tree).head))
-      else
+      if(tree.symbol != null) {
+        val chain = symbolChainFromTree(tree)
+        BoundedType(
+          propertyConstraints(chain) &&
+          fromSymbol(chain.head)
+        )
+      } else
         BoundedType.noBounds
+
+    private def propertyConstraints(symbolChain: SymbolChain[SymbolType]): Constraint = {
+      def isPublicStable(s: Symbol) = s.isPublic && s.isTerm && s.asTerm.isStable
+
+      val symbol = symbolChain.head
+      val stableMembers = TypeFacade.findFacadeForType(symbol.typeSignature).members.filter(isPublicStable)
+      val constraints: Traversable[Constraint] = stableMembers.map {s: Symbol =>
+        if(expressionForType.isDefinedAt(s.typeSignature))
+          PropertyConstraint(s,
+            Equal(expressionForType(s.typeSignature).fromSymbol(SymbolChain(s :: symbolChain.symbols))))
+        else
+          NoConstraints
+      }
+      constraints.reduceOption(_&&_).getOrElse(NoConstraints)
+    }
+
 
     override def fromMethodApplication(
       symbolChain: SymbolChain[SymbolType],
