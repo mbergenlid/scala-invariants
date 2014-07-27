@@ -51,7 +51,12 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
   def updateContext(context: Context, tree: Tree, constraint: Constraint): Context = tree match {
 //    case Assign(_, _) => TransitiveContext.removeSymbolConstraints(symbolChainFromTree(tree))
     case _ if constraint != NoConstraints =>
-      context && (symbolChainFromTree(tree) -> constraint)
-    case _ => context      
+      val chain = symbolChainFromTree(tree)
+      if(chain.isStable) {
+        context && (symbolChainFromTree(tree) -> constraint)
+      } else {
+        context
+      }
+    case _ => context
   }
 }
