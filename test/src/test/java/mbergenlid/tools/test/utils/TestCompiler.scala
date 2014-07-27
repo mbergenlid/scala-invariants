@@ -1,19 +1,23 @@
-package mbergenlid.tools.test
+package mbergenlid.tools.test.utils
+
+import java.io.{FilenameFilter, File}
+import java.net.URL
 
 import org.scalatest.FunSuite
-import mbergenlid.tools.test.utils.PropertyRunner
-import java.io.{FilenameFilter, File}
 
+trait TestCompiler {
+  self: FunSuite =>
 
-class TestRunner extends FunSuite {
-
-  val Scalac = "/opt/scala/scala-2.10.3/bin/scalac"
+  val Scalac = "/opt/scala-2.10.4/bin/scalac"
   val Plugin = findPluginJar()
+
+  protected def searchPath: URL
+  protected def evaluate(file: File): Unit
 
   registerTests()
 
   private def registerTests() {
-    val testDir = this.getClass.getClassLoader.getResource("test")
+    val testDir: URL = searchPath
 
     val file = new File(testDir.toURI)
 
@@ -23,8 +27,7 @@ class TestRunner extends FunSuite {
 
         assert(result == 0, "Expected source to compile")
 
-        val name = f.getName
-        PropertyRunner.execute(s"test.${name.dropRight(6)}")
+        evaluate(f)
       }
     }
   }

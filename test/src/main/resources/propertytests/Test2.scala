@@ -1,4 +1,4 @@
-package test
+package propertytests
 
 import mbergenlid.tools.boundedintegers.annotations.{LessThan, GreaterThan, GreaterThanOrEqual}
 

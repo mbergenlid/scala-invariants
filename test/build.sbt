@@ -1,6 +1,6 @@
 organization := "mbergenlid.tools" 
 
-name := "test"
+name := "propertytests"
 
 version := "0.1-SNAPSHOT"
 
@@ -14,7 +14,7 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
     "mbergenlid.tools" %% "annotations" % "0.1-SNAPSHOT",
     "plugin" %% "plugin" % "0.1-SNAPSHOT",
-    "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
+    "org.scalatest" % "scalatest_2.10" % "2.0" % "propertytests",
     "org.scalacheck" %% "scalacheck" % "1.11.3"
 )
 
