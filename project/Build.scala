@@ -28,11 +28,16 @@ object Build extends Build {
     extractJarsTarget <<= (target)(_ / "scala-2.10/classes"),
 
     // task to extract jar files
-    extractJars <<= (packageBin in Compile in annotations, packageBin in Compile in plugin, extractJarsTarget) map { (bin1, bin2, dir) =>
+    extractJars <<= (packageBin in Compile in annotations,
+        packageBin in Compile in plugin,
+        packageBin in Compile in api,
+        extractJarsTarget) map { (bin1, bin2, bin3, dir) =>
+
       println("Running extract jars")
-      println(s"${bin1.absolutePath} ${bin2.absolutePath}")
+      println(s"${bin1.absolutePath} ${bin2.absolutePath} ${bin3.absolutePath}")
       IO.unzip(bin1, dir, {n: String => !n.startsWith("META-INF")})
       IO.unzip(bin2, dir, {n: String => !n.startsWith("META-INF")})
+      IO.unzip(bin3, dir, {n: String => !n.startsWith("META-INF")})
     },
 
     packageBin in Compile <<= (packageBin in Compile) dependsOn extractJars
