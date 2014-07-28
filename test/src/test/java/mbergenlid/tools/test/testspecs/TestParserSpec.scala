@@ -16,7 +16,6 @@ class TestParserSpec extends FunSuite {
     assert(parseResult.successful)
 
     val lines = parseResult.get
-    println(lines)
     assert(lines === List(14, 17, 4711))
   }
 

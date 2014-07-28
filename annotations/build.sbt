@@ -4,8 +4,6 @@ name := "annotations"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.10.4"
-
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 resolvers ++= Seq(
