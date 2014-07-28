@@ -8,7 +8,9 @@ import org.scalatest.FunSuite
 trait TestCompiler {
   self: FunSuite =>
 
-  val Scalac = "/opt/scala-2.10.4/bin/scalac"
+  val ScalaHome = System.getProperty("SCALA_HOME", "/opt/scala/scala-2.10.4")
+  val Scalac = s"$ScalaHome/bin/scalac"
+  val PluginRoot: String = System.getProperty("PLUGIN_ROOT", ".")
   val Plugin = findPluginJar()
 
   protected def searchPath: URL
@@ -33,7 +35,8 @@ trait TestCompiler {
   }
 
   private def findPluginJar(): String = {
-    val pluginDir = new File(System.getProperty("PLUGIN_ROOT", "."))
+
+    val pluginDir = new File(PluginRoot)
     val target = new File(pluginDir, "target/scala-2.10")
     val jars = target.listFiles(new FilenameFilter() {
       def accept(file: File, name: String) =
@@ -43,13 +46,25 @@ trait TestCompiler {
     jars(0).getAbsolutePath
   }
 
+  private def findAnnotationsJar(): String = {
+    val annotationsDir = new File(PluginRoot, "annotations")
+    val target = new File(annotationsDir, "target/scala-2.10")
+    val jars = target.listFiles(new FilenameFilter() {
+      def accept(file: File, name: String) =
+        name.endsWith(".jar") && !(name.endsWith("-javadoc.jar") || name.endsWith("-sources.jar"))
+    })
+    assert(jars.length == 1)
+    jars(0).getAbsolutePath
+  }
+
+
   def compile(file: String) = {
     import scala.sys.process._
 
     Seq(Scalac,
       "-cp",
-      System.getProperty("java.class.path"),
+      findAnnotationsJar(),
       s"-Xplugin:$Plugin",
-      "-d", "/home/marcus/work/plugin/test/target/scala-2.10/classes/", file).!
+      "-d", s"$PluginRoot/test/target/scala-2.10/classes/", file).!
   }
 }
