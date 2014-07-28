@@ -63,7 +63,7 @@ trait TestCompiler {
 
     Seq(Scalac,
       "-cp",
-      findAnnotationsJar(),
+      Plugin,
       s"-Xplugin:$Plugin",
       "-d", s"$PluginRoot/test/target/scala-2.10/classes/", file).!
   }

@@ -10,8 +10,11 @@ trait TypeBoundFactories extends ApiUniverse {
 
   import global._
 
-  lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
-  lazy val EqualType = typeOf[EqualAnnotation]
+  lazy val GreaterThanOrEqualType = universe.typeOf[GreaterThanOrEqualAnnotation].asInstanceOf[Type]
+  lazy val GreaterThanType = universe.typeOf[GreaterThanAnnotation].asInstanceOf[Type]
+  lazy val EqualType = universe.typeOf[EqualAnnotation].asInstanceOf[Type]
+  lazy val LessThanOrEqualType = universe.typeOf[LessThanOrEqualAnnotation].asInstanceOf[Type]
+  lazy val LessThanType = universe.typeOf[LessThanAnnotation].asInstanceOf[Type]
   lazy val ThisSymbol =
     typeOf[String].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
@@ -27,11 +30,11 @@ trait TypeBoundFactories extends ApiUniverse {
   object GreaterThanOrEqualExtractor extends
     AnnotationExtractor(GreaterThanOrEqualType, universe.typeOf[GreaterThanOrEqualAnnotation])
   object GreaterThanExtractor extends
-    AnnotationExtractor(typeOf[GreaterThanAnnotation], universe.typeOf[GreaterThanAnnotation])
+    AnnotationExtractor(GreaterThanType, universe.typeOf[GreaterThanAnnotation])
   object LessThanOrEqualExtractor extends
-    AnnotationExtractor(typeOf[LessThanOrEqualAnnotation], universe.typeOf[LessThanOrEqualAnnotation])
+    AnnotationExtractor(LessThanOrEqualType, universe.typeOf[LessThanOrEqualAnnotation])
   object LessThanExtractor extends
-    AnnotationExtractor(typeOf[LessThanAnnotation], universe.typeOf[LessThanAnnotation])
+    AnnotationExtractor(LessThanType, universe.typeOf[LessThanAnnotation])
   object EqualExtractor extends
     AnnotationExtractor(EqualType, universe.typeOf[EqualAnnotation])
 
@@ -130,7 +133,7 @@ trait TypeBoundFactories extends ApiUniverse {
         else Nil
         )
       val ecs = annotations.collect {
-        case a if a.tpe <:< typeOf[Bounded] =>
+        case a if a.tpe <:< universe.typeOf[Bounded].asInstanceOf[Type] =>
           constraint(a, symbol)
         case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
           constraint(a, symbol)
