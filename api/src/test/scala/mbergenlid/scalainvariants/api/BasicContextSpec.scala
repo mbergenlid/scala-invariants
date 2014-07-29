@@ -45,6 +45,16 @@ class BasicContextSpec extends FunSuite with TestUniverse {
     assert(constraint2 == NoConstraints)
   }
 
+  test("Lookup Context.Or") {
+    val context = ((EmptyContext && chain(symbol1) -> Equal(20)) &&
+      chain(symbol1) -> GreaterThanOrEqual(11)) || (
+      chain(symbol1) -> LessThanOrEqual(-1))
+
+    val constraint = context.get(chain(symbol1))
+    println(constraint.prettyPrint())
+    assert(constraint.definitelySubsetOf(GreaterThanOrEqual(11) || LessThanOrEqual(-1)))
+  }
+
 
   val testClass = new TestClass
   class TestClass {

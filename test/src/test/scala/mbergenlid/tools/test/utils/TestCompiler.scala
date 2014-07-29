@@ -4,6 +4,7 @@ import java.io.{FilenameFilter, File}
 import java.net.URL
 
 import org.scalatest.FunSuite
+import scala.sys.process.ProcessLogger
 
 trait TestCompiler {
   self: FunSuite =>
@@ -25,10 +26,6 @@ trait TestCompiler {
     val file = new File(testDir.toURI)
     file.listFiles().filter(_.getName.endsWith(".scala")).foreach { f =>
       test(f.getName) {
-        val result = compile(f.getAbsolutePath)
-
-        assert(result == 0, "Expected source to compile")
-
         evaluate(f)
       }
     }
@@ -40,14 +37,23 @@ trait TestCompiler {
     else throw new IllegalArgumentException(s"System property $name must be set")
   }
 
-  def compile(file: String) = {
+  def compile(file: String): Int =
+    compile(file, None)
+
+  def compile(file: String, logger: ProcessLogger): Int =
+    compile(file, Some(logger))
+
+  private def compile(file: String, logger: Option[ProcessLogger]) = {
     import scala.sys.process._
 
-//    println(s"$Scalac -cp $Plugin -Xplugin:$Plugin -d $TestOutput $file")
-    Seq(Scalac,
-      "-cp",
-      Plugin,
-      s"-Xplugin:$Plugin",
-      "-d", TestOutput, file).!
+    val commandLine =
+      Seq(Scalac,
+        "-cp",
+        Plugin,
+        s"-Xplugin:$Plugin",
+        "-d", TestOutput, file)
+
+    if(logger.isDefined) commandLine.!(logger.get)
+    else commandLine.!
   }
 }

@@ -16,7 +16,7 @@ object Build extends Build {
                          base = file("plugin")).dependsOn(api, annotations)
 
   lazy val testProject = Project(id = "test",
-                          base = file("test")).dependsOn(plugin)
+                          base = file("test")).dependsOn(plugin, annotations)
 
   lazy val extractJarsTarget = SettingKey[File]("extract-jars-target", "Target directory for extracted JAR files")
 
@@ -41,6 +41,8 @@ object Build extends Build {
     packageBin in Compile in plugin <<= (packageBin in Compile in plugin) dependsOn extractJars,
 
     (test in Test in testProject) <<= (test in Test in testProject) dependsOn (packageBin in Compile in plugin),
+
+    (testOnly in Test in testProject) <<= (testOnly in Test in testProject) dependsOn (packageBin in Compile in plugin),
 
     testOptions in Test in testProject +=
       Tests.Setup { () =>

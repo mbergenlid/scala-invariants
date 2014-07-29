@@ -57,6 +57,8 @@ trait Contexts {
   case object EmptyContext extends Context {
     override def get(symbol: SymbolChain[SymbolType]): Constraint = NoConstraints
     override def -(symbol: SymbolChain[SymbolType]): Context = this
+
+    override def &&(other: Context): Context = other
   }
 
   case class &&(lhs: Context, rhs: Context) extends Context {
