@@ -10,11 +10,11 @@ trait TypeBoundFactories extends ApiUniverse {
 
   import global._
 
-  lazy val GreaterThanOrEqualType = universe.typeOf[GreaterThanOrEqualAnnotation].asInstanceOf[Type]
-  lazy val GreaterThanType = universe.typeOf[GreaterThanAnnotation].asInstanceOf[Type]
-  lazy val EqualType = universe.typeOf[EqualAnnotation].asInstanceOf[Type]
-  lazy val LessThanOrEqualType = universe.typeOf[LessThanOrEqualAnnotation].asInstanceOf[Type]
-  lazy val LessThanType = universe.typeOf[LessThanAnnotation].asInstanceOf[Type]
+  lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
+  lazy val GreaterThanType = typeOf[GreaterThanAnnotation]
+  lazy val EqualType = typeOf[EqualAnnotation]
+  lazy val LessThanOrEqualType = typeOf[LessThanOrEqualAnnotation]
+  lazy val LessThanType = typeOf[LessThanAnnotation]
   lazy val ThisSymbol =
     typeOf[String].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
@@ -132,8 +132,9 @@ trait TypeBoundFactories extends ApiUniverse {
         if(symbol.isMethod && symbol.asMethod.isGetter) symbol.asMethod.accessed.annotations
         else Nil
         )
+
       val ecs = annotations.collect {
-        case a if a.tpe <:< universe.typeOf[Bounded].asInstanceOf[Type] =>
+        case a if a.tpe <:< typeOf[Bounded] =>
           constraint(a, symbol)
         case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
           constraint(a, symbol)

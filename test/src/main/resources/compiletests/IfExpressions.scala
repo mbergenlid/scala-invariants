@@ -1,5 +1,5 @@
 /**
- * Errors: 21, 26, 28
+ * Errors: 21, 27
  */
 package compiletests
 
@@ -21,11 +21,11 @@ object IfExpressions {
       testMethod(x)
   }
 
-//  def successfulElse() = {
-//    val x = anotherRandomInteger
-//    if(x > 10 || x < 0)
-//      testMethod(x)
-//    else
-//      testMethod(1000)
-//  }
+  def successfulElse() = {
+    val x = anotherRandomInteger
+    if(x > 10 || x < 0)
+      testMethod(x)
+    else
+      testMethod(x)
+  }
 }

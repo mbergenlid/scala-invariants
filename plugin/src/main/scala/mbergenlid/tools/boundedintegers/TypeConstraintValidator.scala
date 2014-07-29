@@ -55,6 +55,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
 
         val fromAnnotatedConstants =
           TransitiveContext.substituteConstants(exprConstraints, symbol.typeSignature, extractSymbols(target))
+
         val assignee =
           exprConstraints && fromConstants && fromAnnotatedConstants
 
