@@ -192,10 +192,19 @@ class ContextSpec extends FunSuite with TestUniverse {
     ))(GreaterThanOrEqual(Polynomial.fromSymbol[Int]("z")), GreaterThan(Polynomial.fromConstant(1)))()
 
   contextConstantsTest(
-    Map(
-      sym("x") -> GreaterThan(10)
-    ),
-    Equal(0)
+    EmptyContext &&
+      sym("x") -> GreaterThan(10),
+    Equal(0),
+    Set(sym("x"))
+  )(LessThan(sym("x")))()
+
+  contextConstantsTest(
+    EmptyContext &&
+      sym("x") -> Equal(20) &&
+      (Context.apply(sym("x") -> GreaterThan(10)) ||
+        sym("x") -> LessThan(0)),
+    Equal(0),
+    Set(sym("x"))
   )(LessThan(sym("x")))()
 
   def contextTest
@@ -221,15 +230,16 @@ class ContextSpec extends FunSuite with TestUniverse {
 
 
   def contextConstantsTest(
-    contextMap: Map[SymbolChain[SymbolType], Constraint],
+    context: Context,
     startConstraint: Constraint,
+    symbols: Set[SymbolChain[SymbolType]],
     debug: Boolean = false)(
     positiveAsserts: Constraint*)(
     negativeAsserts: Constraint*) {
 
-      val c = contextMap.foldLeft[Context](EmptyContext)(_&&_)
+      val c = context
       test("Constants: " + c.toString) {
-        val bounds = transitiveContext.substituteConstants(startConstraint, typeOf[Int], c)
+        val bounds = transitiveContext.substituteConstants(startConstraint, symbols, typeOf[Int], c)
         if(debug) {
           println(bounds.prettyPrint())
         }

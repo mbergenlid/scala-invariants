@@ -36,6 +36,7 @@ trait ContextLookup {
 
     def substituteConstants(
       from: Constraint,
+      symbols: Set[SymbolChain[SymbolType]],
       resultType: Type,
       context: Context): Constraint = {
 
@@ -45,7 +46,7 @@ trait ContextLookup {
         expr.terms.find(_.variables.isEmpty).map(_.coeff).getOrElse(Polynomial.Zero.asConstant)
 
       def fromConstant(ec: ExpressionConstraint) = for {
-        boundedBy <- findSymbolConstraints(extractConstant(ec.expression), context, f)
+        boundedBy <- findSymbolConstraints(extractConstant(ec.expression), symbols, context, f)
         if boundedBy.expression != ec.expression
         newConstraint <- ec.combine(boundedBy)
       } yield newConstraint(ec.expression.substituteConstant(boundedBy.expression))
@@ -62,13 +63,14 @@ trait ContextLookup {
 
     private def findSymbolConstraints(
       constant: ConstantValue,
+      symbols: Set[SymbolChain[SymbolType]],
       context: Context,
       f: ExpressionFactory[_]): Traversable[ExpressionConstraint] = {
 
       val seq = for {
-        (symbol, constraint) <- context.symbols
+        symbol <- symbols
         if symbol.isStable
-        sc: SimpleConstraint <- constraint
+        sc: SimpleConstraint <- context.get(symbol)
       } yield constraintFromConstant(sc, symbol, constant, f)
       seq.collect {
         case ec:ExpressionConstraint => ec
