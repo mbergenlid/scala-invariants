@@ -1,6 +1,6 @@
 package mbergenlid.tools.test.utils
 
-import java.io.{FilenameFilter, File}
+import java.io.File
 import java.net.URL
 
 import org.scalatest.FunSuite
@@ -10,7 +10,7 @@ trait TestCompiler {
   self: FunSuite =>
 
 
-  val ScalaHome = getProperty("SCALA_HOME")
+  val ScalaHome = getEnv("SCALA_HOME")
   val Scalac = s"$ScalaHome/bin/scalac"
   val Plugin = getProperty("PLUGIN")
   val TestOutput = getProperty("TEST_OUTPUT")
@@ -35,6 +35,12 @@ trait TestCompiler {
     val prop = System.getProperty(name)
     if(prop != null) prop
     else throw new IllegalArgumentException(s"System property $name must be set")
+  }
+
+  private def getEnv(name: String) = {
+    val env = System.getenv(name)
+    if(env != null) env
+    else throw new IllegalArgumentException(s"Environment variable $name must be set")
   }
 
   def compile(file: String): Int =

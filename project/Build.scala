@@ -50,7 +50,6 @@ object Build extends Build {
           (artifactPath in packageBin in Compile in plugin).value.getAbsolutePath)
         System.setProperty("TEST_OUTPUT",
           (classDirectory in Compile in testProject).value.getAbsolutePath)
-        System.setProperty("SCALA_HOME", System.getenv("SCALA_HOME"))
       }
   )
 }
