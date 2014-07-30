@@ -18,31 +18,54 @@ class CompilerTestRunner extends FunSuite with TestCompiler with TestParser {
       val logger = new Logger(file.getName)
       compile(file.getAbsolutePath, logger)
 
-      assert(logger.lines === specification.errors)
+      val actualErrors = logger.errors
+      for(error <- actualErrors) {
+        if(!specification.errors.contains(error.line))
+          fail(s"Unexpected compiler error:\n${error.message}")
+      }
+      for(expected <- specification.errors) {
+        if(!actualErrors.exists(_.line == expected))
+          fail(s"Expected compiler error on line $expected")
+      }
     } else {
       fail(s"Failed to parse test specification in file $file")
     }
   }
 
   class Logger(fileName: String) extends ProcessLogger {
-
     val Pattern = s""".*$fileName:(\\d+): error:.*""".r
-    private var _lines: List[Int] = Nil
+    private var _lines: List[CompileError] = Nil
+    private var currentLine: Int = -1
+    private val messageBuilder = new StringBuilder
 
-    def lines = _lines.reverse
+    def errors: List[CompileError] = _lines.reverse
 
-    override def buffer[T](f: => T): T = f
+    override def buffer[T](f: => T): T = {
+      val res = f
+      appendError()
+      res
+    }
+
+    private def appendError(): Unit = {
+      if(currentLine != -1) {
+        _lines = CompileError(currentLine, messageBuilder.toString()) :: _lines
+        messageBuilder.clear()
+      }
+    }
 
     override def err(s: => String): Unit = s match {
       case Pattern(line) =>
-        _lines = line.toInt :: _lines
-        println(s)
+        appendError()
+        currentLine = line.toInt
+        messageBuilder.append(s).append("\n")
       case _ =>
-        println(s)
+        messageBuilder.append(s).append("\n")
     }
 
-    override def out(s: => String): Unit = println(s)
+    override def out(s: => String): Unit = {}
   }
+
+  case class CompileError(line: Int, message: String)
 
   override protected def searchPath: URL =
     this.getClass.getClassLoader.getResource("compiletests")
