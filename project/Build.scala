@@ -30,11 +30,11 @@ object Build extends Build {
     // task to extract jar files
     extractJars <<= (packageBin in Compile in annotations,
         packageBin in Compile in api,
-        extractJarsTarget) map { (bin1, bin2, dir) =>
+        extractJarsTarget, streams) map { (bin1, bin2, dir, s) =>
 
-      println("Running extract jars")
-      println(s"${bin1.absolutePath} ${bin2.absolutePath}")
+      s.log.info(s"Extracting ${bin1.absolutePath}")
       IO.unzip(bin1, dir, {n: String => !n.startsWith("META-INF")})
+      s.log.info(s"Extracting ${bin2.absolutePath}")
       IO.unzip(bin2, dir, {n: String => !n.startsWith("META-INF")})
     },
 
