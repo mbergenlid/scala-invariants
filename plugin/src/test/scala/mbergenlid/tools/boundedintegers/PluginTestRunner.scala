@@ -6,6 +6,7 @@ import scala.reflect.runtime.universe.runtimeMirror
 import validators._
 import scala.language.implicitConversions
 import scala.language.reflectiveCalls
+import scala.reflect.runtime.universe
 
 trait PluginTestRunner extends FunSuite {
 
@@ -14,7 +15,14 @@ trait PluginTestRunner extends FunSuite {
   val cut = new BoundedTypeChecker(tb.u) with MethodApplication
                                           with IfExpression
                                           with Assignment
-                                          with MethodDefinition
+                                          with MethodDefinition {
+
+    override lazy val ThisSymbol = _ThisSymbol.asInstanceOf[SymbolType]
+  }
+
+  private lazy val _ThisSymbol =
+    universe.typeOf[this.type].termSymbol.newTermSymbol(
+      universe.newTermName("this"))
 
   import cut._
 
