@@ -10,13 +10,14 @@ trait TypeBoundFactories extends ApiUniverse {
 
   import global._
 
+  lazy val BoundedAnnotationType = typeOf[Bounded]
   lazy val GreaterThanOrEqualType = typeOf[GreaterThanOrEqualAnnotation]
   lazy val GreaterThanType = typeOf[GreaterThanAnnotation]
   lazy val EqualType = typeOf[EqualAnnotation]
   lazy val LessThanOrEqualType = typeOf[LessThanOrEqualAnnotation]
   lazy val LessThanType = typeOf[LessThanAnnotation]
   lazy val ThisSymbol =
-    typeOf[String].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
+    typeOf[this.type].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
   override def createConstraintFromSymbol(symbol: SymbolType) = BoundsFactory.fromSymbol(symbol)
 
@@ -134,7 +135,7 @@ trait TypeBoundFactories extends ApiUniverse {
         )
 
       val ecs = annotations.collect {
-        case a if a.tpe <:< typeOf[Bounded] =>
+        case a if a.tpe <:< BoundedAnnotationType =>
           constraint(a, symbol)
         case a if a.tpe.asInstanceOf[universe.Type] <:< universe.typeOf[Bounded] =>
           constraint(a, symbol)

@@ -1,7 +1,7 @@
 package mbergenlid.tools.test.utils
 
 import scala.reflect.runtime.universe
-import mbergenlid.tools.boundedintegers.annotations.{RichNumeric, Bounded}
+import mbergenlid.tools.boundedintegers.annotations._
 
 import org.scalacheck._
 import Prop._
@@ -21,6 +21,14 @@ object PropertyRunner extends MyUniverse with Assertions {
   import universe._
 
   override lazy val IntType = global.typeOf[Int]
+  override lazy val BoundedAnnotationType = universe.typeOf[Bounded].asInstanceOf[global.Type]
+  override lazy val GreaterThanOrEqualType = universe.typeOf[GreaterThanOrEqual].asInstanceOf[global.Type]
+  override lazy val GreaterThanType = universe.typeOf[GreaterThan].asInstanceOf[global.Type]
+  override lazy val EqualType = universe.typeOf[Equal].asInstanceOf[global.Type]
+  override lazy val LessThanOrEqualType = universe.typeOf[LessThanOrEqual].asInstanceOf[global.Type]
+  override lazy val LessThanType = universe.typeOf[LessThan].asInstanceOf[global.Type]
+  override lazy val ThisSymbol =
+    universe.typeOf[this.type].termSymbol.newTermSymbol(newTermName("this")).asInstanceOf[SymbolType]
 
   def execute(className: String): Unit = {
     val m = runtimeMirror(getClass.getClassLoader)
