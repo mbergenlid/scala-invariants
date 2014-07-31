@@ -1,5 +1,5 @@
 /**
- * Errors: 21, 27
+ * Errors: 21, 27, 42, 60
  */
 package compiletests
 
@@ -28,4 +28,36 @@ object IfExpressions {
     else
       testMethod(x)
   }
+
+  def boundToSymbol() = {
+    val maxValue = 10
+    def myMethod(@LessThanOrEqual(maxValue)
+                 @GreaterThanOrEqual(0L) a: Int, b: String) = 1
+
+    val x = anotherRandomInteger
+    if(x > 0 && x < maxValue)
+      myMethod(x, "Should compile")
+
+    if(x > 0)
+      myMethod(x, "Should not compile")
+  }
+
+  def boundToSymbolTwoWays() = {
+    val x = anotherRandomInteger
+    val y = 0
+
+    if(x < 10 && y < x)
+      testMethod(x)
+  }
+
+  def boundToExpression() = {
+    val x = anotherRandomInteger
+
+    if(x > 0 && x + 1 < 12)
+      testMethod(x)
+
+    if(x > 0 && x + 2 < 14)
+      testMethod(x)
+  }
+
 }
