@@ -3,32 +3,25 @@ package mbergenlid.tools.test
 import org.scalatest.FunSuite
 import mbergenlid.tools.test.utils.TestCompiler
 import java.net.URL
-import java.io.{FileReader, File}
+import java.io.File
 import mbergenlid.scalainvariants.test.TestParser
-import scala.util.parsing.input.StreamReader
 import scala.sys.process.ProcessLogger
 
-class CompilerTestRunner extends FunSuite with TestCompiler with TestParser {
+class CompilerTestRunner extends FunSuite with TestCompiler {
 
   override protected def evaluate(file: File): Unit = {
-    val input = StreamReader(new FileReader(file))
-    val result = parse(input)
-    if(result.successful) {
-      val specification = result.get
-      val logger = new Logger(file.getName)
-      compile(file.getAbsolutePath, logger)
+    val specification = TestParser.parse(file)
+    val logger = new Logger(file.getName)
+    compile(file.getAbsolutePath, logger)
 
-      val actualErrors = logger.errors
-      for(error <- actualErrors) {
-        if(!specification.errors.contains(error.line))
-          fail(s"Unexpected compiler error:\n${error.message}")
-      }
-      for(expected <- specification.errors) {
-        if(!actualErrors.exists(_.line == expected))
-          fail(s"Expected compiler error on line $expected")
-      }
-    } else {
-      fail(s"Failed to parse test specification in file $file")
+    val actualErrors = logger.errors
+    for(error <- actualErrors) {
+      if(!specification.errors.exists(_.line == error.line))
+        fail(s"Unexpected compiler error:\n${error.message}")
+    }
+    for(expected <- specification.errors) {
+      if(!actualErrors.exists(_.line == expected.line))
+        fail(s"Expected compiler error on line $expected")
     }
   }
 

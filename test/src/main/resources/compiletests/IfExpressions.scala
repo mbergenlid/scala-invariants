@@ -18,13 +18,13 @@ object IfExpressions {
     if(x < 11 && -1 < x)
       testMethod(x)
     else
-      testMethod(x)
+      testMethod(x) //error
   }
 
   def successfulElse() = {
     val x = anotherRandomInteger
     if(x > 10 || x < 0)
-      testMethod(x)
+      testMethod(x) //error
     else
       testMethod(x)
   }
@@ -39,7 +39,7 @@ object IfExpressions {
       myMethod(x, "Should compile")
 
     if(x > 0)
-      myMethod(x, "Should not compile")
+      myMethod(x, "Should not compile") //error
   }
 
   def boundToSymbolTwoWays() = {
@@ -57,7 +57,7 @@ object IfExpressions {
       testMethod(x)
 
     if(x > 0 && x + 2 < 14)
-      testMethod(x)
+      testMethod(x) //error
   }
 
 }

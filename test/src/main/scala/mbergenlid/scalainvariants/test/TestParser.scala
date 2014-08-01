@@ -1,7 +1,11 @@
 package mbergenlid.scalainvariants.test
 
-import scala.util.parsing.combinator.{JavaTokenParsers, RegexParsers}
-import scala.util.parsing.input.Reader
+import java.io.{BufferedReader, FileInputStream, InputStreamReader, File}
+
+import mbergenlid.scalainvariants.test.TestParser.{ErrorDef, TestSpecification}
+
+import scala.collection.mutable.ArrayBuffer
+import scala.util.parsing.combinator.JavaTokenParsers
 
 
 /**
@@ -12,28 +16,34 @@ import scala.util.parsing.input.Reader
  * of the compilation like what lines are expected to produce an error.
  *
  */
-trait TestParser extends RegexParsers {
-
-  def parse(input: Reader[Char]): ParseResult[TestSpecification] =
-    parse(testSpecification, input)
-
-  def testSpecification: Parser[TestSpecification] =
-    "/**" ~> (spec ^^ TestSpecification) <~ "*/"
-
-  def spec: Parser[ErrorList] =
-    "*".? ~> errorSpec
-
-  def errorSpec: Parser[ErrorList] =
-    "Errors: " ~> errorList
-
-  def errorList: Parser[ErrorList] =
-    repsep(lineNumber, ",")
-
-  def lineNumber: Parser[Int] =
-    """\d+""".r ^^ {Integer.parseInt}
-
-
-  type ErrorList = List[Int]
+object TestParser {
+  type ErrorList = List[ErrorDef]
+  case class ErrorDef(line: Int)
   case class TestSpecification(errors: ErrorList)
 
+  def parse(input: File): TestSpecification = {
+    val errors =
+      forEachLine(input) {
+        case (line, index) if line.endsWith("//error") => ErrorDef(index)
+      }
+    TestSpecification(errors)
+  }
+
+  def forEachLine[T](file: File)(f: PartialFunction[(String, Int), T]): List[T] = {
+    val reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))
+
+    val buffer = new ArrayBuffer[T]
+    var lineNumber = 1
+    var line = reader.readLine()
+    while(line != null) {
+      if(f.isDefinedAt(line, lineNumber))
+        buffer += f(line, lineNumber)
+
+      line = reader.readLine()
+      lineNumber += 1
+    }
+    reader.close()
+
+    buffer.toList
+  }
 }
