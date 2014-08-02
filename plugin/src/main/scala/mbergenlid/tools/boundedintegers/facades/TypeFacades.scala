@@ -22,9 +22,9 @@ trait TypeFacades {
   }
 
   lazy private val typeFacades = Map[Type, Type] (
-    universe.typeOf[String].asInstanceOf[Type] -> universe.typeOf[StringFacade].asInstanceOf[Type],
-    universe.typeOf[Array[_]].asInstanceOf[Type] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[Type],
-    universe.typeOf[Int].asInstanceOf[Type] -> universe.typeOf[IntFacade].asInstanceOf[Type]
+    typeOf[String] -> universe.typeOf[StringFacade].asInstanceOf[Type],
+    typeOf[Array[_]] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[Type],
+    typeOf[Int] -> universe.typeOf[IntFacade].asInstanceOf[Type]
   )
 
   lazy private val symbolFacades: Map[String, global.Symbol] =
