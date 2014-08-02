@@ -30,4 +30,32 @@ object SymbolExpressions {
     if(x < 11 && x + intBetween0And5 > 2)
       testMethod(x)  //error
   }
+
+  def boundWithLessOrEqual() = {
+    val x = anotherRandomInteger
+    val y = intBetween0And5
+
+    if(x > 0 && x + intBetween0And5 <= 15)
+      testMethod(x)  //error
+
+    if(x > 0 && x + intBetween5And10 <= 15)
+      testMethod(x)
+
+    if(x < 11 && x + intBetween5And10 >= 10)
+      testMethod(x)
+
+    if(x < 11 && x + intBetween0And5 >= 2)
+      testMethod(x)  //error
+  }
+
+  def boundWithEqual() = {
+    val x = anotherRandomInteger
+    val y = intBetween0And5
+
+    if(x + intBetween0And5 == 15)
+      testMethod(x)  //error
+
+    if(x + intBetween0And5 == 10)
+      testMethod(x)
+  }
 }

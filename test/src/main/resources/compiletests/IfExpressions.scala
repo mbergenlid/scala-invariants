@@ -60,4 +60,9 @@ object IfExpressions {
       testMethod(x) //error
   }
 
+  @GreaterThanOrEqual(0)
+  def abs1(n: Int) = if(n < 0) 0-n else n //error
+
+  @GreaterThanOrEqual(0)
+  def abs2(@GreaterThan(Int.MinValue)n: Int) = if(n < 0) 0-n else n
 }
