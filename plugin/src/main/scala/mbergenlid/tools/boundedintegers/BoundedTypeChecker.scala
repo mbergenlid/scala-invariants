@@ -42,14 +42,22 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
         val bounds = checkBounds(newContext)(res)
         val blockConstraint = TransitiveContext.getConstraint(bounds.constraint, newContext)
         BoundedType(blockConstraint)
-      case _ => 
-        traverseChildren(tree.children)
+      case PackageDef(_, trees) =>
+        traverseChildren(trees)
+        BoundedType.noBounds
+      case ModuleDef(_, _, tmpl) =>
+        traverseChildren(tmpl.children)
+        BoundedType.noBounds
+      case ClassDef(_, _, _, tmpl) =>
+        traverseChildren(tmpl.children)
+        BoundedType.noBounds
+      case _ =>
         BoundedType.noBounds
     }
   }
 
   def updateContext(context: Context, tree: Tree, constraint: Constraint): Context = tree match {
-//    case Assign(_, _) => TransitiveContext.removeSymbolConstraints(symbolChainFromTree(tree))
+    case Assign(_, _) => context
     case _ if constraint != NoConstraints =>
       val chain = symbolChainFromTree(tree)
       if(chain.isStable) {

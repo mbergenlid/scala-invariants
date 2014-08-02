@@ -3,7 +3,7 @@ package mbergenlid.tools.test.utils
 import java.io.File
 import java.net.URL
 
-import org.scalatest.FunSuite
+import org.scalatest.{Tag, FunSuite}
 import scala.sys.process.ProcessLogger
 
 trait TestCompiler {
@@ -24,8 +24,9 @@ trait TestCompiler {
     val testDir: URL = searchPath
 
     val file = new File(testDir.toURI)
-    file.listFiles().filter(_.getName.endsWith(".scala")).foreach { f =>
-      test(f.getName) {
+    file.listFiles().
+        filter(_.getName.endsWith(".scala")).foreach { f =>
+      test(f.getName, Tag(f.getName.dropRight(".scala".length))) {
         evaluate(f)
       }
     }

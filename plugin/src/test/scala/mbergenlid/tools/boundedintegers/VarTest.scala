@@ -10,6 +10,17 @@ class VarTest extends PluginTestRunner {
       """.stripMargin)(List(3))
   }
 
+  test("Var assignment") {
+    compile(
+      """
+        |@LessThanOrEqual(10)
+        |@GreaterThanOrEqual(0)
+        |var x = 11
+        |
+        |true
+      """.stripMargin)(List(4))
+  }
+
   test("Simple var boundary") {
     compile("""
               |@LessThanOrEqual(10)
@@ -27,6 +38,7 @@ class VarTest extends PluginTestRunner {
               |@LessThanOrEqual(10)
               |var x = 5
               |x = 100
+              |x = 9
               |x
             """.stripMargin)(List(5))
   }
@@ -34,7 +46,7 @@ class VarTest extends PluginTestRunner {
   test("Modifying a bounded variable") {
     compile("""
               |@GreaterThanOrEqual(0)
-              |@LessThanOrEqual(0)
+              |@LessThanOrEqual(10)
               |var x = 5
               |x = x + 2
               |x
