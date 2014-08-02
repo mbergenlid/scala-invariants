@@ -55,7 +55,9 @@ class CompilerTestRunner extends FunSuite with TestCompiler {
         messageBuilder.append(s).append("\n")
     }
 
-    override def out(s: => String): Unit = {}
+    override def out(s: => String): Unit = {
+      println(s)
+    }
   }
 
   case class CompileError(line: Int, message: String)

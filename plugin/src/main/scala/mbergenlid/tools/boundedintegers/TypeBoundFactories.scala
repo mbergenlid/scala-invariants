@@ -253,7 +253,7 @@ trait TypeBoundFactories extends ApiUniverse {
             case _ => symbol.typeSignature
           }
           val typeFacade: Type = findFacadeForType(symbolType)
-          val memberSymbol = typeFacade.member(newTermName(prop))
+          val memberSymbol = typeFacade.members.find(_.name.toString == prop).getOrElse(NoSymbol)
 
           if(memberSymbol == NoSymbol)
             throw new CompilationError(
