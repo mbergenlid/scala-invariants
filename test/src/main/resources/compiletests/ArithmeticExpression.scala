@@ -1,7 +1,7 @@
 
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{GreaterThan, Equal, LessThanOrEqual, GreaterThanOrEqual}
+import mbergenlid.scalainvariants.annotations.{GreaterThan, Equal, LessThanOrEqual, GreaterThanOrEqual}
 
 object ArithmeticExpression {
 

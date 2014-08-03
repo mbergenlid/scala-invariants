@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{LessThanOrEqual, LessThan, GreaterThanOrEqual}
+import mbergenlid.scalainvariants.annotations.{LessThanOrEqual, LessThan, GreaterThanOrEqual}
 
 object ArraySearchTest {
 

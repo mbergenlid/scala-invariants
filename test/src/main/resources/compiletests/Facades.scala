@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.Equal
+import mbergenlid.scalainvariants.annotations.Equal
 
 object Facades {
 

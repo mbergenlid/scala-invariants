@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations._
+import mbergenlid.scalainvariants.annotations._
 
 import scala.util.Random
 

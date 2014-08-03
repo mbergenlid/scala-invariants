@@ -3,7 +3,7 @@
  */
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{LessThanOrEqual, GreaterThanOrEqual}
+import mbergenlid.scalainvariants.annotations.{LessThanOrEqual, GreaterThanOrEqual}
 
 object SymbolExpressions {
   val anotherRandomInteger = 20

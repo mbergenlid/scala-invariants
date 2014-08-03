@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{GreaterThan, Equal}
+import mbergenlid.scalainvariants.annotations.{GreaterThan, Equal}
 
 object BoundToInput {
 

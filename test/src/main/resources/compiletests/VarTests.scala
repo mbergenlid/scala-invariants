@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{LessThanOrEqual, GreaterThanOrEqual}
+import mbergenlid.scalainvariants.annotations.{LessThanOrEqual, GreaterThanOrEqual}
 
 import scala.util.Random
 

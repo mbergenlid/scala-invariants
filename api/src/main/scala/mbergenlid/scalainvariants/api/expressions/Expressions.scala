@@ -1,7 +1,7 @@
 package mbergenlid.scalainvariants.api.expressions
 
 import mbergenlid.scalainvariants.api.{SymbolChain, ApiUniverse}
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
+import mbergenlid.scalainvariants.annotations.RichNumeric
 
 trait Expressions {
   self: ApiUniverse =>

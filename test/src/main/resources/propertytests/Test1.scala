@@ -1,6 +1,6 @@
 package propertytests
 
-import mbergenlid.tools.boundedintegers.annotations.GreaterThanOrEqual
+import mbergenlid.scalainvariants.annotations.GreaterThanOrEqual
 
 object Test1 {
 

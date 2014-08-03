@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{Equal, LessThanOrEqual}
+import mbergenlid.scalainvariants.annotations.{Equal, LessThanOrEqual}
 
 object MethodDefinition {
   @LessThanOrEqual(10)

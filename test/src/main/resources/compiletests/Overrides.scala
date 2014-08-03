@@ -1,6 +1,6 @@
 package compiletests
 
-import mbergenlid.tools.boundedintegers.annotations.{Equal, GreaterThan}
+import mbergenlid.scalainvariants.annotations.{Equal, GreaterThan}
 
 object Overrides {
 

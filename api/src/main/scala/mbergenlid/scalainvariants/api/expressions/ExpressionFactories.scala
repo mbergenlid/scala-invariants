@@ -1,6 +1,6 @@
 package mbergenlid.scalainvariants.api.expressions
 
-import mbergenlid.tools.boundedintegers.annotations.RichNumeric
+import mbergenlid.scalainvariants.annotations.RichNumeric
 import mbergenlid.scalainvariants.api.{ApiUniverse, TypeFacades, SymbolChain}
 
 trait ExpressionFactories {
