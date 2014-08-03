@@ -134,4 +134,29 @@ object PropertyConstraints {
     false
   }
 
+  def automaticPropertyConstraints() = {
+    class TestClass {
+      val prop: Int = 3
+    }
+
+    val tc = new TestClass
+    def method(@Property("prop", Equal(tc.prop)) bla: TestClass) = 4
+    method(tc)
+
+    val sa = Array(1,2,3,4,5)
+    def arrayMethod(@Property("length", Equal(sa.length)) array: Array[Int]) = 5
+    arrayMethod(sa)
+  }
+
+  def numericMethodApplication() = {
+    @Equal("array.length")
+    def testMethod(array: Array[Int]): Int = array.length
+
+    val sa = Array(1,2,3,4,5)
+
+    @Equal(sa.length)
+    val index = testMethod(sa)
+
+    index
+  }
 }

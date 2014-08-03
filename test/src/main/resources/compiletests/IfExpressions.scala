@@ -4,7 +4,6 @@
 package compiletests
 
 import mbergenlid.tools.boundedintegers.annotations._
-import scala.util.Random
 
 object IfExpressions {
 
@@ -65,4 +64,33 @@ object IfExpressions {
 
   @GreaterThanOrEqual(0)
   def abs2(@GreaterThan(Int.MinValue)n: Int) = if(n < 0) 0-n else n
+
+  // TODO: Add this test when we can express OR as annotations
+
+//  @Or(GreaterThan(10), Equal(-1))
+//  def resultOfIfExpression() = {
+//    val x = anotherRandomInteger
+//
+//    if(x > 0) x + 10
+//    else -1
+//  }
+//
+//  @Or(GreaterThanOrEqual(0), Equal(-1))
+//  def resultOfNegativeIfExpression() = {
+//    val x = anotherRandomInteger
+//    val y = randomInteger
+//
+//    if(x == 0) y - x
+//    else -1
+//  }
+//
+//  @Or(GreaterThan(10), Equal(-1))
+//  def resultOfIfExpressionWithBlock() {
+//    val x = anotherRandomInteger
+//
+//    if(x > 0) {
+//      x + 10
+//    } else -1
+//  }
+
 }

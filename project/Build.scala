@@ -16,7 +16,7 @@ object Build extends Build {
                          base = file("plugin")).dependsOn(api, annotations)
 
   lazy val testProject = Project(id = "test",
-                          base = file("test")).dependsOn(plugin, annotations)
+                          base = file("test")).dependsOn(plugin, annotations, api)
 
   lazy val extractJarsTarget = SettingKey[File]("extract-jars-target", "Target directory for extracted JAR files")
 
