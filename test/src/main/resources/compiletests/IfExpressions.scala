@@ -65,6 +65,10 @@ object IfExpressions {
   @GreaterThanOrEqual(0)
   def abs2(@GreaterThan(Int.MinValue)n: Int) = if(n < 0) 0-n else n
 
+  @GreaterThanOrEqual(0)
+  def abs3(@GreaterThan(Int.MinValue)n: Int) = if(n < 0) -n else n
+
+
   // TODO: Add this test when we can express OR as annotations
 
 //  @Or(GreaterThan(10), Equal(-1))

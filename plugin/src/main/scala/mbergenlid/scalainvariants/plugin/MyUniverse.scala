@@ -53,12 +53,11 @@ trait MyUniverse extends ApiUniverse
 
   override def expressionForType: PartialFunction[Types#TypeApi, ExpressionFactory[_]] = {
     case IntTypeExtractor() =>
-      new ExpressionFactory[Int](TypeFacade)
+      new ExpressionFactory[Int](TypeFacade, List(ThisSymbol))
     case LongTypeExtractor() =>
-      new ExpressionFactory[Long](TypeFacade)
+      new ExpressionFactory[Long](TypeFacade, List(ThisSymbol))
     case DoubleTypeExtractor() =>
-      new ExpressionFactory[Double](TypeFacade)
-
+      new ExpressionFactory[Double](TypeFacade, List(ThisSymbol))
     case MethodType(params, IntTypeExtractor()) =>
       new ExpressionFactory[Int](TypeFacade, ThisSymbol :: params)
     case MethodType(params, DoubleTypeExtractor()) =>

@@ -208,7 +208,7 @@ trait TypeBoundFactories extends ApiUniverse {
             NoConstraints
 
         val constraint: List[Constraint] =
-          if (methodSymbol.paramss.isEmpty || methodSymbol.paramss.head.isEmpty) {
+          if (args.isEmpty) {
             annotationConstraints
           } else {
 

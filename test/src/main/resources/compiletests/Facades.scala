@@ -17,4 +17,10 @@ object Facades {
     val y = 5
     y + 1
   }
+
+  @Equal(-5)
+  def unaryMinus() = {
+    val x = 5
+    -x
+  }
 }

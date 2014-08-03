@@ -39,6 +39,12 @@ trait MethodApplication extends AbstractBoundsValidator with MyUniverse {
 
       val parameterContext = parameterMap.foldLeft[Context](EmptyContext)(_&&_)
       BoundsFactory.fromMethod(symbolChainFromTree(t), BoundedType.noBounds, parameterContext)
+
+    case t@Select(_this, _) if t.symbol.isMethod =>
+      val _thisBounds = checkBounds(context)(_this)
+      BoundsFactory.fromMethod(symbolChainFromTree(t), _thisBounds,
+        SymbolChain(List(ThisSymbol)) -> _thisBounds.constraint)
+
   }
 
   protected[plugin]

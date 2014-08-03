@@ -41,6 +41,7 @@ trait Contexts {
     def symbols: Traversable[(SymbolChain[SymbolType], Constraint)] =
       new Context.ContextTraversable(this)
 
+    def isEmpty = false
   }
 
   trait ScopedContext extends Context {
@@ -59,6 +60,8 @@ trait Contexts {
     override def -(symbol: SymbolChain[SymbolType]): Context = this
 
     override def &&(other: Context): Context = other
+
+    override def isEmpty = true
   }
 
   case class &&(lhs: Context, rhs: Context) extends Context {
