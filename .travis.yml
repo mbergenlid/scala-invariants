@@ -6,4 +6,4 @@ scala:
 before_script:
     - wget http://scala-lang.org/files/archive/scala-2.10.4.tgz -O /tmp/scala-2.10.4.tgz
     - tar -xzf /tmp/scala-2.10.4.tgz
-    - export SCALA_HOME=/tmp/scala-2.10.4
+    - export SCALA_HOME=$PWD/scala-2.10.4
