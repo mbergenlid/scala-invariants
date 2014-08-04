@@ -10,8 +10,8 @@ trait TestCompiler {
   self: FunSuite =>
 
 
-//  val ScalaHome = getEnv("SCALA_HOME")
-  val Scalac = "scalac"
+  val ScalaHome = getEnv("SCALA_HOME")
+  val Scalac = s"$ScalaHome/bin/scalac"
   val Plugin = getProperty("PLUGIN")
   val TestOutput = getProperty("TEST_OUTPUT")
 
