@@ -4,6 +4,6 @@ scala:
     - 2.10.4
 
 before_script:
-    - wget http://scala-lang.org/files/archive/scala-2.10.4.tgz /tmp/
+    - wget http://scala-lang.org/files/archive/scala-2.10.4.tgz -O /tmp/scala-2.10.4.tgz
     - tar -xzf /tmp/scala-2.10.4.tgz
     - export PATH=$PATH:/tmp/scala-2.10.4/bin/scalac
