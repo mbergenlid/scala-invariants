@@ -2,7 +2,11 @@ Scala-invariants
 =================
 
 An experimental plugin for the scala compiler that lets you add constraints to expressions
-which has to hold at compile time.
+which has to hold at compile time. This plugin was created as an experiment because I thought
+it was a cool idea and I wanted to learn about scala plugin development. The state of the plugin is 
+far from stable at this time but maybe it will turn into something useful at some stage.
+
+Anyway, below is a brief explanation of what the plugin is capable of at the moment.
 
 Basic Usage
 -----------
@@ -108,9 +112,10 @@ However, that fails with the following error:
            def abs(x: Int) = if(x < 0) -x else x
                              ^
 
-Which is correct, since `-Int.MinValue == Int.MinValue`... That's not good.
+Which is correct, since (for technical reasons) `(-Int.MinValue) == Int.MinValue`. Hmm.. 
+That's not good.
 
-We could fix that by not allowing `Int.MinValue` to be passed in, like so.
+We could fix that by, for example, not allowing `Int.MinValue` to be passed in, like so.
    
     scala> @GreaterThanOrEqual(0)
          | def abs1(@GreaterThan(Int.MinValue)x: Int) = if(x < 0) -x else x
@@ -126,6 +131,9 @@ scala-invariants as well. For example,
     scala> @GreaterThan("x")
          | def increment(@LessThan(Int.MaxValue)x: Int) = x+1
     increment: (x: Int)Int
+
+The parameter to the `@GreaterThan`-annotation is here passed as a String, this means that it should be
+resolved as a method parameter.
 
 The method call will then be resolved in terms of the input. 
 
@@ -145,10 +153,81 @@ A parameter can also be constrained by another parameter in the same method.
 Here, `b` has to be greater than `a` which has to be greater than or equal to `0`
 A parameter can not be constrained by a parameter that appears after the parameter itself.
 
-Property Constraints
-----------------------
-
-
 
 Advanced Example
 ---------------------
+
+Here is a more advanced example of how `scala-invariants` can be used. We are going to implement the method
+`find(array: Array[Int], element: Int, start: Int)` which finds the first occurrence of `element` in `array`
+starting from index `start`.
+
+    scala> :paste
+    // Entering paste mode (ctrl-D to finish)
+    
+    @GreaterThanOrEqual(-1)
+    @LessThan("array.length")
+    def find(
+      array: Array[Int],
+      element: Int,
+      @GreaterThanOrEqual(0) @LessThanOrEqual("array.length") start: Int): Int = {
+
+      if(start == array.length) -1
+      else if(array(start) == element) start
+      else find(array, element, start+1)
+    }
+
+All invariants are validated at compile time, if we for example forgot to add the base case test, 
+`start == array.length`, the code wouldn't compile.
+
+
+    scala> :paste
+    // Entering paste mode (ctrl-D to finish)
+    
+    @GreaterThanOrEqual(-1)
+        @LessThan("array.length")
+        def find(
+          array: Array[Int],
+          element: Int,
+          @GreaterThanOrEqual(0) @LessThanOrEqual("array.length") start: Int): Int = {
+     
+          if(array(start) == element) start
+          else find(array, element, start+1)
+    }
+    
+    // Exiting paste mode, now interpreting.
+    
+    <console>:17: error: 
+    Could not assign start to index.
+    Unable to prove that:
+      start constrained by (start < start + array.length && start >= 0 && start <= array.length && start <= 2147483647 && start == start)
+    is a subtype of
+      index constrained by (index >= 0 && index < array.length)
+          
+                 if(array(start) == element) start
+                          ^
+Here, start could be equal to `array.length` which is not a valid argument for `array.apply`.
+
+    <console>:18: error: 
+    Could not assign $plus to start.
+    Unable to prove that:
+      $plus constrained by ($plus >= 1 && $plus == start + 1 && $plus <= 2147483648 && $plus <= array.length + 1)
+    is a subtype of
+      start constrained by (start >= 0 && start <= array.length)
+          
+                 else find(array, element, start+1)
+                                                ^
+Here, since `start <= array.length` then `start+1 <= array.length + 1` which can be greater than `array.length`  
+
+    <console>:17: error: 
+    Could not assign If to find.
+    Unable to prove that:
+      If constrained by (If < start + array.length && If <= 2147483647 && If >= 0 && If <= array.length && If == start || If < start + array.length && If < 2147483647 && If >= -1 && If < array.length)
+    is a subtype of
+      find constrained by (find >= -1 && find < array.length)
+          
+                 if(array(start) == element) start
+
+Here, the final return is not within the method's declared bounds, since `start` could be equal to 
+`array.length` but the method is declared as returning something that is strictly less than `array.length`.
+
+
