@@ -1,8 +1,5 @@
 package mbergenlid.scalainvariants.test.utils
 
-import java.io.File
-import java.net.URL
-
 import org.scalatest.{Tag, FunSuite}
 import scala.sys.process.ProcessLogger
 
@@ -15,22 +12,6 @@ trait TestCompiler {
   val Plugin = getProperty("PLUGIN")
   val TestOutput = getProperty("TEST_OUTPUT")
 
-  protected def searchPath: URL
-  protected def evaluate(file: File): Unit
-
-  registerTests()
-
-  private def registerTests() {
-    val testDir: URL = searchPath
-
-    val file = new File(testDir.toURI)
-    file.listFiles().
-        filter(_.getName.endsWith(".scala")).foreach { f =>
-      test(f.getName, Tag(f.getName.dropRight(".scala".length))) {
-        evaluate(f)
-      }
-    }
-  }
 
   private def getProperty(name: String) = {
     val prop = System.getProperty(name)

@@ -3,11 +3,11 @@ package mbergenlid.scalainvariants.test
 import java.net.URL
 
 import org.scalatest.{Outcome, FunSuite}
-import mbergenlid.scalainvariants.test.utils.{TestCompiler, PropertyRunner}
+import mbergenlid.scalainvariants.test.utils.{TestScanner, TestCompiler, PropertyRunner}
 import java.io.File
 
 
-class PropertyTestRunner extends FunSuite with TestCompiler {
+class PropertyTestRunner extends FunSuite with TestCompiler with TestScanner {
 
   override protected def searchPath: URL =
     this.getClass.getClassLoader.getResource("propertytests")

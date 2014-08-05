@@ -1,12 +1,12 @@
 package mbergenlid.scalainvariants.test
 
 import org.scalatest.FunSuite
-import mbergenlid.scalainvariants.test.utils.TestCompiler
+import mbergenlid.scalainvariants.test.utils.{TestScanner, TestCompiler}
 import java.net.URL
 import java.io.File
 import scala.sys.process.ProcessLogger
 
-class CompilerTestRunner extends FunSuite with TestCompiler {
+class CompilerTestRunner extends FunSuite with TestCompiler with TestScanner {
 
   override protected def evaluate(file: File): Unit = {
     val specification = TestParser.parse(file)
