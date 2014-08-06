@@ -24,7 +24,9 @@ trait TypeFacades {
   lazy private val typeFacades = Map[Type, Type] (
     typeOf[String] -> universe.typeOf[StringFacade].asInstanceOf[Type],
     typeOf[Array[_]] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[Type],
-    typeOf[Int] -> universe.typeOf[IntFacade].asInstanceOf[Type]
+    typeOf[Int] -> universe.typeOf[IntFacade].asInstanceOf[Type],
+    typeOf[Double] -> universe.typeOf[DoubleFacade].asInstanceOf[Type],
+    typeOf[Long] -> universe.typeOf[LongFacade].asInstanceOf[Type]
   )
 
   lazy private val symbolFacades: Map[String, global.Symbol] =

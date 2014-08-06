@@ -1,37 +1,33 @@
 package mbergenlid.scalainvariants.plugin.facades
 
-import mbergenlid.scalainvariants.annotations.{ConstantNumber, Equal}
+import mbergenlid.scalainvariants.annotations.Equal
 
-trait IntFacade {
+trait DoubleFacade {
 
   @Equal("this + x")
-  def +(x: Int): Int
+  def +(x: Int): Double
 
   @Equal("this + x")
   def +(x: Double): Double
 
   @Equal("this + x")
-  def +(x: Long): Long
+  def +(x: Long): Double
 
   @Equal("this - x")
-  def -(x: Int): Int
+  def -(x: Int): Double
 
   @Equal("this - x")
   def -(x: Double): Double
 
   @Equal("this - x")
-  def -(x: Long): Long
+  def -(x: Long): Double
 
   @Equal("this * x")
-  def *(x: Int): Int
+  def *(x: Int): Double
 
   @Equal("this * x")
   def *(x: Double): Double
 
   @Equal("this * x")
-  def *(x: Long): Long
-
-  @Equal("0 - this")
-  def unary_- : Int
+  def *(x: Long): Double
 }
-
