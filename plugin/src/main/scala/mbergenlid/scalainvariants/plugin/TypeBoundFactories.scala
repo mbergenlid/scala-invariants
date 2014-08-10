@@ -118,6 +118,8 @@ trait TypeBoundFactories extends ApiUniverse {
     }
 
     def expression(tree: Tree, tpe: TypeType): Expression = tree match {
+      case Literal(Constant(x: Short)) =>
+        expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Int)) =>
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Long)) =>

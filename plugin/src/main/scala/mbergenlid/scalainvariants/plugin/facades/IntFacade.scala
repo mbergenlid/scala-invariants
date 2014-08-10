@@ -5,6 +5,9 @@ import mbergenlid.scalainvariants.annotations.{ConstantNumber, Equal}
 trait IntFacade {
 
   @Equal("this + x")
+  def +(x: Short): Int
+
+  @Equal("this + x")
   def +(x: Int): Int
 
   @Equal("this + x")
@@ -14,6 +17,9 @@ trait IntFacade {
   def +(x: Long): Long
 
   @Equal("this - x")
+  def -(x: Short): Int
+
+  @Equal("this - x")
   def -(x: Int): Int
 
   @Equal("this - x")
@@ -21,6 +27,9 @@ trait IntFacade {
 
   @Equal("this - x")
   def -(x: Long): Long
+
+  @Equal("this * x")
+  def *(x: Short): Int
 
   @Equal("this * x")
   def *(x: Int): Int

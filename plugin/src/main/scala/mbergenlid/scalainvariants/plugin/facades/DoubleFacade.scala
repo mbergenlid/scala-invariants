@@ -5,6 +5,9 @@ import mbergenlid.scalainvariants.annotations.Equal
 trait DoubleFacade {
 
   @Equal("this + x")
+  def +(x: Short): Double
+
+  @Equal("this + x")
   def +(x: Int): Double
 
   @Equal("this + x")
@@ -14,6 +17,9 @@ trait DoubleFacade {
   def +(x: Long): Double
 
   @Equal("this - x")
+  def -(x: Short): Double
+
+  @Equal("this - x")
   def -(x: Int): Double
 
   @Equal("this - x")
@@ -21,6 +27,9 @@ trait DoubleFacade {
 
   @Equal("this - x")
   def -(x: Long): Double
+
+  @Equal("this * x")
+  def *(x: Short): Double
 
   @Equal("this * x")
   def *(x: Int): Double

@@ -20,11 +20,12 @@ trait ContextLookup {
     }
 
     def getConstraint(symbol: SymbolChain[SymbolType], context: Context): Constraint = {
-      val constraint =
-        if (symbol.isStable)
-          createConstraintFromSymbol(symbol.head) && context.get(symbol)
-        else
-          createConstraintFromSymbol(symbol.head)
+        val constraint =
+          if (symbol.isStable)
+            createConstraintFromSymbol(symbol.head) && context.get(symbol)
+          else
+            createConstraintFromSymbol(symbol.head)
+
       for {
         sc <- constraint
       } yield substitute(

@@ -5,6 +5,7 @@ trait ConstraintExpression
 class ConstantNumber[T: Numeric] protected (value: T) extends ConstraintExpression
 
 object ConstantNumber {
+  implicit def short2ConstantNumber(value: Short) = new ConstantNumber(value)
   implicit def int2ConstantNumber(value: Int) = new ConstantNumber(value)
   implicit def long2ConstantNumber(value: Long) = new ConstantNumber(value)
   implicit def double2ConstantNumber(value: Double) = new ConstantNumber(value)

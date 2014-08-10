@@ -29,6 +29,7 @@ trait MyUniverse extends ApiUniverse
 
 
   lazy val TypeNothing = typeOf[Nothing]
+  lazy val ShortType = typeOf[Short]
   lazy val IntType = typeOf[Int]
   lazy val GlobalIntType = universe.typeOf[Int]
   lazy val LongType = typeOf[Long]
@@ -47,17 +48,23 @@ trait MyUniverse extends ApiUniverse
       case _ => Symbol.fullName == tpe.typeSymbol.fullName
     }
   }
+  object ShortTypeExtractor extends TypeExtractor(ShortType)
   object IntTypeExtractor extends TypeExtractor(IntType)
   object LongTypeExtractor extends TypeExtractor(LongType)
   object DoubleTypeExtractor extends TypeExtractor(DoubleType)
 
   override def expressionForType: PartialFunction[Types#TypeApi, ExpressionFactory[_]] = {
+    case ShortTypeExtractor() =>
+      new ExpressionFactory[Short](TypeFacade, List(ThisSymbol))
     case IntTypeExtractor() =>
       new ExpressionFactory[Int](TypeFacade, List(ThisSymbol))
     case LongTypeExtractor() =>
       new ExpressionFactory[Long](TypeFacade, List(ThisSymbol))
     case DoubleTypeExtractor() =>
       new ExpressionFactory[Double](TypeFacade, List(ThisSymbol))
+
+    case MethodType(params, ShortTypeExtractor()) =>
+      new ExpressionFactory[Short](TypeFacade, ThisSymbol :: params)
     case MethodType(params, IntTypeExtractor()) =>
       new ExpressionFactory[Int](TypeFacade, ThisSymbol :: params)
     case MethodType(params, DoubleTypeExtractor()) =>

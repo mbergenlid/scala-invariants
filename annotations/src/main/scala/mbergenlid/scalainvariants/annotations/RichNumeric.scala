@@ -1,6 +1,6 @@
 package mbergenlid.scalainvariants.annotations
 
-import scala.math.Numeric.{DoubleIsFractional, LongIsIntegral, IntIsIntegral}
+import scala.math.Numeric.{ShortIsIntegral, DoubleIsFractional, LongIsIntegral, IntIsIntegral}
 import scala.math.Ordering
 
 /**
@@ -72,4 +72,17 @@ object RichNumeric {
   }
 
   implicit object DoubleIsRichNumeric extends DoubleIsRichNumeric with Ordering.DoubleOrdering
+
+  trait ShortIsRichNumeric extends RichNumeric[Short] with ShortIsIntegral {
+    override def minValue = Short.MinValue
+    override def maxValue = Short.MaxValue
+
+    def fromBigDecimal(x: BigDecimal) = x.toShort
+    def toBigDecimal(x: Short) = BigDecimal(x)
+
+    override def fromType[U: RichNumeric](value: U) =
+      fromInt(implicitly[RichNumeric[U]].toInt(value))
+  }
+
+  implicit object ShortIsRichNumeric extends ShortIsRichNumeric with Ordering.ShortOrdering
 }
