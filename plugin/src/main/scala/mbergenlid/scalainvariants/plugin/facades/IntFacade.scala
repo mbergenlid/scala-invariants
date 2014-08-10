@@ -14,6 +14,9 @@ trait IntFacade {
   def +(x: Double): Double
 
   @Equal("this + x")
+  def +(x: Float): Float
+
+  @Equal("this + x")
   def +(x: Long): Long
 
   @Equal("this - x")
@@ -26,6 +29,9 @@ trait IntFacade {
   def -(x: Double): Double
 
   @Equal("this - x")
+  def -(x: Float): Float
+
+  @Equal("this - x")
   def -(x: Long): Long
 
   @Equal("this * x")
@@ -36,6 +42,9 @@ trait IntFacade {
 
   @Equal("this * x")
   def *(x: Double): Double
+
+  @Equal("this * x")
+  def *(x: Float): Float
 
   @Equal("this * x")
   def *(x: Long): Long

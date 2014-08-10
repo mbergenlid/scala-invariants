@@ -26,6 +26,7 @@ trait TypeFacades {
     typeOf[Array[_]] -> universe.typeOf[ArrayFacade[_]].asInstanceOf[Type],
     typeOf[Int] -> universe.typeOf[IntFacade].asInstanceOf[Type],
     typeOf[Double] -> universe.typeOf[DoubleFacade].asInstanceOf[Type],
+    typeOf[Float] -> universe.typeOf[FloatFacade].asInstanceOf[Type],
     typeOf[Long] -> universe.typeOf[LongFacade].asInstanceOf[Type],
     typeOf[Short] -> universe.typeOf[ShortFacade].asInstanceOf[Type]
   )

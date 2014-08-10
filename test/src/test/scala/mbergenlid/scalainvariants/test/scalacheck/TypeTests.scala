@@ -75,7 +75,7 @@ class TypeTests extends FunSuite with TestCompiler {
     Gen.oneOf(Plus, Minus, Times)
 
   val types =
-    Gen.oneOf("Int", "Long", "Short", "Double")
+    Gen.oneOf("Int", "Long", "Short", "Double", "Float")
 
   val numeric: Gen[RichNumeric[_]] =
     Gen.oneOf(IntIsRichNumeric, DoubleIsRichNumeric)

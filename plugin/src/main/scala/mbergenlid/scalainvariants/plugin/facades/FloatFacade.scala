@@ -2,13 +2,13 @@ package mbergenlid.scalainvariants.plugin.facades
 
 import mbergenlid.scalainvariants.annotations.Equal
 
-trait LongFacade {
+trait FloatFacade {
 
   @Equal("this + x")
-  def +(x: Short): Long
+  def +(x: Short): Float
 
   @Equal("this + x")
-  def +(x: Int): Long
+  def +(x: Int): Float
 
   @Equal("this + x")
   def +(x: Double): Double
@@ -17,13 +17,13 @@ trait LongFacade {
   def +(x: Float): Float
 
   @Equal("this + x")
-  def +(x: Long): Long
+  def +(x: Long): Float
 
   @Equal("this - x")
-  def -(x: Short): Long
+  def -(x: Short): Float
 
   @Equal("this - x")
-  def -(x: Int): Long
+  def -(x: Int): Float
 
   @Equal("this - x")
   def -(x: Double): Double
@@ -32,20 +32,20 @@ trait LongFacade {
   def -(x: Float): Float
 
   @Equal("this - x")
-  def -(x: Long): Long
+  def -(x: Long): Float
 
   @Equal("this * x")
-  def *(x: Short): Long
+  def *(x: Short): Float
 
   @Equal("this * x")
-  def *(x: Int): Long
-
-  @Equal("this * x")
-  def *(x: Long): Long
+  def *(x: Int): Float
 
   @Equal("this * x")
   def *(x: Double): Double
 
   @Equal("this * x")
   def *(x: Float): Float
+
+  @Equal("this * x")
+  def *(x: Long): Float
 }

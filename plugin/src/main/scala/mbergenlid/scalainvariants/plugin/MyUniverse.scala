@@ -34,6 +34,7 @@ trait MyUniverse extends ApiUniverse
   lazy val GlobalIntType = universe.typeOf[Int]
   lazy val LongType = typeOf[Long]
   lazy val DoubleType = typeOf[Double]
+  lazy val FloatType = typeOf[Float]
   lazy val IntSymbol = IntType.typeSymbol
   lazy val LongSymbol = LongType.typeSymbol
   lazy val DoubleSymbol = DoubleType.typeSymbol
@@ -52,6 +53,7 @@ trait MyUniverse extends ApiUniverse
   object IntTypeExtractor extends TypeExtractor(IntType)
   object LongTypeExtractor extends TypeExtractor(LongType)
   object DoubleTypeExtractor extends TypeExtractor(DoubleType)
+  object FloatTypeExtractor extends TypeExtractor(FloatType)
 
   override def expressionForType: PartialFunction[Types#TypeApi, ExpressionFactory[_]] = {
     case ShortTypeExtractor() =>
@@ -62,6 +64,8 @@ trait MyUniverse extends ApiUniverse
       new ExpressionFactory[Long](TypeFacade, List(ThisSymbol))
     case DoubleTypeExtractor() =>
       new ExpressionFactory[Double](TypeFacade, List(ThisSymbol))
+    case FloatTypeExtractor() =>
+      new ExpressionFactory[Float](TypeFacade, List(ThisSymbol))
 
     case MethodType(params, ShortTypeExtractor()) =>
       new ExpressionFactory[Short](TypeFacade, ThisSymbol :: params)
@@ -69,6 +73,8 @@ trait MyUniverse extends ApiUniverse
       new ExpressionFactory[Int](TypeFacade, ThisSymbol :: params)
     case MethodType(params, DoubleTypeExtractor()) =>
       new ExpressionFactory[Double](TypeFacade, ThisSymbol :: params)
+    case MethodType(params, FloatTypeExtractor()) =>
+      new ExpressionFactory[Float](TypeFacade, ThisSymbol :: params)
     case MethodType(params, LongTypeExtractor()) =>
       new ExpressionFactory[Long](TypeFacade, ThisSymbol :: params)
   }

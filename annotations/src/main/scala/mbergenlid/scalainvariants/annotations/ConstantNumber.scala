@@ -9,5 +9,6 @@ object ConstantNumber {
   implicit def int2ConstantNumber(value: Int) = new ConstantNumber(value)
   implicit def long2ConstantNumber(value: Long) = new ConstantNumber(value)
   implicit def double2ConstantNumber(value: Double) = new ConstantNumber(value)
+  implicit def float2ConstantNumber(value: Float) = new ConstantNumber(value)
   implicit def string2ConstantNumber(value: String) = new ConstantNumber[Int](0)
 }

@@ -29,6 +29,9 @@ trait ShortFacade {
   def -(x: Double): Double
 
   @Equal("this - x")
+  def -(x: Float): Float
+
+  @Equal("this - x")
   def -(x: Long): Long
 
   @Equal("this * x")
@@ -39,6 +42,9 @@ trait ShortFacade {
 
   @Equal("this * x")
   def *(x: Double): Double
+
+  @Equal("this * x")
+  def *(x: Float): Float
 
   @Equal("this * x")
   def *(x: Long): Long

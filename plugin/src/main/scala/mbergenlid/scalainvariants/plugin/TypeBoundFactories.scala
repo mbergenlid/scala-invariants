@@ -126,6 +126,8 @@ trait TypeBoundFactories extends ApiUniverse {
         expressionForType(tpe).convertConstant(x)
       case Literal(Constant(x: Double)) =>
         expressionForType(tpe).convertConstant(x)
+      case Literal(Constant(x: Float)) =>
+        expressionForType(tpe).convertConstant(x)
       case x if x.symbol != NoSymbol =>
         expressionForType(tpe).fromSymbol(symbolChainFromTree(x))
     }
