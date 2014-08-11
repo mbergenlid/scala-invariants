@@ -33,11 +33,21 @@ object MiscInvariants {
     testMethod(z) //error
   }
 
-  def validationInMiddleOfBooleanExpression() = {
+  def validationInMiddleOfBooleanExpression1() = {
     val x = randomInteger
 
     if(x < 10 && testMethod(x)) println("Should compile")
     if(x > 0 && testMethod(x)) println("Should not compile") //error
+  }
+
+  def validationInMiddleOfBooleanExpression2() = {
+    val x = randomInteger
+    val y = randomInteger
+
+    if(x < 10 || testMethod(x)) println("Should not compile") //error
+    if(x > 10 || testMethod(x)) println("Should compile")
+
+    if((x > 10 && y < 10) || testMethod(x)) println("OK") //error
   }
 
   def implicitlyBoundToMethod() = {

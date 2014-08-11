@@ -81,13 +81,6 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   import BoolOperators._
 
-  class DeferredBoolExpression(method: Name, expression: Name => Context) {
-    def apply(): Context = expression(method)
-    def unary_! :DeferredBoolExpression = method match {
-      case m if m == n("$less") => new DeferredBoolExpression(n("$greater$eq"), expression)
-    }
-  }
-
   def evaluate(expr: Tree)(implicit c: Context): BoolOperator = expr match {
     case Apply(Select(boolExpr, method), List(arg)) if boolExpr.tpe <:< typeOf[Boolean] =>
       apply(evaluate(boolExpr), method, arg)
@@ -116,7 +109,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
 
   def apply(obj: BoolOperator, method: Name, arg: Tree)(implicit c: Context): BoolOperator = method match {
     case a if a == stringToTermName("$amp$amp") => BoolOperators.&&(obj, evaluate(arg)(obj.evaluate() && c))
-    case a if a == stringToTermName("$bar$bar") => BoolOperators.||(obj, evaluate(arg))
+    case a if a == stringToTermName("$bar$bar") => BoolOperators.||(obj, evaluate(arg)((!obj).evaluate() && c))
     case _ => obj
   }
 
