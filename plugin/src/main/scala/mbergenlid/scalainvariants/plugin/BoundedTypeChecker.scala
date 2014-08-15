@@ -18,7 +18,7 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
 
   def checkBoundedTypes(tree: Tree): List[BoundedTypeError] = {
     errors = Nil
-    checkBounds(EmptyContext)(tree)
+    checkBounds(Context.EmptyContext)(tree)
     errors.reverse
   }
 

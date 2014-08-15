@@ -17,6 +17,9 @@ class BasicContextSpec extends FunSuite with TestUniverse {
     SymbolChain(symbol.toList)
 
   implicit def int2Expression(i: Int): Expression = Polynomial.fromConstant(i)
+  implicit def sym2Expression(s: SymbolChain[SymbolType]): Expression = Polynomial.fromSymbol[Int](s)
+
+  import Context._
 
   test("Basic retrieval") {
     val context = EmptyContext &&
@@ -35,7 +38,7 @@ class BasicContextSpec extends FunSuite with TestUniverse {
       chain(symbol1) -> LessThan(-10)
 
     val constraint = context.get(chain(symbol1))
-    assert(constraint.definitelySubsetOf(GreaterThan(0) || LessThan(-10)))
+    assert(constraint.definitelySubsetOf(GreaterThan(0) || LessThan(-10)), constraint.prettyPrint())
 
     val context2 = EmptyContext &&
       chain(symbol1) -> GreaterThan(0) ||
@@ -45,16 +48,34 @@ class BasicContextSpec extends FunSuite with TestUniverse {
     assert(constraint2 == NoConstraints)
   }
 
-  test("Lookup Context.Or") {
+  test("Lookup Context.Or 1") {
     val context = ((EmptyContext && chain(symbol1) -> Equal(20)) &&
       chain(symbol1) -> GreaterThanOrEqual(11)) || (
       chain(symbol1) -> LessThanOrEqual(-1))
 
     val constraint = context.get(chain(symbol1))
-    println(constraint.prettyPrint())
     assert(constraint.definitelySubsetOf(GreaterThanOrEqual(11) || LessThanOrEqual(-1)))
   }
 
+  test("Lookup Context.Or 2") {
+    val context = (EmptyContext && chain(symbol1) -> GreaterThan(0) ||
+      chain(symbol2) -> GreaterThan(0)) &&
+      chain(symbol2) -> LessThanOrEqual(0)
+
+    val constraint = context.get(chain(symbol1))
+    assert(constraint.definitelySubsetOf(GreaterThan(0)), constraint.prettyPrint())
+
+
+    val context2 = (EmptyContext &&
+      chain(symbol1) -> GreaterThan(0) &&
+      chain(symbol1) -> Equal(chain(symbol1))) &&
+      chain(symbol1) -> LessThanOrEqual(0)
+
+
+    println(context2)
+    val constraint2 = context2.get(chain(symbol2))
+//    println(constraint2)
+  }
 
   val testClass = new TestClass
   class TestClass {

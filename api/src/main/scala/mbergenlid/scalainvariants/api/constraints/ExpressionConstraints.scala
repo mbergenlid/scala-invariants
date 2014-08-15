@@ -217,7 +217,7 @@ trait ExpressionConstraints {
     }
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
-      case GreaterThan(v2) => v2 > expression
+      case GreaterThan(v2) => v2 >= expression
       case GreaterThanOrEqual(v2) => v2 > expression
       case Equal(v2) => v2 > expression
       case _ => false
@@ -300,7 +300,7 @@ trait ExpressionConstraints {
 
     def flatMap(f: (ExpressionConstraint) => Constraint) = ???
 
-    def map[B](f: (ExpressionConstraint) => B)(implicit bf: ConstraintBuilder[B]) =
+    def map[B](f: (ExpressionConstraint) => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) =
       PropertyConstraint(symbol, constraint.map(f))
 
     def isSymbolConstraint = ???

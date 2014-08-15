@@ -7,7 +7,7 @@ import mbergenlid.scalainvariants.annotations._
 
 object IfExpressions {
 
-  val anotherRandomInteger = 20
+  def anotherRandomInteger = 20
 
   def testMethod(@GreaterThanOrEqual(0)
                  @LessThanOrEqual(10) a: Int) = a == 3
@@ -57,6 +57,22 @@ object IfExpressions {
 
     if(x > 0 && x + 2 < 14)
       testMethod(x) //error
+  }
+
+  @GreaterThan(0)
+  def elimination() = {
+    val x = anotherRandomInteger
+    val y = anotherRandomInteger
+
+    if(x > 0 || y > 0) {
+      if(y > 0) { //(x > 0 || y > 0) && y > 0 ==> (x > 0 && y > 0) || y > 0
+        y
+      } else { //(x > 0 || y > 0) && y <= 0  ==> (x > 0 && y <= 0) || Impossible
+        x
+      }
+    } else {
+      5
+    }
   }
 
   @GreaterThanOrEqual(0)

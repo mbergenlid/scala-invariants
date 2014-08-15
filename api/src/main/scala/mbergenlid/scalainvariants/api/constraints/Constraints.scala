@@ -7,19 +7,24 @@ trait Constraints {
   self: ApiUniverse =>
 
   @implicitNotFound(msg = "Can not create Constraint from ${From}")
-  trait ConstraintBuilder[-From] {
-    def apply(from: From, previous: ExpressionConstraint): Constraint
+  trait ConstraintBuilder[-From, To] {
+    def apply(from: From, previous: To): Constraint
   }
-  class DefaultConstraintBuilder extends ConstraintBuilder[Constraint] {
+  class DefaultConstraintBuilder extends ConstraintBuilder[Constraint, ExpressionConstraint] {
     def apply(from: Constraint, previous: ExpressionConstraint) = from
+  }
+
+  class SimpleConstraintBuilder extends ConstraintBuilder[Constraint, SimpleConstraint] {
+    def apply(from: Constraint, previous: SimpleConstraint) = from
   }
 
   object Constraint {
     import scala.language.implicitConversions
     implicit val fromConstraint = new DefaultConstraintBuilder
+    implicit val fromSimpleConsraint = new SimpleConstraintBuilder
 
-    implicit val fromExpression: ConstraintBuilder[Expression] =
-      new ConstraintBuilder[Expression] {
+    implicit val fromExpression: ConstraintBuilder[Expression, ExpressionConstraint] =
+      new ConstraintBuilder[Expression, ExpressionConstraint] {
         def apply(from: Expression, previous: ExpressionConstraint): ExpressionConstraint = previous match {
           case LessThan(_) => LessThan(from)
           case LessThanOrEqual(_) => LessThanOrEqual(from)
@@ -87,17 +92,23 @@ trait Constraints {
 
     def isSymbolConstraint: Boolean
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]): Constraint
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]): Constraint
     def flatMap(f: ExpressionConstraint => Constraint): Constraint
+
+    def mapSimpleConstraints[B](f: SimpleConstraint => B)
+        (implicit bf: ConstraintBuilder[B, SimpleConstraint]): Constraint
 
     def &&(other: Constraint): Constraint
     def ||(other: Constraint): Constraint
 
-    //  lazy val propertyConstraints = new PropertyConstraintTraversable(this)
   }
 
   trait SimpleConstraint extends Constraint {
     def tryAnd(constraint: SimpleConstraint): Option[SimpleConstraint]
+
+    override def mapSimpleConstraints[B](f: (SimpleConstraint) => B)
+        (implicit bf: ConstraintBuilder[B, SimpleConstraint]): Constraint =
+      bf(f(this), this)
   }
 
   case object NoConstraints extends Constraint with SimpleConstraint {
@@ -111,7 +122,7 @@ trait Constraints {
 
     def isSymbolConstraint = false
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) = this
     def flatMap(f: ExpressionConstraint => Constraint) = this
 
     def &&(other: Constraint) = other
@@ -123,7 +134,7 @@ trait Constraints {
   case object ImpossibleConstraint extends Constraint with SimpleConstraint {
     override def definitelySubsetOf(that: Constraint) = false
     override def flatMap(f: ExpressionConstraint => Constraint) = this
-    override def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = this
+    override def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) = this
     override def isSymbolConstraint = false
     override def lowerBound = this
     override def upperBound = this
@@ -141,7 +152,7 @@ trait Constraints {
     def definitelyNotSubsetOf(that: Constraint): Boolean
     override def isSymbolConstraint = expression.containsSymbols
 
-    override def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+    override def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) =
       bf(f(this), this)
 
     override def flatMap(f: ExpressionConstraint => Constraint) = f(this)
@@ -317,7 +328,7 @@ trait Constraints {
         }.getOrElse(sc)
       }
       if(applied)
-        if(mapped.exists(_ == ImpossibleConstraint)) List(ImpossibleConstraint)
+        if(mapped.contains(ImpossibleConstraint)) List(ImpossibleConstraint)
         else mapped
       else scToAdd :: to
     }
@@ -344,14 +355,18 @@ trait Constraints {
     override def prettyPrint(variable: String = "_") =
       constraints.map(_.prettyPrint(variable)).mkString(" && ")
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) =
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) =
       constraints.map(_.map(f)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
-//      exprConstraints.map(ec => bf(f(ec), ec)).reduceLeftOption(_&&_).getOrElse(NoConstraints)
 
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
 
-    private def exprConstraints: List[ExpressionConstraint] =
-      constraints.collect{case ec:ExpressionConstraint => ec}
+    override def mapSimpleConstraints[B](f: (SimpleConstraint) => B)
+        (implicit bf: ConstraintBuilder[B, SimpleConstraint]): Constraint = {
+
+      val m = constraints.map(_.mapSimpleConstraints(f))
+      m.reduceLeftOption(_&&_).getOrElse(NoConstraints)
+    }
+
   }
 
   object And {
@@ -392,7 +407,7 @@ trait Constraints {
         } yield and.asInstanceOf[And]
         case _ =>
           constraints.map(_ && other).collect {
-            case a@And(_) if !a.constraints.exists(_ == ImpossibleConstraint) => a
+            case a@And(_) if !a.constraints.contains(ImpossibleConstraint) => a
             case ec:ExpressionConstraint => And(ec)
           }
       }
@@ -423,12 +438,16 @@ trait Constraints {
         })
     }
 
-    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B]) = {
+    def map[B](f: ExpressionConstraint => B)(implicit bf: ConstraintBuilder[B, ExpressionConstraint]) = {
       val l = constraints.map(_.map(f))
       l.reduce(_||_)
     }
 
 
     def flatMap(f: ExpressionConstraint => Constraint) = map(f)
+
+    override def mapSimpleConstraints[B](f: (SimpleConstraint) => B)
+        (implicit bf: ConstraintBuilder[B, SimpleConstraint]): Constraint =
+      constraints.map(_.mapSimpleConstraints(f)).reduce(_||_)
   }
 }

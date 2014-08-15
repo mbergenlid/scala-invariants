@@ -8,6 +8,7 @@ trait BooleanExpressionEvaluator extends AbstractBoundsValidator {
   self: MyUniverse =>
   import global._
 
+  import Context._
   object BoolOperators {
     trait BoolOperator {
       def evaluate(): Context

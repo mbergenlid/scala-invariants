@@ -61,8 +61,9 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         val assignee =
           exprConstraints && fromConstants && fromAnnotatedConstants
 
-        if(!(assignee definitelySubsetOf target))
+        if(!(assignee definitelySubsetOf target)) {
           reportError(Error(expr.pos, createErrorMessage(symbol, target, expr, assignee)(context)))
+        }
         boundExpr
       } else {
 
@@ -85,7 +86,7 @@ trait TypeConstraintValidator extends AbstractBoundsValidator {
         (symbol, BoundsFactory.fromSymbolChain(symbol))
       }
 
-      map.foldLeft[Context](EmptyContext)(_&&_)
+      map.foldLeft[Context](Context.EmptyContext)(_&&_)
     }
 
     private def replaceThisSymbols(simpleConstraint: SimpleConstraint): Constraint =

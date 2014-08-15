@@ -38,6 +38,7 @@ class ContextSpec extends FunSuite with TestUniverse {
     map + (sym(term) -> multiplicity)
   })
 
+  import Context._
   test("Simple retrieval") {
     val expected =
       LessThan(Polynomial.fromConstant(4))

@@ -12,6 +12,9 @@ class ConstraintsSpec extends FunSuite
   test("ExpressionConstraint.&&") {
     val res1 = LessThanOrEqual(1) && GreaterThanOrEqual(1)
     assert(res1 === Equal(1))
+
+    val res2 = LessThanOrEqual(0) && GreaterThan(0)
+    assert(res2 === ImpossibleConstraint)
   }
 
   test("Test simplification") {
