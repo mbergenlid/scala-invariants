@@ -153,7 +153,6 @@ A parameter can also be constrained by another parameter in the same method.
 Here, `b` has to be greater than `a` which has to be greater than or equal to `0`
 A parameter can not be constrained by a parameter that appears after the parameter itself.
 
-
 Advanced Example
 ---------------------
 
@@ -230,4 +229,29 @@ Here, since `start <= array.length` then `start+1 <= array.length + 1` which can
 Here, the final return is not within the method's declared bounds, since `start` could be equal to 
 `array.length` but the method is declared as returning something that is strictly less than `array.length`.
 
+Smart If Expressions
+---------------------
+
+This section lists a few examples of how if expressions can be used.
+
+    scala> @GreaterThan(0)
+         | def ifExpr1() = {
+         |   val x = scala.util.Random.nextInt
+         |   val y = scala.util.Random.nextInt
+         | 
+         |   if(x > 0 || y > 0) { 
+         |     if(y > 0) { //y > 0 in this branch
+         |       y
+         |     } else { //y <= 0 ==> x > 0
+         |       x
+         |     }
+         |   } else {
+         |     5
+         |   }
+         | }
+
+
+The snippet above compiles since all branches can be proven to be greater than zero. 
+In the first branch, either `y` or `x` is greater than zero. Next if `y > 0` then we return `y` or else,
+since `y` is not greater than 0 then `x` must be greater than zero, we return `x`.
 
