@@ -333,11 +333,18 @@ trait Constraints {
       else scToAdd :: to
     }
 
-    def simplify(): And = And(
-      (List[SimpleConstraint]() /: constraints) {
-        (acc, toAdd) =>
-          tryAnd(acc, toAdd)
-      }.reverse)
+    def simplify(): Constraint = {
+      val list =
+        (List[SimpleConstraint]() /: constraints) {
+          (acc, toAdd) =>
+            tryAnd(acc, toAdd)
+        }.reverse
+      list match {
+        case List() => NoConstraints
+        case c :: Nil => c
+        case l => And(l)
+      }
+    }
 
     override def ||(other: Constraint): Constraint = other match {
       case ImpossibleConstraint => this
@@ -403,8 +410,11 @@ trait Constraints {
           sc1 <- constraints
           sc2 <- cs
           and = sc1 && sc2
-          if and != And(ImpossibleConstraint)
-        } yield and.asInstanceOf[And]
+          if and != ImpossibleConstraint
+        } yield and match {
+            case s: SimpleConstraint => And(s)
+            case _ => and.asInstanceOf[And]
+        }
         case _ =>
           constraints.map(_ && other).collect {
             case a@And(_) if !a.constraints.contains(ImpossibleConstraint) => a

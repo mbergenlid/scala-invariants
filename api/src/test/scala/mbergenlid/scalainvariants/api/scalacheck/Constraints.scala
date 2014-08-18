@@ -41,10 +41,17 @@ class Constraints extends FunSuite with Checkers with TestUniverse {
   test("And simplify") {
     check(forAll { a: And =>
       val simple = a.simplify()
-      val numGreaterThan =
-        simple.constraints.count(sc => sc.isInstanceOf[GreaterThan] || sc.isInstanceOf[GreaterThanOrEqual])
-      val numLessThan =
-        simple.constraints.count(sc => sc.isInstanceOf[LessThan] || sc.isInstanceOf[LessThanOrEqual])
+
+      val numGreaterThan = simple match {
+        case And(constraints) =>
+          constraints.count(sc => sc.isInstanceOf[GreaterThan] || sc.isInstanceOf[GreaterThanOrEqual])
+        case _ => 0
+      }
+      val numLessThan = simple match {
+        case And(constraints) =>
+          constraints.count(sc => sc.isInstanceOf[LessThan] || sc.isInstanceOf[LessThanOrEqual])
+        case _ => 0
+      }
 
       (
         numGreaterThan <= 1 &&

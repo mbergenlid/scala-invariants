@@ -10,8 +10,10 @@ class BasicContextSpec extends FunSuite with TestUniverse {
 
   val variable1 = 1
   val variable2 = 3
+  val variable3 = 4
   lazy val symbol1 = typeOf[BasicContextSpec].member(newTermName("variable1"))
   lazy val symbol2 = typeOf[BasicContextSpec].member(newTermName("variable2"))
+  lazy val symbol3 = typeOf[BasicContextSpec].member(newTermName("variable3"))
 
   def chain(symbol: SymbolApi*): SymbolChain[SymbolApi] =
     SymbolChain(symbol.toList)
@@ -66,15 +68,44 @@ class BasicContextSpec extends FunSuite with TestUniverse {
     assert(constraint.definitelySubsetOf(GreaterThan(0)), constraint.prettyPrint())
 
 
-    val context2 = (EmptyContext &&
-      chain(symbol1) -> GreaterThan(0) &&
-      chain(symbol1) -> Equal(chain(symbol1))) &&
-      chain(symbol1) -> LessThanOrEqual(0)
-
+    //(s1 == s3 && s2 == s3) && (s1 > 0 || s2 > 0) && s2 <= 0
+    //(s1 == s3 && s1 > 0 && s2 == s3 || s1 == s3 && s2 > 0 && s2 == s3)
+    //(s1 == s3 && s1 > 0 && s2 == s3 && s2 <= 0) || (s1 == s3 && s2 > Impossible)
+    val context2 = EmptyContext &&
+      chain(symbol1) -> Equal(chain(symbol3)) &&
+      chain(symbol2) -> Equal(chain(symbol3)) &&
+      (
+        chain(symbol1) -> GreaterThan(0) ||
+        chain(symbol2) -> GreaterThan(0)
+      ) &&
+      chain(symbol2) -> LessThanOrEqual(0)
 
     println(context2)
-    val constraint2 = context2.get(chain(symbol2))
-//    println(constraint2)
+    val constraint2 = context2.get(chain(symbol1))
+    assert(constraint2.definitelySubsetOf(GreaterThan(0)), constraint2.prettyPrint())
+  }
+
+  test("And") {
+    val context = EmptyContext &&
+      chain(symbol1) -> LessThan(0) &&
+      chain(symbol1) -> GreaterThanOrEqual(0)
+
+    assert(context.constraint === ImpossibleConstraint)
+
+    val context2 = EmptyContext &&
+      chain(symbol1) -> GreaterThan(0) &&
+      chain(symbol1) -> Equal(chain(symbol2)) &&
+      chain(symbol1) -> LessThanOrEqual(0)
+
+    assert(context2.constraint === ImpossibleConstraint)
+
+    val context3 = EmptyContext &&
+      chain(symbol1) -> LessThan(0) &&
+      chain(symbol1) -> Equal(chain(symbol2)) &&
+      chain(symbol1) -> GreaterThanOrEqual(0)
+
+    assert(context3.constraint === ImpossibleConstraint)
+
   }
 
   val testClass = new TestClass

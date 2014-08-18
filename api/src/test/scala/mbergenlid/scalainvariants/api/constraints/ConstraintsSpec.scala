@@ -9,6 +9,13 @@ class ConstraintsSpec extends FunSuite
   import Constraint._
   import scala.language.implicitConversions
 
+  test("Impossible constraints") {
+    assert((LessThan(0) && GreaterThanOrEqual(0)) === ImpossibleConstraint)
+    assert((LessThanOrEqual(0) && GreaterThan(0)) === ImpossibleConstraint)
+    assert((GreaterThan(0) && LessThanOrEqual(0)) === ImpossibleConstraint)
+    assert((GreaterThanOrEqual(0) && LessThan(0)) === ImpossibleConstraint)
+  }
+
   test("ExpressionConstraint.&&") {
     val res1 = LessThanOrEqual(1) && GreaterThanOrEqual(1)
     assert(res1 === Equal(1))
@@ -54,7 +61,7 @@ class ConstraintsSpec extends FunSuite
     assert(res5 == c("x > y && (x < 10 && x > 1)"), res5.prettyPrint())
 
     val res6 = and && And(GreaterThan(15))
-    assert(res6 === And(ImpossibleConstraint))
+    assert(res6 === ImpossibleConstraint)
 
     val res7 = c("x >= 10") && c("x == 9")
     assert(res7 === ImpossibleConstraint)

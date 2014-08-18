@@ -118,7 +118,7 @@ trait ExpressionConstraints {
     }
 
     override def definitelyNotSubsetOf(that: Constraint) = that match {
-      case LessThan(v2) => v2 < expression
+      case LessThan(v2) => v2 <= expression
       case LessThanOrEqual(v2) => v2 < expression
       case Equal(v2) => v2 < expression
       case _ => false

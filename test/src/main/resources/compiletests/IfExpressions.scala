@@ -7,7 +7,7 @@ import mbergenlid.scalainvariants.annotations._
 
 object IfExpressions {
 
-  def anotherRandomInteger = 20
+  val anotherRandomInteger = 20
 
   def testMethod(@GreaterThanOrEqual(0)
                  @LessThanOrEqual(10) a: Int) = a == 3
