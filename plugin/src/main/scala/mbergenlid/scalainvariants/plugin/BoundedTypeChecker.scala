@@ -45,11 +45,11 @@ abstract class BoundedTypeChecker(val global: Universe) extends MyUniverse
       case PackageDef(_, trees) =>
         traverseChildren(trees)
         BoundedType.noBounds
-      case ModuleDef(_, _, tmpl) =>
-        traverseChildren(tmpl.children)
+      case ModuleDef(_, _, tpl) =>
+        traverseChildren(tpl.children)
         BoundedType.noBounds
-      case ClassDef(_, _, _, tmpl) =>
-        traverseChildren(tmpl.children)
+      case ClassDef(_, _, _, tpl) =>
+        traverseChildren(tpl.children)
         BoundedType.noBounds
       case _ =>
         BoundedType.noBounds
