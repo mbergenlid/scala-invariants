@@ -41,7 +41,9 @@ trait TestCompiler {
         s"-Xplugin:$Plugin",
         "-d", TestOutput, file)
 
-    if(logger.isDefined) commandLine.!(logger.get)
-    else commandLine.!
+    val builder = Process(commandLine, None)
+//      "JAVA_OPTS" -> "-agentlib:jdwp=transport=dt_socket,server=n,address=marcus-Aspire-V5-571G:5005,suspend=y")
+    if(logger.isDefined) builder.!(logger.get)
+    else builder.!
   }
 }

@@ -27,6 +27,8 @@ class ExpressionsSpec extends FunSuite with TestUniverse {
     val multiplicity = map.getOrElse(term, 0) + 1
     map + (sym(term) -> multiplicity)
   })
+  def t(v: Int, s: String, mult: Int) =
+    Term(ConstantValue(v), Map(sym(s) -> mult))
 
   test("Comparison") {
     assert(c(10) > c(Int.MinValue))
@@ -116,5 +118,19 @@ class ExpressionsSpec extends FunSuite with TestUniverse {
 
     assert(diff1 > Polynomial.fromConstant(Int.MaxValue))
     assert(diff2 > Polynomial.fromConstant(Int.MaxValue))
+  }
+
+  test("Division") {
+    assert(c(4) / c(2) === c(2))
+    assert(c(4) / s("x") === Polynomial(t(4, "x", -1)))
+
+    assert(c(0) / c(2) === c(0))
+  }
+
+  test("Division substitute") {
+    val sub = (c(2) / s("x")).substitute("x", c(2))
+    assert(sub === c(1))
+
+    assert(c(2).substitute("x", c(1)) === c(2))
   }
 }

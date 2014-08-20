@@ -22,10 +22,11 @@ trait ExpressionParsers {
         value
 
     def operator: Parser[(Expression, Expression) => Expression] =
-      ("+" | "-" | "*") ^^ {
+      ("+" | "-" | "*" | "/") ^^ {
         case "+" => _ + _
         case "-" => _ - _
         case "*" => _ * _
+        case "/" => _ / _
       }
 
     def value: Parser[Expression] =

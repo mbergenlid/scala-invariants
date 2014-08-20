@@ -194,12 +194,20 @@ trait Constraints {
     protected[api]
     def combineNegative(other: ExpressionConstraint): Option[Expression => ExpressionConstraint]
 
-    def substitute(symbol: SymbolChain[SymbolType], other: ExpressionConstraint): Option[ExpressionConstraint] =
-      for {
-        term <- expression.terms.find(_.variables.contains(symbol))
-        f <-  if(term.coeff.isLessThanZero) combineNegative(other)
-        else combine(other)
-      } yield {f(expression.substitute(symbol, other.expression))}
+    def substitute(symbol: SymbolChain[SymbolType], other: ExpressionConstraint): Option[ExpressionConstraint] = {
+      expression.terms.find(_.variables.contains(symbol)) match {
+        case Some(term) =>
+          for {
+            f <-  if(term.coeff.isLessThanZero)
+              combineNegative(other)
+            else
+              combine(other)
+          } yield {f(expression.substitute(symbol, other.expression))}
+        case None =>
+          Some(this)
+      }
+    }
+
 
     /** Returns the transitive constraint factory from this to {{{other}}}
       * by going via constraint less than.

@@ -30,8 +30,10 @@ trait Expressions {
     def +(that: Expression): Expression
     def -(that: Expression): Expression
     def *(that: Expression): Expression
+    def /(that: Expression): Expression
 
     def unary_- : Expression
+    def inverse : Expression
     def substitute(symbol: SymbolChain[SymbolType], expr: Expression): Expression
     def substituteConstant(expr: Expression): Expression
 
@@ -108,7 +110,11 @@ trait Expressions {
       thatTerm <- that.terms
     } yield { thisTerm * thatTerm }, isIntegral)
 
+    def /(that: Expression): Expression = this * that.inverse
+
     def unary_- : Expression = map(_.unary_-)
+    def inverse : Expression = map(_.inverse)
+
     def substitute(symbol: SymbolChain[SymbolType], expr: Expression): Expression = {
       terms.foldLeft[Expression](Polynomial.Zero) {(p, t) => {
         p + t.substitute(symbol, expr, isIntegral)
@@ -167,12 +173,16 @@ trait Expressions {
     def lessThanZero = variables.isEmpty && coeff.isLessThanZero
 
     def substitute(symbol: SymbolChain[SymbolType], expr: Expression, isIntegral: Boolean): Expression  =
-      if(variables.contains(symbol)) {
-        expr * new Polynomial(Set(Term(coeff, variables - symbol)), isIntegral)
-      } else {
-        new Polynomial(Set(this), isIntegral)
+      variables.get(symbol) match {
+        case Some(order) if order > 0 =>
+          expr * new Polynomial(Set(Term(coeff, variables - symbol)), isIntegral)
+        case Some(order) if order < 0 =>
+          new Polynomial(Set(Term(coeff, variables - symbol)), isIntegral) / expr
+        case Some(0) =>
+          new Polynomial(Set(this), isIntegral)
+        case None =>
+          new Polynomial(Set(this), isIntegral)
       }
-
 
     def + : PartialFunction[Term, Term] = {
       case t if t.isZero => this
@@ -193,6 +203,9 @@ trait Expressions {
       })
     }
 
+    def inverse: Term =
+      Term(coeff.inverse, variables.map(v => (v._1, -v._2)))
+
     override def toString = {
       def printVariables = {
         def printVariable(v: SymbolChain[SymbolType], mult: Int) =
@@ -212,13 +225,13 @@ trait Expressions {
   }
 
   case class ConstantValue(value: BigDecimal) extends Ordered[ConstantValue] {
-
     def isOne = value == BigDecimal(1)
     def isZero = value == BigDecimal(0)
     def isGreaterThanZero = value > 0
     def isLessThanZero = value < 0
 
     def unary_- : ConstantValue = ConstantValue(-value)
+    def inverse: ConstantValue = ConstantValue(1/value)
 
     def +(that: ConstantValue) = {
       val newValue = value + that.value

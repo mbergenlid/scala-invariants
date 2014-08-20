@@ -56,4 +56,9 @@ object ArithmeticUnitTests {
     x*y
   }
 
+  @GreaterThanOrEqual(0)
+  def division() = {
+    intBetween0And5 / 2
+  }
+
 }

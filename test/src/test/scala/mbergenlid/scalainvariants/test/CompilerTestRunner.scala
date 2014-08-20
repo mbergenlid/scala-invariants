@@ -11,16 +11,19 @@ class CompilerTestRunner extends FunSuite with TestCompiler with TestScanner {
   override protected def evaluate(file: File): Unit = {
     val specification = TestParser.parse(file)
     val logger = new Logger(file.getName)
-    compile(file.getAbsolutePath, logger)
-
-    val actualErrors = logger.errors
-    for(error <- actualErrors) {
-      if(!specification.errors.exists(_.line == error.line))
-        fail(s"Unexpected compiler error:\n${error.message}")
-    }
-    for(expected <- specification.errors) {
-      if(!actualErrors.exists(_.line == expected.line))
-        fail(s"Expected compiler error on line $expected")
+    val result = compile(file.getAbsolutePath, logger)
+    if(result <= 1) {
+      val actualErrors = logger.errors
+      for(error <- actualErrors) {
+        if(!specification.errors.exists(_.line == error.line))
+          fail(s"Unexpected compiler error:\n${error.message}")
+      }
+      for(expected <- specification.errors) {
+        if(!actualErrors.exists(_.line == expected.line))
+          fail(s"Expected compiler error on line $expected")
+      }
+    } else {
+      fail(s"Unknown error occurred while compiling ${file.getName}")
     }
   }
 

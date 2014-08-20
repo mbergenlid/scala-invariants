@@ -49,6 +49,9 @@ trait IntFacade {
   @Equal("this * x")
   def *(x: Long): Long
 
+  @Equal("this / x")
+  def /(x: Int): Int
+
   @Equal("0 - this")
   def unary_- : Int
 }
