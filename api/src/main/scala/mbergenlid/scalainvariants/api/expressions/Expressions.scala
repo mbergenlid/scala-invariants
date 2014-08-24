@@ -223,38 +223,6 @@ trait Expressions {
     }
 
   }
-
-  case class ConstantValue(value: BigDecimal) extends Ordered[ConstantValue] {
-    def isOne = value == BigDecimal(1)
-    def isZero = value == BigDecimal(0)
-    def isGreaterThanZero = value > 0
-    def isLessThanZero = value < 0
-
-    def unary_- : ConstantValue = ConstantValue(-value)
-    def inverse: ConstantValue = ConstantValue(1/value)
-
-    def +(that: ConstantValue) = {
-      val newValue = value + that.value
-      ConstantValue(newValue)
-    }
-
-    def *(that: ConstantValue): ConstantValue = {
-      val newValue = value*that.value
-      ConstantValue(newValue)
-    }
-
-    override def compare(other: ConstantValue) =
-      value.compare(other.value)
-
-    override def toString = value.toString()
-  }
-
-  object ConstantValue {
-    def apply[U: RichNumeric](value: U): ConstantValue =
-      ConstantValue(implicitly[RichNumeric[U]].toBigDecimal(value))
-
-    lazy val One = ConstantValue(1)
-  }
 }
 
 

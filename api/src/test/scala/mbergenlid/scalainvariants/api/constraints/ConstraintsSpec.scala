@@ -1,6 +1,7 @@
 package mbergenlid.scalainvariants.api.constraints
 
 import mbergenlid.scalainvariants.api.SymbolChain
+import mbergenlid.scalainvariants.api.expressions.ConstantValue
 import org.scalatest.FunSuite
 import mbergenlid.scalainvariants.api.util.{TestUniverse, TestExpressionParser}
 
@@ -404,7 +405,7 @@ class ConstraintsSpec extends FunSuite
   test("ExpressionConstraint substitute") {
     val ec = Equal(Polynomial(t(1, "x", -1)))
     val res = ec.substitute(stringToSymbol("x"), Equal(2))
-    assert(res === Some(Equal(Polynomial(Term(ConstantValue(0.5), Map())))))
+    assert(res === Some(Equal(Polynomial(Term(ConstantValue(0), Map())))))
 
     assert(GreaterThan(0).substitute(s("x"), Equal(2)) === Some(GreaterThan(0)))
   }

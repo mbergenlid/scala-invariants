@@ -1,5 +1,7 @@
 package mbergenlid.scalainvariants.api
 
+import mbergenlid.scalainvariants.api.expressions.ConstantValue
+
 import scala.reflect.api.Types
 
 trait ContextLookup {

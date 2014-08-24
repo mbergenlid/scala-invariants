@@ -1,6 +1,8 @@
 package mbergenlid.scalainvariants.api.util
 
 
+import mbergenlid.scalainvariants.api.expressions.ConstantValue
+
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.reflect.runtime.universe._
 import scala.language.implicitConversions

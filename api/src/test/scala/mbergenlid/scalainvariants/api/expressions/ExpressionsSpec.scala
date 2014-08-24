@@ -120,11 +120,17 @@ class ExpressionsSpec extends FunSuite with TestUniverse {
     assert(diff2 > Polynomial.fromConstant(Int.MaxValue))
   }
 
+  test("Add floating points") {
+
+  }
+
   test("Division") {
     assert(c(4) / c(2) === c(2))
     assert(c(4) / s("x") === Polynomial(t(4, "x", -1)))
 
     assert(c(0) / c(2) === c(0))
+
+    assert(c(1) / c(2) === c(0))
   }
 
   test("Division substitute") {

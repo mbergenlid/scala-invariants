@@ -1,5 +1,6 @@
 package mbergenlid.scalainvariants.api
 
+import mbergenlid.scalainvariants.api.expressions.ConstantValue
 import mbergenlid.scalainvariants.api.util.TestUniverse
 import org.scalatest.FunSuite
 
